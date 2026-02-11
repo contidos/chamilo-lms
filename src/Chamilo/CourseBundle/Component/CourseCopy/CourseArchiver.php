@@ -258,59 +258,25 @@ class CourseArchiver
     }
 
     /**
-     * @param array|string $file Either $_FILES['...'] array or a tmp path string
+     * @param array $file
      *
-     * @return bool|string Returns the stored zip filename (not full path) or false on failure
+     * @return bool|string
      */
     public static function importUploadedFile($file)
     {
-        $newFilename = uniqid('import_file', true).'.zip';
-        $newDir = self::getBackupDir();
+        $new_filename = uniqid('import_file', true).'.zip';
+        $new_dir = self::getBackupDir();
+        if (!is_dir($new_dir)) {
+            $fs = new Filesystem();
+            $fs->mkdir($new_dir);
+        }
+        if (is_dir($new_dir) && is_writable($new_dir)) {
+            move_uploaded_file($file, $new_dir.$new_filename);
 
-        // Ensure backup directory exists
-        if (!is_dir($newDir)) {
-            @mkdir($newDir, api_get_permissions_for_new_directories(), true);
+            return $new_filename;
         }
 
-        if (!is_dir($newDir) || !is_writable($newDir)) {
-            return false;
-        }
-
-        // Normalize input
-        $tmpPath = '';
-        $uploadErr = 0;
-
-        if (is_array($file)) {
-            $uploadErr = (int) ($file['error'] ?? 0);
-            $tmpPath = (string) ($file['tmp_name'] ?? '');
-        } else {
-            $tmpPath = (string) $file;
-        }
-
-        if ($uploadErr !== 0 || $tmpPath === '') {
-            return false;
-        }
-
-        $destPath = $newDir.$newFilename;
-
-        // Prefer move_uploaded_file for real HTTP uploads, fallback to copy for non-upload contexts
-        $ok = false;
-        if (function_exists('is_uploaded_file') && is_uploaded_file($tmpPath)) {
-            $ok = @move_uploaded_file($tmpPath, $destPath);
-        } elseif (is_file($tmpPath) && is_readable($tmpPath)) {
-            $ok = @copy($tmpPath, $destPath);
-        } else {
-            return false;
-        }
-
-        clearstatcache(true, $destPath);
-
-        if (!$ok || !is_file($destPath) || (int) filesize($destPath) <= 0) {
-            @unlink($destPath);
-            return false;
-        }
-
-        return $newFilename;
+        return false;
     }
 
     /**
@@ -331,73 +297,36 @@ class CourseArchiver
         $unzip_dir = self::getBackupDir().$tmp_dir_name;
         $filePath = self::getBackupDir().$filename;
 
-        $perms = api_get_permissions_for_new_directories();
+        @mkdir($unzip_dir, api_get_permissions_for_new_directories(), true);
+        @copy(
+            $filePath,
+            $unzip_dir.'/backup.zip'
+        );
 
-        if (!is_dir($unzip_dir) && !@mkdir($unzip_dir, $perms, true)) {
-            error_log('[COURSE_ARCHIVER] readCourse: failed to create unzip_dir="'.$unzip_dir.'"');
-            return new Course();
-        }
-
-        if (!is_file($filePath)) {
-            error_log('[COURSE_ARCHIVER] readCourse: backup zip not found filePath="'.$filePath.'"');
-            return new Course();
-        }
-
-        if (!@copy($filePath, $unzip_dir.'/backup.zip')) {
-            error_log('[COURSE_ARCHIVER] readCourse: failed to copy zip filePath="'.$filePath.'" to "'.$unzip_dir.'/backup.zip"');
-            return new Course();
-        }
-
-        // Unzip the archive
+        // unzip the archive
         $zip = new \PclZip($unzip_dir.'/backup.zip');
-
-        if (!@chdir($unzip_dir)) {
-            error_log('[COURSE_ARCHIVER] readCourse: chdir failed unzip_dir="'.$unzip_dir.'"');
-            return new Course();
-        }
+        @chdir($unzip_dir);
 
         // For course backups we must preserve original filenames so that
         // paths in course_info.dat still match the files in backup_path.
-        $extractResult = $zip->extract(PCLZIP_OPT_TEMP_FILE_ON);
+        $zip->extract(
+            PCLZIP_OPT_TEMP_FILE_ON
+        );
 
-        if ($extractResult === 0) {
-            error_log('[COURSE_ARCHIVER] readCourse: extract failed error="'.$zip->errorInfo(true).'" unzip_dir="'.$unzip_dir.'"');
-            return new Course();
-        }
-
-        // Remove the archive-file
+        // remove the archive-file
         if ($delete) {
             @unlink($filePath);
         }
 
-        // Read the course
+        // read the course
         if (!is_file('course_info.dat')) {
-            error_log('[COURSE_ARCHIVER] readCourse: missing course_info.dat cwd="'.getcwd().'" unzip_dir="'.$unzip_dir.'"');
             return new Course();
         }
 
-        $size = (int) @filesize('course_info.dat');
-        if ($size <= 0) {
-            error_log('[COURSE_ARCHIVER] readCourse: empty course_info.dat size='.$size.' cwd="'.getcwd().'"');
-            return new Course();
-        }
-
-        $fp = @fopen('course_info.dat', 'r');
-        if (false === $fp) {
-            error_log('[COURSE_ARCHIVER] readCourse: failed to open course_info.dat cwd="'.getcwd().'"');
-            return new Course();
-        }
-
-        $contents = @fread($fp, $size);
+        $fp = @fopen('course_info.dat', "r");
+        $contents = @fread($fp, filesize('course_info.dat'));
         @fclose($fp);
 
-        $readLen = is_string($contents) ? strlen($contents) : -1;
-        if (!is_string($contents) || $readLen <= 0) {
-            error_log('[COURSE_ARCHIVER] readCourse: failed to read course_info.dat');
-            return new Course();
-        }
-
-        // Backward compatibility aliases used by serialized payloads
         class_alias('Chamilo\CourseBundle\Component\CourseCopy\Course', 'Course');
         class_alias('Chamilo\CourseBundle\Component\CourseCopy\Resources\Announcement', 'Announcement');
         class_alias('Chamilo\CourseBundle\Component\CourseCopy\Resources\Attendance', 'Attendance');
@@ -428,25 +357,17 @@ class CourseArchiver
         class_alias('Chamilo\CourseBundle\Component\CourseCopy\Resources\Work', 'Work');
         class_alias('Chamilo\CourseBundle\Component\CourseCopy\Resources\XapiTool', 'XapiTool');
 
-        $decoded = base64_decode($contents, true);
-        if (false === $decoded) {
-            error_log('[COURSE_ARCHIVER] readCourse: base64_decode strict failed, retry non-strict');
-            $decoded = base64_decode($contents);
-        }
+        /** @var Course $course */
+        $course = \UnserializeApi::unserialize('course', base64_decode($contents));
 
-        if (!is_string($decoded) || $decoded === '') {
-            error_log('[COURSE_ARCHIVER] readCourse: base64_decode produced empty payload');
+        if (!in_array(
+            get_class($course),
+            ['Course', 'Chamilo\CourseBundle\Component\CourseCopy\Course']
+        )
+        ) {
             return new Course();
         }
 
-        /** @var mixed $course */
-        $course = \UnserializeApi::unserialize('course', $decoded);
-        if (!is_object($course) || !in_array(get_class($course), ['Course', 'Chamilo\CourseBundle\Component\CourseCopy\Course'], true)) {
-            error_log('[COURSE_ARCHIVER] readCourse: invalid class after unserialize, returning empty Course');
-            return new Course();
-        }
-
-        // Ensure backup_path is always set when unserialize is successful
         $course->backup_path = $unzip_dir;
 
         return $course;

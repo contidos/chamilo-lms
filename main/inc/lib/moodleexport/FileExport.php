@@ -197,28 +197,37 @@ class FileExport
      */
     private function processDocument(array $filesData, object $document): array
     {
-        // Only real files are exported; folders are represented implicitly by "filepath"
-        if ($document->file_type !== 'file') {
+        if (
+            $document->file_type === 'file' &&
+            isset($this->course->used_page_doc_ids) &&
+            in_array($document->source_id, $this->course->used_page_doc_ids)
+        ) {
             return $filesData;
         }
 
-        // Base file data (contenthash, size, title, etc.)
-        $fileData = $this->getFileData($document);
+        if (
+            $document->file_type === 'file' &&
+            pathinfo($document->path, PATHINFO_EXTENSION) === 'html' &&
+            substr_count($document->path, '/') === 1
+        ) {
+            return $filesData;
+        }
 
-        // Rebuild the relative filepath so Moodle can recreate the Documents tree
-        $relDir = dirname($document->path);
-        $filepath = $this->ensureTrailingSlash(
-            $relDir === '.' ? '/' : '/'.$relDir.'/'
-        );
-
-        // Attach this file to the global "Documents" folder activity
-        $fileData['filepath'] = $filepath;
-        $fileData['contextid'] = ActivityExport::DOCS_MODULE_ID;
-        $fileData['component'] = 'mod_folder';
-        $fileData['filearea'] = 'content';
-        $fileData['itemid'] = ActivityExport::DOCS_MODULE_ID;
-
-        $filesData['files'][] = $fileData;
+        if ($document->file_type === 'file') {
+            $extension = pathinfo($document->path, PATHINFO_EXTENSION);
+            if (!in_array(strtolower($extension), ['html', 'htm'])) {
+                $fileData = $this->getFileData($document);
+                $fileData['filepath'] = '/Documents/';
+                $fileData['contextid'] = 0;
+                $fileData['component'] = 'mod_folder';
+                $filesData['files'][] = $fileData;
+            }
+        } elseif ($document->file_type === 'folder') {
+            $folderFiles = \DocumentManager::getAllDocumentsByParentId($this->course->info, $document->source_id);
+            foreach ($folderFiles as $file) {
+                $filesData['files'][] = $this->getFolderFileData($file, (int) $document->source_id, '/Documents/'.dirname($file['path']).'/');
+            }
+        }
 
         return $filesData;
     }
@@ -258,23 +267,22 @@ class FileExport
     /**
      * Get file data for files inside a folder.
      */
-    private function getFolderFileData(array $file, int $sourceId, string $parentPath = '/'): array
+    private function getFolderFileData(array $file, int $sourceId, string $parentPath = '/Documents/'): array
     {
         $adminData = MoodleExport::getAdminUserData();
         $adminId = $adminData['id'];
         $contenthash = hash('sha1', basename($file['path']));
         $mimetype = $this->getMimeType($file['path']);
         $filename = basename($file['path']);
-        $relDir = dirname($file['path']);
-        $filepath = $this->ensureTrailingSlash($relDir === '.' ? '/' : '/'.$relDir.'/');
+        $filepath = $this->ensureTrailingSlash($parentPath);
 
         return [
             'id' => $file['id'],
             'contenthash' => $contenthash,
-            'contextid' => ActivityExport::DOCS_MODULE_ID,
+            'contextid' => $sourceId,
             'component' => 'mod_folder',
             'filearea' => 'content',
-            'itemid' => ActivityExport::DOCS_MODULE_ID,
+            'itemid' => (int) $file['id'],
             'filepath' => $filepath,
             'documentpath' => 'document/'.$file['path'],
             'filename' => $filename,

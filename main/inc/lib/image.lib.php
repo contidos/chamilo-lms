@@ -33,8 +33,6 @@ class Image
                 exit;
             }
         }
-
-        $this->image_wrapper->reencode();
     }
 
     public function resize($max_size_for_picture)
@@ -159,7 +157,6 @@ abstract class ImageWrapper
         }
         $this->path = $path;
         $this->set_image_wrapper(); //Creates image obj
-        $this->reencode();
     }
 
     abstract public function set_image_wrapper();
@@ -171,8 +168,6 @@ abstract class ImageWrapper
     abstract public function resize($thumbw, $thumbh, $border, $specific_size = false);
 
     abstract public function crop($x, $y, $width, $height, $src_width, $src_height);
-
-    abstract public function reencode(): void;
 
     abstract public function send_image($file = '', $compress = -1, $convert_file_to = null);
 
@@ -352,27 +347,6 @@ class ImagickWrapper extends ImageWrapper
             return $result;
         }
     }
-
-    /**
-     * @throws Exception
-     */
-    public function reencode(): void
-    {
-        if ($this->image_validated) {
-            try {
-                $this->image->setImageFormat($this->type);
-                $this->image->writeImage($this->path);
-            } catch (ImagickException $e) {
-                throw new Exception;
-            }
-
-            $this->image->clear();
-
-            return;
-        }
-
-        throw new Exception;
-    }
 }
 
 /**
@@ -506,33 +480,6 @@ class GDWrapper extends ImageWrapper
         );
         $this->bg = $dst_img;
         @imagedestroy($src_img);
-    }
-
-    /**
-     * @throws Exception
-     */
-    public function reencode(): void
-    {
-        if ($this->image_validated) {
-            switch ($this->type) {
-                case 'jpeg':
-                case 'jpg':
-                    imagejpeg($this->bg, $this->path);
-                    break;
-
-                case 'png':
-                    imagepng($this->bg, $this->path);
-                    break;
-
-                case 'gif':
-                    imagegif($this->bg, $this->path);
-                    break;
-            }
-
-            return;
-        }
-
-        throw new Exception;
     }
 
     /**

@@ -44,12 +44,12 @@ class FolderExport extends ActivityExport
      */
     public function getData(int $folderId, int $sectionId): ?array
     {
-        if ($folderId === 0 || $folderId === ActivityExport::DOCS_MODULE_ID) {
+        if ($folderId === 0) {
             return [
-                'id' => ActivityExport::DOCS_MODULE_ID,
-                'moduleid' => ActivityExport::DOCS_MODULE_ID,
+                'id' => 0,
+                'moduleid' => 0,
                 'modulename' => 'folder',
-                'contextid' => ActivityExport::DOCS_MODULE_ID,
+                'contextid' => 0,
                 'name' => 'Documents',
                 'sectionid' => $sectionId,
                 'timemodified' => time(),
@@ -98,10 +98,17 @@ class FolderExport extends ActivityExport
     private function getFilesForFolder(int $folderId): array
     {
         $files = [];
-        if ($folderId === ActivityExport::DOCS_MODULE_ID) {
+        if ($folderId === 0) {
             foreach ($this->course->resources[RESOURCE_DOCUMENT] as $doc) {
                 if ($doc->file_type === 'file') {
-                    $files[] = ['id' => (int) $doc->source_id];
+                    $files[] = [
+                        'id' => (int) $doc->source_id,
+                        'contenthash' => hash('sha1', basename($doc->path)),
+                        'filename' => basename($doc->path),
+                        'filepath' => '/Documents/',
+                        'filesize' => (int) $doc->size,
+                        'mimetype' => $this->getMimeType($doc->path),
+                    ];
                 }
             }
         }

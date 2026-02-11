@@ -215,9 +215,15 @@ class Draggable extends Question
     {
         $header = parent::return_header($exercise, $counter, $score);
         $header .= '<table class="'.$this->question_table_class.'"><tr>';
-        $header .= '<th>'.get_lang('ElementList').'</th>';
-        $header .= '<th>'.get_lang('YourChoice').'</th>';
-        if ($exercise->showExpectedChoice() || $exercise->showExpectedChoiceColumn()) {
+
+        if ($exercise->showExpectedChoice()) {
+            $header .= '<th>'.get_lang('YourChoice').'</th>';
+            if ($exercise->showExpectedChoiceColumn()) {
+                $header .= '<th>'.get_lang('ExpectedChoice').'</th>';
+            }
+        } else {
+            $header .= '<th>'.get_lang('ElementList').'</th>';
+            $header .= '<th>'.get_lang('YourChoice').'</th>';
             $header .= '<th>'.get_lang('ExpectedChoice').'</th>';
         }
         $header .= '<th>'.get_lang('Status').'</th>';

@@ -47,18 +47,13 @@ class UrlExport extends ActivityExport
         // Extract the URL information from the course data
         $url = $this->course->resources['link'][$activityId];
 
-        $name = $url->title;
-        if ($sectionId > 0) {
-            $name = $this->lpItemTitle($sectionId, RESOURCE_LINK, $activityId, $name);
-        }
-
         // Return the URL data formatted for export
         return [
             'id' => $activityId,
             'moduleid' => $activityId,
             'modulename' => 'url',
             'contextid' => $this->course->info['real_id'],
-            'name' => $name,
+            'name' => $url->title,
             'description' => $url->description,
             'externalurl' => $url->url,
             'timecreated' => time(),

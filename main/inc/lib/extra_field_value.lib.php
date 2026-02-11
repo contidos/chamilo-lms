@@ -1221,25 +1221,4 @@ class ExtraFieldValue extends Model
 
         return true;
     }
-
-    /**
-     * @return array<int, array<string, string>>
-     */
-    public static function formatValues(array $extraInfo): array
-    {
-        $formatted = [];
-
-        foreach ($extraInfo as $extra) {
-            /** @var ExtraFieldValues $extraValue */
-            $extraValue = $extra['value'];
-
-            $formatted[] = [
-                'variable' => $extraValue->getField()->getVariable(),
-                'display_text' => $extraValue->getField()->getDisplayText(),
-                'value' => $extraValue->getValue(),
-            ];
-        }
-
-        return $formatted;
-    }
 }

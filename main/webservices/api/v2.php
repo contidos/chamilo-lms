@@ -15,7 +15,6 @@
  * although it is not recommended to do so (for security reasons).
  */
 
-use Chamilo\CoreBundle\Entity\ExtraFieldValues;
 use Symfony\Component\HttpFoundation\Request as HttpRequest;
 
 require_once __DIR__.'/../../inc/global.inc.php';
@@ -26,31 +25,38 @@ $httpRequest = HttpRequest::createFromGlobals();
 
 $jsonContent = 'application/json' === $httpRequest->headers->get('Content-Type')
     ? json_decode($httpRequest->getContent(), true)
-    : [];
+    : null;
 
-foreach ($jsonContent as $key => $value) {
-    $value = Security::remove_XSS($value);
+if ($jsonContent) {
+    foreach ($jsonContent as $key => $value) {
+        $value = Security::remove_XSS($value);
 
-    $httpRequest->query->set($key, $value);
-    $httpRequest->request->set($key, $value);
-    $httpRequest->overrideGlobals();
-}
-
-if ($hash = $httpRequest->query->get('hash')) {
-    foreach (Rest::decodeParams($hash) as $key => $value) {
-        $httpRequest->query->set($key, Security::remove_XSS($value));
+        $httpRequest->query->set($key, $value);
+        $httpRequest->request->set($key, $value);
+        $httpRequest->overrideGlobals();
     }
 }
 
-$action = $httpRequest->query->get('action', $httpRequest->request->get('action'));
+$hash = $httpRequest->query->get('hash');
+
+if ($hash) {
+    $hashParams = Rest::decodeParams($hash);
+    if (!empty($hashParams)) {
+        foreach ($hashParams as $key => $value) {
+            $httpRequest->query->set($key, Security::remove_XSS($value));
+        }
+    }
+}
+
+$action = $httpRequest->query->get('action') ?: $httpRequest->request->get('action');
 $username = Security::remove_XSS(
-    $httpRequest->query->get('username', $httpRequest->request->get('username'))
+    $httpRequest->query->get('username') ?: $httpRequest->request->get('username')
 );
 $apiKey = Security::remove_XSS(
-    $httpRequest->query->get('api_key', $httpRequest->request->get('api_key'))
+    $httpRequest->query->get('api_key') ?: $httpRequest->request->get('api_key')
 );
-$course = $httpRequest->query->getInt('course', $httpRequest->request->getInt('course'));
-$session = $httpRequest->query->getInt('session', $httpRequest->request->getInt('session'));
+$course = $httpRequest->query->getInt('course') ?: $httpRequest->request->getInt('course');
+$session = $httpRequest->query->getInt('session') ?: $httpRequest->request->getInt('session');
 
 $restResponse = new RestResponse();
 
@@ -230,19 +236,6 @@ try {
         case Rest::VIEW_COURSE_HOME:
             Event::addEvent(LOG_WS.$action, 'username', $username);
             $restApi->viewCourseHome();
-            break;
-        case REST::GET_COURSE_BY_CODE:
-            $q = $httpRequest->query->get('q');
-            $sessionId = $httpRequest->query->getInt('session_id');
-
-            Event::addEvent(
-                LOG_WS.$action,
-                'course_code_session_id',
-                $q.'__'.$sessionId
-            );
-
-            $courses = $restApi->getCourseByCode($q, $sessionId);
-            $restResponse->setData($courses);
             break;
         case Rest::GET_COURSE_INFO:
             Event::addEvent(LOG_WS.$action, 'course_id', (int) $_POST['course']);
@@ -575,16 +568,10 @@ try {
             $restResponse->setData($data);
             break;
         case Rest::GET_USER_INFO_FROM_USERNAME:
-            $loginname = trim($httpRequest->request->get('loginname'));
-            if (empty($loginname)) {
+            if (empty($_POST['loginname'])) {
                 throw new Exception(get_lang('NoData'));
             }
-            $item = api_get_user_info_from_username($loginname);
-
-            if (!$item) {
-                throw new Exception(get_lang('NoUser'));
-            }
-
+            $item = api_get_user_info_from_username($_POST['loginname']);
             $userInfo = [
                 'id' => $item['user_id'],
                 'firstname' => $item['firstname'],
@@ -593,17 +580,10 @@ try {
                 'username' => $item['username'],
                 'active' => $item['active'],
             ];
-
-            if (api_is_teacher()) {
-                $extraInfo = (new ExtraFieldValue('user'))->getAllValuesForAnItem($item['user_id'], true);
-
-                $userInfo['extra'] = ExtraFieldValue::formatValues($extraInfo);
-            }
-
             Event::addEvent(
                 LOG_WS.$action,
                 'username',
-                Database::escape_string($loginname)
+                Database::escape_string($_POST['loginname'])
             );
             $restResponse->setData($userInfo);
             break;
@@ -788,7 +768,7 @@ try {
             $restResponse->setData($courseList);
             break;
         case Rest::SAVE_COURSE:
-            $data = $restApi->addCourse($httpRequest->request);
+            $data = $restApi->addCourse($_POST);
             Event::addEvent(LOG_WS.$action, 'course_id', $data['id']);
             $restResponse->setData($data);
             break;
@@ -818,32 +798,28 @@ try {
             $restResponse->setData(['status' => $result]);
             break;
         case Rest::GET_SESSION_FROM_EXTRA_FIELD:
-            $fieldName = trim($httpRequest->request->get('field_name'));
-            $fieldValue = trim($httpRequest->request->get('field_value'));
-            if (empty($fieldName) || empty($fieldValue)) {
+            if (empty($_POST['field_name']) || empty($_POST['field_value'])) {
                 throw new Exception(get_lang('NoData'));
             }
-            $idSession = $restApi->getSessionFromExtraField($fieldName, $fieldValue);
+            $idSession = $restApi->getSessionFromExtraField($_POST['field_name'], $_POST['field_value']);
             Event::addEvent(
                 LOG_WS.$action,
                 'extra_field_name-extra_field_value',
-                $fieldName.':'.$fieldValue
+                Database::escape_string($_POST['field_name']).':'.Database::escape_string($_POST['field_value'])
             );
             $restResponse->setData([$idSession]);
             break;
         case Rest::GET_SESSION_INFO_FROM_EXTRA_FIELD:
-            $fieldName = trim($httpRequest->request->get('field_name'));
-            $fieldValue = trim($httpRequest->request->get('field_value'));
-            if (empty($fieldName) || empty($fieldValue)) {
+            if (empty($_POST['field_name']) || empty($_POST['field_value'])) {
                 throw new Exception(get_lang('NoData'));
             }
-            $sessionInfo = $restApi->getSessionInfoFromExtraField($fieldName, $fieldValue);
+            $idSession = $restApi->getSessionInfoFromExtraField($_POST['field_name'], $_POST['field_value']);
             Event::addEvent(
                 LOG_WS.$action,
                 'extra_field_name-extra_field_value',
-                $fieldName.':'.$fieldValue
+                Database::escape_string($_POST['field_name']).':'.Database::escape_string($_POST['field_value'])
             );
-            $restResponse->setData($sessionInfo);
+            $restResponse->setData([$idSession]);
             break;
         case Rest::SAVE_SESSION:
             $data = $restApi->addSession($_POST);
@@ -914,10 +890,6 @@ try {
                 (int) $_POST['id_session'].':'.implode(',', $_POST['list_users'])
             );
             $restResponse->setData($data);
-            break;
-        case Rest::ADD_SESSION_COURSE_COACHES:
-            $restApi->addSessionCourseCoaches($httpRequest->request);
-            $restResponse->setData([]);
             break;
         case Rest::UNSUBSCRIBE_USERS_FROM_SESSION:
             $data = $restApi->unsubscribeUsersFromSession($_POST);
