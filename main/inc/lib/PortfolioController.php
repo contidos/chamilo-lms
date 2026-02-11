@@ -16,7 +16,6 @@ use Chamilo\CourseBundle\Entity\CItemProperty;
 use Chamilo\UserBundle\Entity\User;
 use Doctrine\ORM\Query\Expr\Join;
 use Mpdf\MpdfException;
-use Symfony\Component\Filesystem\Exception\FileNotFoundException;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpFoundation\Request as HttpRequest;
 
@@ -2360,14 +2359,10 @@ class PortfolioController
 
             foreach ($imagePaths as $imagePath) {
                 $inlineFile = dirname($itemFilename).'/'.basename($imagePath);
-
-                try {
-                    $filenames[] = $inlineFile;
-                    $fs->copy($imagePath, $inlineFile);
-                } catch (FileNotFoundException $notFoundException) {
-                    continue;
-                }
+                $filenames[] = $inlineFile;
+                $fs->copy($imagePath, $inlineFile);
             }
+
 
             $attachments = $attachmentsRepo->findFromItem($item);
 
@@ -2380,15 +2375,12 @@ class PortfolioController
                     $attachment->getFilename()
                 );
 
-                try {
-                    $fs->copy(
-                        $attachmentsDirectory.$attachment->getPath(),
-                        $attachmentFilename
-                    );
-                    $filenames[] = $attachmentFilename;
-                } catch (FileNotFoundException $notFoundException) {
-                    continue;
-                }
+                $fs->copy(
+                    $attachmentsDirectory.$attachment->getPath(),
+                    $attachmentFilename
+                );
+
+                $filenames[] = $attachmentFilename;
             }
 
             $tblItemsData[] = [
@@ -2423,13 +2415,8 @@ class PortfolioController
 
             foreach ($imagePaths as $imagePath) {
                 $inlineFile = dirname($commentFilename).'/'.basename($imagePath);
-
-                try {
-                    $filenames[] = $inlineFile;
-                    $fs->copy($imagePath, $inlineFile);
-                } catch (FileNotFoundException $notFoundException) {
-                    continue;
-                }
+                $filenames[] = $inlineFile;
+                $fs->copy($imagePath, $inlineFile);
             }
 
             $attachments = $attachmentsRepo->findFromComment($comment);
@@ -2443,15 +2430,12 @@ class PortfolioController
                     $attachment->getFilename()
                 );
 
-                try {
-                    $fs->copy(
-                        $attachmentsDirectory.$attachment->getPath(),
-                        $attachmentFilename
-                    );
-                    $filenames[] = $attachmentFilename;
-                } catch (FileNotFoundException $notFoundException) {
-                    continue;
-                }
+                $fs->copy(
+                    $attachmentsDirectory.$attachment->getPath(),
+                    $attachmentFilename
+                );
+
+                $filenames[] = $attachmentFilename;
             }
 
             $tblCommentsData[] = [
@@ -4309,7 +4293,10 @@ class PortfolioController
     }
 
     /**
+     * @param string $htmlContent
      * @param array $imagePaths Relative paths found in $htmlContent
+     *
+     * @return string
      */
     private function fixMediaSourcesToHtml(string $htmlContent, array &$imagePaths): string
     {
@@ -4340,7 +4327,7 @@ class PortfolioController
 
         $paths = [
             '/app/upload/' => $sysPath,
-            '/courses/' => $sysPath.'/app',
+            '/courses/' => $sysPath.'/app'
         ];
 
         foreach ($elements as $element) {
@@ -4352,7 +4339,6 @@ class PortfolioController
                 continue;
             }
 
-            // to search anchors linking to files
             if ($anchorElements->length > 0) {
                 foreach ($anchorElements as $anchorElement) {
                     if (!$anchorElement->hasAttribute('href')) {

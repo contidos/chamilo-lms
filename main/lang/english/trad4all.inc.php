@@ -9112,14 +9112,4 @@ $TimeSpentInCoursesLastWeek = "Time spent in courses last week";
 $ProgressionInSessions = "Session progress";
 $synthesis = "Synthesis";
 $WeeklyTimeSummary = "Weekly time spent summary";
-$ExistingUserWithSameExtraFieldValue = "An existing user with the same %s was found (ID %d), enrolling instead of creating.";
-$SelectExtraField = "Select the extra field to search on";
-$WhatToDoWithUnifiedUsers = "What to do with unified users";
-$ExtraFieldNotFound = "Extra Field not found";
-$NoDuplicatesFound = "No duplicates found";
-$UnifyToThisUser = "Unify on this user";
-$Unify = "Unify";
-$AreYouSureToUnify = "Are you sure to unify";
-$FinalUser = "Final user";
-$WillMergeNUsers = "Will merge {n} users";
 ?>

@@ -111,10 +111,11 @@ if (api_is_course_admin() && !in_array($origin, ['learnpath', 'embeddable', 'ifr
     );
 }
 $exercise_stat_info = $objExercise->get_stat_track_exercise_info_by_exe_id($exeId);
-$learnpath_id = $exercise_stat_info['orig_lp_id'] ?? 0;
-$learnpath_item_id = $exercise_stat_info['orig_lp_item_id'] ?? 0;
-$learnpath_item_view_id = $exercise_stat_info['orig_lp_item_view_id'] ?? 0;
-$exerciseId = $exercise_stat_info['exe_exo_id'] ?? 0;
+$learnpath_id = isset($exercise_stat_info['orig_lp_id']) ? $exercise_stat_info['orig_lp_id'] : 0;
+$learnpath_item_id = isset($exercise_stat_info['orig_lp_item_id']) ? $exercise_stat_info['orig_lp_item_id'] : 0;
+$learnpath_item_view_id = isset($exercise_stat_info['orig_lp_item_view_id'])
+    ? $exercise_stat_info['orig_lp_item_view_id'] : 0;
+$exerciseId = isset($exercise_stat_info['exe_exo_id']) ? $exercise_stat_info['exe_exo_id'] : 0;
 
 $logInfo = [
     'tool' => TOOL_QUIZ,
@@ -356,7 +357,7 @@ $template->assign('actions', $pageActions);
 $template->assign('content', $template->fetch($template->get_template('exercise/result.tpl')));
 $template->display_one_col_template();
 
-function showEmbeddableFinishButton(): string
+function showEmbeddableFinishButton()
 {
     $js = '<script>
         $(function () {

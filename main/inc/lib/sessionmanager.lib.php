@@ -2052,22 +2052,6 @@ class SessionManager
             $course_list[] = $row['c_id'];
         }
 
-        // Build list of users already subscribed to the session as students.
-        // This allows us to avoid re-enrolling them into all courses again
-        // when they are already part of the session (preserves manual
-        // unsubscriptions at the course level).
-        $usersAlreadyInSession = [];
-        if (!empty($userList)) {
-            $userIdsStr = "'".implode("','", $userList)."'";
-            $sql = "SELECT user_id FROM $tbl_session_rel_user
-                    WHERE session_id = $sessionId AND relation_type = 0
-                    AND user_id IN ($userIdsStr)";
-            $resUsersInSession = Database::query($sql);
-            while ($row = Database::fetch_array($resUsersInSession)) {
-                $usersAlreadyInSession[] = (int) $row['user_id'];
-            }
-        }
-
         if ($session->getSendSubscriptionNotification() &&
             is_array($userList)
         ) {
@@ -2170,8 +2154,8 @@ class SessionManager
 
                 $usersToSubscribeInCourse = array_filter(
                     $userList,
-                    function ($userId) use ($existingUsers, $usersAlreadyInSession) {
-                        return !in_array($userId, $existingUsers) && !in_array($userId, $usersAlreadyInSession);
+                    function ($userId) use ($existingUsers) {
+                        return !in_array($userId, $existingUsers);
                     }
                 );
 
@@ -3293,8 +3277,7 @@ class SessionManager
         $from = null,
         $to = null,
         $urlId = 0,
-        $onlyThisSessionList = [],
-        $includeSessionWithNoCourse = false
+        $onlyThisSessionList = []
     ) {
         $session_table = Database::get_main_table(TABLE_MAIN_SESSION);
         $session_category_table = Database::get_main_table(TABLE_MAIN_SESSION_CATEGORY);
@@ -3304,12 +3287,6 @@ class SessionManager
         $course_table = Database::get_main_table(TABLE_MAIN_COURSE);
         $urlId = empty($urlId) ? api_get_current_access_url_id() : (int) $urlId;
         $return_array = [];
-        $courseFrom ="LEFT JOIN " . $session_course_table . " sco ON (sco.session_id = s.id)
-				INNER JOIN " . $course_table . " c ON sco.c_id = c.id";
-
-        if ($includeSessionWithNoCourse) {
-            $courseFrom = "";
-        }
 
         $sql_query = " SELECT
                     DISTINCT(s.id),
@@ -3325,7 +3302,8 @@ class SessionManager
 				INNER JOIN $user_table u ON s.id_coach = u.user_id
 				INNER JOIN $table_access_url_rel_session ar ON ar.session_id = s.id
 				LEFT JOIN  $session_category_table sc ON s.session_category_id = sc.id
-				$courseFrom
+				LEFT JOIN $session_course_table sco ON (sco.session_id = s.id)
+				INNER JOIN $course_table c ON sco.c_id = c.id
 				WHERE ar.access_url_id = $urlId ";
 
         $availableFields = [
@@ -6009,9 +5987,9 @@ class SessionManager
      * @param int $sessionId
      * @param int $courseId
      *
-     * @return array<int, int>
+     * @return array
      */
-    public static function getCoachesByCourseSession($sessionId, $courseId): array
+    public static function getCoachesByCourseSession($sessionId, $courseId)
     {
         $table = Database::get_main_table(TABLE_MAIN_SESSION_COURSE_USER);
         $sessionId = (int) $sessionId;
@@ -6027,7 +6005,7 @@ class SessionManager
         $coaches = [];
         if (Database::num_rows($result) > 0) {
             while ($row = Database::fetch_array($result)) {
-                $coaches[] = (int) $row['user_id'];
+                $coaches[] = $row['user_id'];
             }
         }
 
@@ -10071,7 +10049,7 @@ class SessionManager
         // 2. SESSION DATA
         $row2 = $config['course_field_value'] ? [$config['course_field_value']] : [$courseInfo['title']];
         $row2[] = (new DateTime($sessionInfo['access_start_date']))->format('d/m/Y');
-        $row2[] = (new DateTime($sessionInfo['access_end_date']))->format('d/m/Y');
+        $row2[] = (new DateTime($sessionInfo['access_end_date']))->format('d/m/T');
 
         $extraValuesObj = new ExtraFieldValue('session');
         $sessionExtra = $extraValuesObj->getAllValuesByItem($sessionId);

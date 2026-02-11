@@ -6940,8 +6940,7 @@ class learnpath
         $isConfigPage = false,
         $allowExpand = true,
         $action = '',
-        $extraField = [],
-        $noEdition = false
+        $extraField = []
     ) {
         $actionsRight = '';
         $lpId = $this->lp_id;
@@ -6982,25 +6981,23 @@ class learnpath
             ])
         );
 
-        if (!$noEdition) {
-            $actionsLeft .= Display::url(
-                Display::return_icon(
-                    'upload_audio.png',
-                    get_lang('UpdateAllAudioFragments'),
-                    '',
-                    ICON_SIZE_MEDIUM
-                ),
-                'lp_controller.php?'.api_get_cidreq().'&'.http_build_query([
-                    'action' => 'admin_view',
-                    'lp_id' => $lpId,
-                    'updateaudio' => 'true',
-                ])
-            );
-        }
+        $actionsLeft .= Display::url(
+            Display::return_icon(
+                'upload_audio.png',
+                get_lang('UpdateAllAudioFragments'),
+                '',
+                ICON_SIZE_MEDIUM
+            ),
+            'lp_controller.php?'.api_get_cidreq().'&'.http_build_query([
+                'action' => 'admin_view',
+                'lp_id' => $lpId,
+                'updateaudio' => 'true',
+            ])
+        );
 
         $subscriptionSettings = self::getSubscriptionSettings();
         $request = api_request_uri();
-        if ((strpos($request, 'edit') === false) && !$noEdition) {
+        if (strpos($request, 'edit') === false) {
             $actionsLeft .= Display::url(
                 Display::return_icon(
                     'settings.png',
@@ -7015,7 +7012,7 @@ class learnpath
             );
         }
 
-        if ((strpos($request, 'build') === false && !$noEdition &&
+        if ((strpos($request, 'build') === false &&
             strpos($request, 'add_item') === false) ||
             in_array($action, ['add_audio'])
         ) {

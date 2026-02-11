@@ -776,10 +776,6 @@ class Attendance
             );
 
             $value['photo'] = $photo;
-            $addOfficialCode = api_get_configuration_value('attendance_add_official_code');
-            if ($addOfficialCode) {
-                $value['official_code'] = $user_data['official_code'];
-            }
             $value['firstname'] = $user_data['firstname'];
             $value['lastname'] = $user_data['lastname'];
             $value['username'] = $user_data['username'];
@@ -2727,12 +2723,7 @@ class Attendance
 
         // Get data table
         $dataTable = [];
-        $addOfficialCode = api_get_configuration_value('attendance_add_official_code');
-        if ($addOfficialCode) {
-            $headTable = ['#', get_lang('OfficialCode'), get_lang('Name')];
-        } else {
-            $headTable = ['#', get_lang('Name')];
-        }
+        $headTable = ['#', get_lang('Name')];
         foreach ($calendar as $classDay) {
             $labelDuration = !empty($classDay['duration']) ? get_lang('Duration').' : '.$classDay['duration'] : '';
             $headTable[] =
@@ -2749,9 +2740,6 @@ class Attendance
                 $cols = 1;
                 $result = [];
                 $result['count'] = $count;
-                if ($addOfficialCode) {
-                    $result['official_code'] = $user['official_code'];
-                }
                 $result['full_name'] = api_get_person_name($user['firstname'], $user['lastname']);
                 foreach ($calendar as $classDay) {
                     $commentInfo = $this->getComment($user['user_id'], $classDay['id']);

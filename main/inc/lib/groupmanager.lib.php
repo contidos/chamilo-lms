@@ -1427,16 +1427,9 @@ class GroupManager
             return false;
         }
         $session_id = api_get_session_id();
-        $studentStatus = 5;
-        if (isset($session_id) && $session_id != 0) {
-            $studentStatus = 0;
-        }
         $complete_user_list = CourseManager::get_user_list_from_course_code(
             $_course['code'],
-            $session_id,
-            null,
-            null,
-            $studentStatus
+            $session_id
         );
         $groupIid = $groupInfo['iid'];
         $category = self::get_category_from_group($groupIid);
@@ -1455,7 +1448,6 @@ class GroupManager
         }
 
         $usersToAdd = [];
-        shuffle($complete_user_list);
         foreach ($complete_user_list as $userInfo) {
             $isSubscribed = self::is_subscribed($userInfo['user_id'], $groupInfo);
             if ($isSubscribed) {

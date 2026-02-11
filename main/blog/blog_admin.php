@@ -18,7 +18,7 @@ if ((!api_is_allowed_in_course() || !api_is_allowed_in_course()) && !api_is_allo
 }
 
 $origin = api_get_origin();
-$action = $_GET['action'] ?? '';
+$action = isset($_GET['action']) ? $_GET['action'] : '';
 
 if (api_is_allowed_to_edit()) {
     $nameTools = get_lang('blog_management');
@@ -58,14 +58,11 @@ if (api_is_allowed_to_edit()) {
             echo Display::return_message(get_lang('BlogEdited'), 'confirmation');
         }
     }
-
-    $isValidToken = Security::check_token('get', null, 'blog');
-
-    if ($action == 'visibility' && $isValidToken) {
+    if (isset($_GET['action']) && $_GET['action'] == 'visibility') {
         Blog::changeBlogVisibility(intval($_GET['blog_id']));
         echo Display::return_message(get_lang('VisibilityChanged'), 'confirmation');
     }
-    if ($action == 'delete' && $isValidToken) {
+    if (isset($_GET['action']) && $_GET['action'] == 'delete') {
         Blog::deleteBlog(intval($_GET['blog_id']));
         echo Display::return_message(get_lang('BlogDeleted'), 'confirmation');
     }

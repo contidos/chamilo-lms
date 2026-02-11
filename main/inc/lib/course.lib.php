@@ -8,7 +8,6 @@ use Chamilo\CoreBundle\Entity\Repository\SequenceResourceRepository;
 use Chamilo\CoreBundle\Entity\SequenceResource;
 use Chamilo\CourseBundle\Component\CourseCopy\CourseBuilder;
 use Chamilo\CourseBundle\Component\CourseCopy\CourseRestorer;
-use Chamilo\CourseBundle\Entity\CCourseDescription;
 use ChamiloSession as Session;
 use Doctrine\Common\Collections\Criteria;
 
@@ -94,7 +93,7 @@ class CourseManager
 
         // Create the course keys
         $keys = AddCourse::define_course_keys($params['wanted_code']);
-        $params['exemplary_content'] = $params['exemplary_content'] ?? false;
+        $params['exemplary_content'] = isset($params['exemplary_content']) ? $params['exemplary_content'] : false;
 
         if (count($keys)) {
             $params['code'] = $keys['currentCourseCode'];
@@ -3443,24 +3442,24 @@ class CourseManager
     /**
      * Lists details of the course description.
      *
-     * @param array<int, CCourseDescription> $descriptions The course description
-     * @param string                         $charset      The encoding
-     * @param bool                           $action_show  If true is displayed if false is hidden
+     * @param array        The course description
+     * @param string    The encoding
+     * @param bool        If true is displayed if false is hidden
      *
      * @return string The course description in html
      */
     public static function get_details_course_description_html(
-        array $descriptions,
-        string $charset,
-        bool $action_show = true
-    ): ?string {
+        $descriptions,
+        $charset,
+        $action_show = true
+    ) {
         $data = null;
-        if (count($descriptions) > 0) {
+        if (isset($descriptions) && count($descriptions) > 0) {
             foreach ($descriptions as $description) {
                 $data .= '<div class="sectiontitle">';
                 if (api_is_allowed_to_edit() && $action_show) {
                     //delete
-                    $data .= '<a href="'.api_get_self().'?'.api_get_cidreq().'&action=delete&description_id='.$description->getIid().'" onclick="javascript:if(!confirm(\''.addslashes(api_htmlentities(
+                    $data .= '<a href="'.api_get_self().'?'.api_get_cidreq().'&action=delete&description_id='.$description->id.'" onclick="javascript:if(!confirm(\''.addslashes(api_htmlentities(
                         get_lang('ConfirmYourChoice'),
                                 ENT_QUOTES,
                         $charset
@@ -3472,7 +3471,7 @@ class CourseManager
                     );
                     $data .= '</a> ';
                     //edit
-                    $data .= '<a href="'.api_get_self().'?'.api_get_cidreq().'&description_id='.$description->getIid().'">';
+                    $data .= '<a href="'.api_get_self().'?'.api_get_cidreq().'&description_id='.$description->id.'">';
                     $data .= Display::return_icon(
                         'edit.png',
                         get_lang('Edit'),
@@ -3481,10 +3480,10 @@ class CourseManager
                     );
                     $data .= '</a> ';
                 }
-                $data .= Security::remove_XSS($description->getTitle());
+                $data .= $description->title;
                 $data .= '</div>';
                 $data .= '<div class="sectioncomment">';
-                $data .= Security::remove_XSS($description->getContent());
+                $data .= Security::remove_XSS($description->content);
                 $data .= '</div>';
             }
         } else {
@@ -7513,53 +7512,5 @@ class CourseManager
 
         $courseFieldValue = new ExtraFieldValue('course');
         $courseFieldValue->saveFieldValues($params);
-    }
-
-    public static function searchCourse(string $searchTerm, ?int $sessionId = null): array
-    {
-        if (!empty($sessionId)) {
-            //if session is defined, lets find only courses of this session
-            return SessionManager::get_course_list_by_session_id(
-                $sessionId,
-                $searchTerm
-            );
-        }
-
-        //if session is not defined lets search all courses STARTING with $searchTerm
-        //TODO change this function to search not only courses STARTING with $searchTerm
-        if (api_is_platform_admin()) {
-            return CourseManager::get_courses_list(
-                0,
-                0,
-                'title',
-                'ASC',
-                -1,
-                $searchTerm,
-                null,
-                true
-            );
-        }
-
-        if (api_is_teacher()) {
-            $courseList = CourseManager::get_course_list_of_user_as_course_admin(api_get_user_id(), $searchTerm);
-            $category = api_get_configuration_value('course_category_code_to_use_as_model');
-
-            if (!empty($category)) {
-                $alreadyAdded = [];
-                if (!empty($courseList)) {
-                    $alreadyAdded = array_column($courseList, 'id');
-                }
-                $coursesInCategory = CourseCategory::getCoursesInCategory($category, $searchTerm);
-                foreach ($coursesInCategory as $course) {
-                    if (!in_array($course['id'], $alreadyAdded)) {
-                        $courseList[] = $course;
-                    }
-                }
-            }
-
-            return $courseList;
-        }
-
-        return [];
     }
 }

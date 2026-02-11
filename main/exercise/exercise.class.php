@@ -4516,7 +4516,7 @@ class Exercise
                         if (!$switchableAnswerSet) {
                             // not switchable answer, must be in the same place than teacher order
                             for ($i = 0; $i < count($listCorrectAnswers['words']); $i++) {
-                                $studentAnswer = $choice[$i] ?? '';
+                                $studentAnswer = isset($choice[$i]) ? $choice[$i] : '';
                                 $correctAnswer = $listCorrectAnswers['words'][$i];
 
                                 if ($debug) {
@@ -4527,16 +4527,16 @@ class Exercise
                                 // This value is the user input, not escaped while correct answer is escaped by ckeditor
                                 // Works with cyrillic alphabet and when using ">" chars see #7718 #7610 #7618
                                 // ENT_QUOTES is used in order to transform ' to &#039;
-                                //if (!$from_database) {
-                                $studentAnswer = FillBlanks::clearStudentAnswer($studentAnswer);
-                                if ($debug) {
-                                    error_log('Student answer cleaned:');
-                                    error_log($studentAnswer);
+                                if (!$from_database) {
+                                    $studentAnswer = FillBlanks::clearStudentAnswer($studentAnswer);
+                                    if ($debug) {
+                                        error_log('Student answer cleaned:');
+                                        error_log($studentAnswer);
+                                    }
                                 }
-                                //}
 
                                 $isAnswerCorrect = 0;
-                                if (FillBlanks::isStudentAnswerGood($studentAnswer, $correctAnswer, $from_database, true)) {
+                                if (FillBlanks::isStudentAnswerGood($studentAnswer, $correctAnswer, $from_database)) {
                                     // gives the related weighting to the student
                                     $questionScore += $answerWeighting[$i];
                                     // increments total score
@@ -4594,7 +4594,7 @@ class Exercise
 
                                 $found = false;
                                 for ($j = 0; $j < count($listTeacherAnswerTemp); $j++) {
-                                    $correctAnswer = $listTeacherAnswerTemp[$j] ?? '';
+                                    $correctAnswer = isset($listTeacherAnswerTemp[$j]) ? $listTeacherAnswerTemp[$j] : '';
                                     if (is_array($listTeacherAnswerTemp)) {
                                         $correctAnswer = implode('||', $listTeacherAnswerTemp);
                                     }
@@ -4995,7 +4995,7 @@ class Exercise
                                 if (false === $this->showExpectedChoice() &&
                                     false === $showTotalScoreAndUserChoicesInLastAttempt
                                 ) {
-                                    $this->hideExpectedAnswer = true;
+                                    $user_answer = '';
                                 }
                                 switch ($answerType) {
                                     case MATCHING:
@@ -5057,6 +5057,9 @@ class Exercise
                                         echo '</tr>';
                                         break;
                                     case DRAGGABLE:
+                                        if (false == $showTotalScoreAndUserChoicesInLastAttempt) {
+                                            $s_answer_label = '';
+                                        }
                                         if (RESULT_DISABLE_SHOW_SCORE_ATTEMPT_SHOW_ANSWERS_LAST_ATTEMPT_NO_FEEDBACK == $this->results_disabled) {
                                             if (false === $showTotalScoreAndUserChoicesInLastAttempt && empty($s_user_answer)) {
                                                 break;
@@ -5064,15 +5067,35 @@ class Exercise
                                         }
 
                                         echo '<tr>';
-                                        if ($this->showExpectedChoice() || $this->showExpectedChoiceColumn()) {
+                                        if ($this->showExpectedChoice()) {
+                                            if (!in_array($this->results_disabled, [
+                                                RESULT_DISABLE_SHOW_ONLY_IN_CORRECT_ANSWER,
+                                                //RESULT_DISABLE_SHOW_SCORE_AND_EXPECTED_ANSWERS_AND_RANKING,
+                                            ])
+                                            ) {
+                                                echo '<td>'.$user_answer.'</td>';
+                                            } else {
+                                                $status = Display::label(get_lang('Correct'), 'success');
+                                            }
                                             echo '<td>'.$s_answer_label.'</td>';
-                                            echo '<td>'.$user_answer.'</td>';
-                                            echo '<td>'.$real_list[$i_answer_correct_answer].'</td>';
                                             echo '<td>'.$status.'</td>';
                                         } else {
                                             echo '<td>'.$s_answer_label.'</td>';
                                             echo '<td>'.$user_answer.'</td>';
+                                            echo '<td>'.$counterAnswer.'</td>';
                                             echo '<td>'.$status.'</td>';
+                                            echo '<td>';
+                                            if (in_array($answerType, [MATCHING, MATCHING_COMBINATION, MATCHING_DRAGGABLE, MATCHING_DRAGGABLE_COMBINATION])) {
+                                                if (isset($real_list[$i_answer_correct_answer]) &&
+                                                    $showTotalScoreAndUserChoicesInLastAttempt === true
+                                                ) {
+                                                    echo Display::span(
+                                                        $real_list[$i_answer_correct_answer],
+                                                        ['style' => 'color: #008000; font-weight: bold;']
+                                                    );
+                                                }
+                                            }
+                                            echo '</td>';
                                         }
                                         echo '</tr>';
                                         break;

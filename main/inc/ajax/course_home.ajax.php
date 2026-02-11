@@ -1,7 +1,6 @@
 <?php
 /* For licensing terms, see /license.txt */
 
-use Chamilo\CourseBundle\Entity\CCourseDescription;
 use Chamilo\CourseBundle\Entity\CTool;
 use ChamiloSession as Session;
 
@@ -291,17 +290,15 @@ switch ($action) {
                 echo get_lang('PrivateAccess');
                 break;
             }
-
-            /** @var array<int, CCourseDescription> $courseDescriptions */
-            $courseDescriptions = Database::getManager()
-                ->getRepository(CCourseDescription::class)
-                ->findBy(['cId' => $course_info['real_id'], 'sessionId' => 0])
-            ;
-
-            $descriptions = [];
-
-            foreach ($courseDescriptions as $courseDescription) {
-                $descriptions[$courseDescription->getIid()] = $courseDescription;
+            $table = Database::get_course_table(TABLE_COURSE_DESCRIPTION);
+            $sql = "SELECT * FROM $table
+                    WHERE c_id = ".$course_info['real_id']." AND session_id = 0
+                    ORDER BY id";
+            $result = Database::query($sql);
+            if (Database::num_rows($result) > 0) {
+                while ($description = Database::fetch_object($result)) {
+                    $descriptions[$description->id] = $description;
+                }
                 // Function that displays the details of the course description in html.
                 $content = CourseManager::get_details_course_description_html(
                     $descriptions,
@@ -750,6 +747,56 @@ switch ($action) {
             Session::erase($notificationId);
         }
 
+        break;
+    case 'get_counter':
+        require_once __DIR__.'/../global.inc.php';
+        $userId = api_get_user_id();
+        $courseId = isset($_REQUEST['course_id']) ? (int) $_REQUEST['course_id'] : 0;
+        $sessionId = isset($_REQUEST['session_id']) ? (int) $_REQUEST['session_id'] : 0;
+
+        $contentCounter = '';
+        $showCourseTimeCounterOnSessions = api_get_configuration_value('course_home_show_time_counter');
+        $showCourseTimeCounterOnThisSession = SessionManager::getFilteredExtraFields($sessionId,['show_time_counter_on_course']);
+        $showCourseTimeSpent = false;
+
+        if (!empty($showCourseTimeCounterOnThisSession) && $showCourseTimeCounterOnThisSession[0]['value']) {
+            $showCourseTimeSpent = true;
+        }
+
+        if ($showCourseTimeCounterOnSessions && $sessionId != 0 && $showCourseTimeSpent) {
+            $logInfo = [
+                'tool' => 'Chrono',
+            ];
+            Event::registerLog($logInfo);            
+
+            $timeSpentOnCourse = Tracking::get_time_spent_on_the_course($userId, $courseId, $sessionId);
+
+            $hours = intdiv($timeSpentOnCourse, 3600);
+            $minutes = intdiv($timeSpentOnCourse % 3600, 60);
+
+            $hoursStr = strval($hours);
+            $minutesStr = sprintf("%02d", $minutes);
+
+            $userInfo = api_get_user_info($userId);
+            $firstName = $userInfo['firstname'];
+            $contentCounter = '<span style="padding:5px; color: #fff;">'.sprintf(get_lang('TimeInCourse'), $firstName).'</span>
+            ';
+
+            foreach (str_split($hoursStr) as $digit) {
+                $contentCounter .= '<span style="background-color:#fff; color: black; border-radius: 4px; padding: 5px;">'.$digit.'</span>
+                ';
+            }
+
+            $contentCounter .= '<span style="background-color:#fff; color: black; border-radius: 4px; padding: 5px;">:</span>
+            ';
+
+            foreach (str_split($minutesStr) as $digit) {
+                $contentCounter .= '<span style="background-color:#fff; color: black; border-radius: 4px; padding: 5px;">'.$digit.'</span>
+                ';
+            }
+        }
+
+        echo $contentCounter;
         break;
     default:
         echo '';

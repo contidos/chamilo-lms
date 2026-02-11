@@ -128,7 +128,6 @@ $xlsxEmailCounts = [];
 $xlsxNameCounts = [];
 $duplicateEmails = [];
 $duplicateNames = [];
-$generatedEmails = []; // username -> generatedEmail
 $xlsxUsernames = []; // Store usernames from XLSX
 
 // Output columns for missing field and duplicate files
@@ -147,8 +146,8 @@ function normalizeName($name)
 function removeAccents($str)
 {
     $str = str_replace(
-        ['à', 'á', 'â', 'ã', 'ä', 'ç', 'è', 'é', 'ê', 'ë', 'ì', 'í', 'î', 'ï', 'ñ', 'ò', 'ó', 'ô', 'õ', 'ö', 'ù', 'ú', 'û', 'ü', 'ý', 'ÿ', 'À', 'Á', 'Â', 'Ã', 'Ä', 'Å', 'Ç', 'È', 'É', 'Ê', 'Ë', 'Ì', 'Í', 'Î', 'Ï', 'Ñ', 'Ò', 'Ó', 'Ô', 'Õ', 'Ö', 'Ù', 'Ú', 'Û', 'Ü', 'Ý', "'"],
-        ['a', 'a', 'a', 'a', 'a', 'c', 'e', 'e', 'e', 'e', 'i', 'i', 'i', 'i', 'n', 'o', 'o', 'o', 'o', 'o', 'u', 'u', 'u', 'u', 'y', 'y', 'A', 'A', 'A', 'A', 'A', 'A', 'C', 'E', 'E', 'E', 'E', 'I', 'I', 'I', 'I', 'N', 'O', 'O', 'O', 'O', 'O', 'U', 'U', 'U', 'U', 'Y', ''],
+        ['à', 'á', 'â', 'ã', 'ä', 'ç', 'è', 'é', 'ê', 'ë', 'ì', 'í', 'î', 'ï', 'ñ', 'ò', 'ó', 'ô', 'õ', 'ö', 'ù', 'ú', 'û', 'ü', 'ý', 'ÿ', 'À', 'Á', 'Â', 'Ã', 'Ä', 'Å', 'Ç', 'È', 'É', 'Ê', 'Ë', 'Ì', 'Í', 'Î', 'Ï', 'Ñ', 'Ò', 'Ó', 'Ô', 'Õ', 'Ö', 'Ù', 'Ú', 'Û', 'Ü', 'Ý'],
+        ['a', 'a', 'a', 'a', 'a', 'c', 'e', 'e', 'e', 'e', 'i', 'i', 'i', 'i', 'n', 'o', 'o', 'o', 'o', 'o', 'u', 'u', 'u', 'u', 'y', 'y', 'A', 'A', 'A', 'A', 'A', 'A', 'C', 'E', 'E', 'E', 'E', 'I', 'I', 'I', 'I', 'N', 'O', 'O', 'O', 'O', 'O', 'U', 'U', 'U', 'U', 'Y'],
         $str
     );
 
@@ -178,22 +177,37 @@ function generateProposedLogin($xlsxLastname, $xlsxFirstname, $isActive, &$usedL
     $lastFirstnamePart = end($firstnameParts);
     $lastPartLetters = strtolower(preg_replace('/[\s-]+/', '', $lastFirstnamePart));
 
-    // Handle duplicates by incrementally adding letters from the last firstname part if active
-    if ($isActive) {
-        $letterCount = 0;
-        while (isset($usedLogins['logins'][$login]) && $usedLogins['logins'][$login]['active']) {
-            $letterCount++;
-            if ($letterCount > strlen($lastPartLetters) - 1) {
-                break; // No more letters available. Will append a number below
+    // Increment occurrence count for this login
+    $usedLogins['counts'][$login] = isset($usedLogins['counts'][$login]) ? $usedLogins['counts'][$login] + 1 : 1;
+    $occurrence = $usedLogins['counts'][$login];
+
+    // Handle duplicates
+    if (isset($usedLogins['logins'][$login])) {
+        // Only modify if both current and previous users are active
+        if ($isActive && $usedLogins['logins'][$login]['active']) {
+            if ($occurrence == 2) {
+                // Second occurrence: append next letter from last firstname part
+                if (strlen($lastPartLetters) > 1) {
+                    $login = $baseLogin.substr($lastPartLetters, 1, 1); // e.g., 'i' from 'Pierre'
+                } else {
+                    $login = $baseLogin.'1'; // Fallback if no more letters
+                }
+            } elseif ($occurrence >= 3) {
+                // Third+ occurrence: append increasing letters from last firstname part
+                $extraLetters = min($occurrence - 1, strlen($lastPartLetters) - 1); // e.g., 2 letters for 3rd, 3 for 4th
+                if ($extraLetters > 0) {
+                    $login = $baseLogin.substr($lastPartLetters, 1, $extraLetters); // e.g., 'ii', 'iii'
+                } else {
+                    $login = $baseLogin.($occurrence - 1); // Fallback to number
+                }
             }
-            $login = $baseLogin.substr($lastPartLetters, 1, $letterCount);
         }
     }
 
     // Ensure uniqueness by appending a number if still conflicting
     $suffix = 1;
     $originalLogin = $login;
-    while (isset($usedLogins['logins'][$login]) && $usedLogins['logins'][$login]['active']) {
+    while (isset($usedLogins['logins'][$login])) {
         $login = $originalLogin.$suffix;
         $suffix++;
     }
@@ -233,19 +247,6 @@ function createMissingFieldFile($filename, $rows, $columns)
     } catch (Exception $e) {
         echo "Error saving $filename: {$e->getMessage()}\n";
     }
-}
-
-/**
- * Generate a tentative e-mail address from firstname and lastname.
- */
-function generateMailFromFirstAndLastNames(string $firstname, string $lastname, string $domain): string
-{
-    $emailLastnameParts = preg_split('/[\s-]+/', trim(removeAccents($lastname)), -1, PREG_SPLIT_NO_EMPTY);
-    $emailLastname = !empty($emailLastnameParts[0]) ? strtolower($emailLastnameParts[0]) : '';
-    $emailFirstnameParts = preg_split('/[\s-]+/', trim(removeAccents($firstname)), -1, PREG_SPLIT_NO_EMPTY);
-    $emailFirstname = !empty($emailFirstnameParts[0]) ? strtolower($emailFirstnameParts[0]) : '';
-
-    return "$emailLastname.$emailFirstname@$domain";
 }
 
 // Detect potential issues in XLSX file
@@ -294,21 +295,27 @@ foreach ($xlsxRows as $rowIndex => $xlsxRow) {
     ];
 
     if ($isActive) {
-        if (empty($xlsxUserData['email'])) {
-            $generatedEmail = $baseEmail = generateMailFromFirstAndLastNames($xlsxUserData['firstname'], $xlsxUserData['lastname'], $domain);
+        if (empty($xlsxUserData['email']) && strpos($xlsxUserData['official_code'], '0009') !== false) {
+            $emailLastnameParts = preg_split('/[\s-]+/', trim(removeAccents($xlsxUserData['lastname'])), -1, PREG_SPLIT_NO_EMPTY);
+            $emailLastname = !empty($emailLastnameParts[0]) ? strtolower($emailLastnameParts[0]) : '';
+            $emailFirstnameParts = preg_split('/[\s-]+/', trim(removeAccents($xlsxUserData['firstname'])), -1, PREG_SPLIT_NO_EMPTY);
+            $emailFirstname = !empty($emailFirstnameParts[0]) ? strtolower($emailFirstnameParts[0]) : '';
+
+            $baseEmail = "{$emailLastname}.{$emailFirstname}@{$domain}";
+            $generatedEmail = $baseEmail;
             $suffix = isset($generatedEmailCounts[$baseEmail]) ? count($generatedEmailCounts[$baseEmail]) + 1 : 1;
             if ($suffix > 1) {
-                $generatedEmail = preg_replace('/^([^@]+)@(.+)/', '${1}'.$suffix.'@${2}', $baseEmail);
+                $generatedEmail = "{$emailLastname}.{$emailFirstname}{$suffix}@{$domain}";
             }
             $generatedEmail = strtoupper($generatedEmail);
             $generatedEmailCounts[$baseEmail][] = $rowData;
 
             $rowData['Mail'] = $generatedEmail;
             $xlsxUserData['email'] = $generatedEmail;
-            $xlsxUserData['emailSource'] = 'Generated during import';
             $emailMissing[] = $rowData;
             $xlsxEmailCounts[$generatedEmail][] = $rowData;
-            $generatedEmails[$xlsxUserData['official_code']] = [$generatedEmail];
+        } elseif (empty($xlsxUserData['email'])) {
+            $emailMissing[] = $rowData;
         }
 
         if (empty($xlsxUserData['lastname'])) {
@@ -355,7 +362,7 @@ createMissingFieldFile($outputDir.'duplicate_name.xlsx', $duplicateNames, $outpu
 
 // Generate unmatched_db_users.xlsx
 $unmatchedUsers = [];
-$sql = "SELECT id, username, official_code, email, active FROM user";
+$sql = "SELECT id, username, official_code, email FROM user";
 $stmt = $database->query($sql);
 while ($dbUser = $stmt->fetch()) {
     if (!in_array($dbUser['username'], $xlsxUsernames) && !empty($dbUser['username'])) {
@@ -364,11 +371,10 @@ while ($dbUser = $stmt->fetch()) {
             'Username' => $dbUser['username'],
             'User ID' => $dbUser['id'],
             'E-mail' => $dbUser['email'],
-            'Active' => $dbUser['active'] ? 'Yes' : 'No',
         ];
     }
 }
-$unmatchedColumns = ['Matricule', 'Username', 'User ID', 'E-mail', 'Active'];
+$unmatchedColumns = ['Matricule', 'Username', 'User ID', 'E-mail'];
 createMissingFieldFile($outputDir.'unmatched_db_users.xlsx', $unmatchedUsers, $unmatchedColumns);
 
 // Process users: compare with database, log decisions, and update/insert if --proceed
@@ -377,10 +383,8 @@ $userManager = new UserManager();
 $usedLogins = ['logins' => [], 'counts' => []]; // Reset usedLogins to avoid false duplicates
 $emptyRowCount = 0;
 $userActions = []; // Initialize array to store user actions
-$userSkippedWhileActive = []; // Initialize array to store special cases
 foreach ($xlsxRows as $rowIndex => $rowData) {
     // Check for empty row
-    $emailSource = 'SAP';
     $isEmpty = true;
     foreach ($rowData as $cell) {
         if (!empty(trim($cell))) {
@@ -409,36 +413,26 @@ foreach ($xlsxRows as $rowIndex => $rowData) {
     $xlsxUserData['username'] = generateProposedLogin($xlsxUserData['lastname'], $xlsxUserData['firstname'], $isActive, $usedLogins);
     $dbUsername = Database::escape_string($xlsxUserData['username']);
 
-    if (!empty($xlsxUserData['official_code']) && !empty($generatedEmails[$xlsxUserData['official_code']])) {
-        $emailSource = 'E-mail generated during import';
-        $xlsxUserData['email'] = $generatedEmails[$xlsxUserData['official_code']];
-    } elseif (!empty($rowData['emailSource'])) {
-        $emailSource = $rowData['emailSource'];
-    }
-
     // Get current time for row logging
     $rowTime = new DateTime();
 
     // Skip users with Matricule starting with 0009
     if (strpos($xlsxUserData['official_code'], '0009') === 0) {
         echo '['.$rowTime->format('H:i:s').'] Row '.($rowIndex + 2).": Skipped - Matricule starts with 0009 (username: $dbUsername)\n";
-        $logRow = [
+        $userActions[] = [
             'Action Type' => 'skipped',
             'User ID' => '',
             'Username' => $dbUsername,
             'Official Code' => $xlsxUserData['official_code'],
             'E-mail' => $xlsxUserData['email'],
-            'E-mail source' => $emailSource,
             'External User ID' => $xlsxUserData['official_code'],
             'Updated Fields' => 'Matricule starts with 0009',
         ];
-        $userActions[] = $logRow;
-        $userSkippedWhileActive[] = $logRow;
         continue;
     }
 
     // Check for existing user by username
-    $sql = "SELECT id, firstname, lastname, email, official_code, phone, active, status, picture_uri, expiration_date, language, creator_id
+    $sql = "SELECT id, firstname, lastname, email, official_code, phone, active
             FROM user
             WHERE username = '$dbUsername'";
     $stmt = $database->query($sql);
@@ -451,16 +445,14 @@ foreach ($xlsxRows as $rowIndex => $rowData) {
     // Decision logic
     if (empty($dbUser) && empty($xlsxUserData['active'])) {
         echo '['.$rowTime->format('H:i:s').'] Row '.($rowIndex + 2).": Skipped - 'Actif' is empty and no matching user in database (username: $dbUsername)\n";
-        $emailSource = 'Not relevant (user ignored)';
         $userActions[] = [
             'Action Type' => 'skipped',
             'User ID' => '',
             'Username' => $dbUsername,
             'Official Code' => $xlsxUserData['official_code'],
             'E-mail' => $xlsxUserData['email'],
-            'E-mail source' => $emailSource,
             'External User ID' => $xlsxMatricule,
-            'Updated Fields' => '"Active" field is empty and no matching user in database',
+            'Updated Fields' => 'Actif is empty and no matching user in database',
         ];
         continue;
     }
@@ -471,30 +463,23 @@ foreach ($xlsxRows as $rowIndex => $rowData) {
     foreach ($requiredFields as $field) {
         if (empty($xlsxUserData[$field])) {
             $missingFields[] .= $field;
-            if ($field == 'email') {
-                $emailSource = 'EMPTY IN SAP';
-            }
         }
     }
 
     if (!empty($missingFields)) {
         echo '['.$rowTime->format('H:i:s').'] Row '.($rowIndex + 2).': Skipped - missing fields: '.implode(', ', $missingFields)." (username: $dbUsername)\n";
-        $logRow = [
+        $userActions[] = [
             'Action Type' => 'skipped',
             'User ID' => '',
             'Username' => $dbUsername,
             'Official Code' => $xlsxUserData['official_code'],
             'E-mail' => $xlsxUserData['email'],
-            'E-mail source' => $emailSource,
             'External User ID' => $xlsxMatricule,
             'Updated Fields' => 'Missing fields: '.implode(', ', $missingFields),
         ];
-        $userActions[] = $logRow;
-        $userSkippedWhileActive[] = $logRow;
         continue;
     }
 
-    // If the user was found/existed in the local database
     if ($dbUser) {
         // Check for updates
         $updates = [];
@@ -530,16 +515,12 @@ foreach ($xlsxRows as $rowIndex => $rowData) {
                         null, // password not updated
                         null, // auth_source
                         $xlsxUserData['email'],
-                        $dbUser['status'], // status
+                        null, // status
                         $xlsxUserData['official_code'],
                         $xlsxUserData['phone'],
-                        $dbUser['picture_uri'], // picture_uri
-                        $dbUser['expiration_date'], // expiration_date
-                        $xlsxActive,
-                        $dbUser['creator_id'],
-                        0,
-                        null,
-                        $dbUser['language']
+                        null, // picture_uri
+                        null, // expiration_date
+                        $xlsxActive
                     );
                     if ($user) {
                         // Update extra field 'external_user_id'
@@ -551,39 +532,32 @@ foreach ($xlsxRows as $rowIndex => $rowData) {
                             'Username' => $dbUsername,
                             'Official Code' => $xlsxUserData['official_code'],
                             'E-mail' => $xlsxUserData['email'],
-                            'E-mail source' => $emailSource,
                             'External User ID' => $xlsxMatricule,
                             'Updated Fields' => implode(', ', array_map(function ($update) { return trim(explode(':', $update)[0]); }, $updates)),
                         ];
                     } else {
                         echo "  Error: Could not update user (username: $dbUsername)\n";
-                        $logRow = [
+                        $userActions[] = [
                             'Action Type' => 'skipped',
                             'User ID' => $dbUser['id'],
                             'Username' => $dbUsername,
                             'Official Code' => $xlsxUserData['official_code'],
                             'E-mail' => $xlsxUserData['email'],
-                            'E-mail source' => $emailSource,
                             'External User ID' => $xlsxMatricule,
                             'Updated Fields' => 'Could not update user',
                         ];
-                        $userActions[] = $logRow;
-                        $userSkippedWhileActive[] = $logRow;
                     }
                 } catch (Exception $e) {
                     echo "  Error: Failed to update user (username: $dbUsername): {$e->getMessage()}\n";
-                    $logRow = [
+                    $userActions[] = [
                         'Action Type' => 'skipped',
                         'User ID' => $dbUser['id'],
                         'Username' => $dbUsername,
                         'Official Code' => $xlsxUserData['official_code'],
                         'E-mail' => $xlsxUserData['email'],
-                        'E-mail source' => $emailSource,
                         'External User ID' => $xlsxMatricule,
                         'Updated Fields' => 'Failed to update user: '.$e->getMessage(),
                     ];
-                    $userActions[] = $logRow;
-                    $userSkippedWhileActive[] = $logRow;
                 }
             } else {
                 echo "   Sim mode: Updated user and external_user_id (username: $dbUsername)\n";
@@ -593,25 +567,21 @@ foreach ($xlsxRows as $rowIndex => $rowData) {
                     'Username' => $dbUsername,
                     'Official Code' => $xlsxUserData['official_code'],
                     'E-mail' => $xlsxUserData['email'],
-                    'E-mail source' => $emailSource,
                     'External User ID' => $xlsxMatricule,
                     'Updated Fields' => implode(', ', array_map(function ($update) { return trim(explode(':', $update)[0]); }, $updates)),
                 ];
             }
         } else {
             echo '['.$rowTime->format('H:i:s').'] Row '.($rowIndex + 2).": No action - no changes needed (username: $dbUsername)\n";
-            $logRow = [
+            $userActions[] = [
                 'Action Type' => 'skipped',
                 'User ID' => $dbUser['id'],
                 'Username' => $dbUsername,
                 'Official Code' => $xlsxUserData['official_code'],
                 'E-mail' => $xlsxUserData['email'],
-                'E-mail source' => $emailSource,
                 'External User ID' => $xlsxMatricule,
                 'Updated Fields' => 'No changes needed',
             ];
-            $userActions[] = $logRow;
-            $userSkippedWhileActive[] = $logRow;
         }
     } else {
         echo '['.$rowTime->format('H:i:s').'] Row '.($rowIndex + 2).": Insert new user - No existing user found (username: $dbUsername)\n";
@@ -632,7 +602,7 @@ foreach ($xlsxRows as $rowIndex => $rowData) {
                     null,
                     null,
                     $xlsxActive,
-                    0,
+                    null,
                     null  // creator_id
                 );
                 if ($userId) {
@@ -645,39 +615,32 @@ foreach ($xlsxRows as $rowIndex => $rowData) {
                         'Username' => $dbUsername,
                         'Official Code' => $xlsxUserData['official_code'],
                         'E-mail' => $xlsxUserData['email'],
-                        'E-mail source' => $emailSource,
                         'External User ID' => $xlsxMatricule,
                         'Updated Fields' => '',
                     ];
                 } else {
                     echo "  Error: Could not create user (username: $dbUsername)\n";
-                    $logRow = [
+                    $userActions[] = [
                         'Action Type' => 'skipped',
                         'User ID' => '',
                         'Username' => $dbUsername,
                         'Official Code' => $xlsxUserData['official_code'],
                         'E-mail' => $xlsxUserData['email'],
-                        'E-mail source' => $emailSource,
                         'External User ID' => $xlsxMatricule,
                         'Updated Fields' => 'Could not create user',
                     ];
-                    $userActions[] = $logRow;
-                    $userSkippedWhileActive[] = $logRow;
                 }
             } catch (Exception $e) {
                 echo "  Error: Failed to insert user (username: $dbUsername): {$e->getMessage()}\n";
-                $logRow = [
+                $userActions[] = [
                     'Action Type' => 'skipped',
                     'User ID' => '',
                     'Username' => $dbUsername,
                     'Official Code' => $xlsxUserData['official_code'],
                     'E-mail' => $xlsxUserData['email'],
-                    'E-mail source' => $emailSource,
                     'External User ID' => $xlsxMatricule,
                     'Updated Fields' => 'Failed to insert user: '.$e->getMessage(),
                 ];
-                $userActions[] = $logRow;
-                $userSkippedWhileActive[] = $logRow;
             }
         } else {
             echo "   Sim mode: Inserted user and external_user_id (username: $dbUsername)\n";
@@ -687,7 +650,6 @@ foreach ($xlsxRows as $rowIndex => $rowData) {
                 'Username' => $dbUsername,
                 'Official Code' => $xlsxUserData['official_code'],
                 'E-mail' => $xlsxUserData['email'],
-                'E-mail source' => $emailSource,
                 'External User ID' => $xlsxMatricule,
                 'Updated Fields' => '',
             ];
@@ -696,9 +658,8 @@ foreach ($xlsxRows as $rowIndex => $rowData) {
 }
 
 // Generate user actions XLSX file
-$actionColumns = ['Action Type', 'User ID', 'Username', 'Official Code', 'E-mail', 'E-mail source', 'External User ID', 'Updated Fields'];
+$actionColumns = ['Action Type', 'User ID', 'Username', 'Official Code', 'E-mail', 'External User ID', 'Updated Fields'];
 createMissingFieldFile($outputDir.'user_actions.xlsx', $userActions, $actionColumns);
-createMissingFieldFile($outputDir.'skipped_user_actions.xlsx', $userSkippedWhileActive, $actionColumns);
 
 if (!$proceed) {
     echo "\nUse --proceed to apply changes to the database.\n";

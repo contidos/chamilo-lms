@@ -370,12 +370,7 @@ if ($allowUserGroups) {
     $items[] = $formUserGroup->toHtml();
 }
 
-$noEdition = false;
-if (!isset($sessionId) || $sessionId !== 0) {
-    $noEdition = true;
-}
-
-$menu = $oLP->build_action_menu(true, false, true, false, '', [], $noEdition);
+$menu = $oLP->build_action_menu(true, false, true, false);
 
 $tpl = new Template();
 $tabs = Display::tabs($headers, $items);

@@ -43,7 +43,7 @@ class Security
     public const CHAR_UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     public const CHAR_LOWER = 'abcdefghijklmnopqrstuvwxyz';
     public const CHAR_DIGITS = '0123456789';
-    public const CHAR_SYMBOLS = '!"#$%&\'()*+,-./:;=?@[]^_`{|}~';
+    public const CHAR_SYMBOLS = '!"#$%&\'()*+,-./:;<=>?@[\]^_`{|}~';
 
     public static $clean = [];
 

@@ -312,8 +312,6 @@ class AzureActiveDirectory extends Plugin
                 $extra,
             ] = $this->formatUserData($azureUserInfo);
 
-            $userInfo = api_get_user_info($userId);
-
             $userId = UserManager::update_user(
                 $userId,
                 $firstNme,
@@ -325,7 +323,7 @@ class AzureActiveDirectory extends Plugin
                 STUDENT,
                 null,
                 $phone,
-                $userInfo['picture_uri'],
+                null,
                 null,
                 $active,
                 null,

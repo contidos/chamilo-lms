@@ -218,20 +218,6 @@ switch ($action) {
 
         $data = [];
         $fileUpload = $_FILES['upload'];
-
-        try {
-            new Image($fileUpload['tmp_name']);
-        } catch (Exception $e) {
-            echo json_encode([
-                'uploaded' => 0,
-                'error' => [
-                    'message' => get_lang('MissingImagesDetected'),
-                ],
-            ]);
-
-            exit;
-        }
-
         $mimeType = mime_content_type($fileUpload['tmp_name']);
 
         $isMimeAccepted = (new Driver())->mimeAccepted($mimeType, ['image']);
@@ -250,7 +236,7 @@ switch ($action) {
                 'uploaded' => 0,
                 'error' => [
                     'message' => $e->getMessage(),
-                ],
+                ]
             ]);
 
             exit;

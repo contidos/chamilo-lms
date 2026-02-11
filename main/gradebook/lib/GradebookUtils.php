@@ -974,7 +974,7 @@ class GradebookUtils
 
     /**
      * @param FlatViewTable $flatviewtable
-     * @param array<int, Category> $cat
+     * @param Category      $cat
      * @param $users
      * @param $alleval
      * @param $alllinks

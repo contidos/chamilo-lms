@@ -256,11 +256,12 @@ function complete_missing_data(array $user): array
  * Save the imported data.
  *
  * @uses   global $inserted_in_course, which returns the list of courses the user was inserted in
- *
- * @return array The $users array, with 'message' and (for reused users) 'id' set
+ * @param  array       $users
+ * @param  bool        $sendMail
+ * @param  string|null $targetFolder
+ * @return array       The $users array, with 'message' and (for reused users) 'id' set
  */
-function save_data(array $users, bool $sendMail = false, ?string $targetFolder = null): array
-{
+function save_data(array $users, bool $sendMail = false, ?string $targetFolder = null): array {
     global $inserted_in_course, $extra_fields;
 
     // Not all scripts declare the $inserted_in_course array (although they should).
@@ -289,7 +290,7 @@ function save_data(array $users, bool $sendMail = false, ?string $targetFolder =
         }
 
         $returnMessage = '';
-        $user_id = null;
+        $user_id       = null;
 
         // 1) If the CSV row has that unique extra‑field, try to look up an existing user
         if (!empty($uniqueField) && !empty($user[$uniqueField])) {
@@ -297,10 +298,10 @@ function save_data(array $users, bool $sendMail = false, ?string $targetFolder =
             $existing = UserManager::isExtraFieldValueUniquePerUrl($user[$uniqueField], true);
             if ($existing !== null) {
                 // existing user found → reuse
-                $user_id = $existing;
+                $user_id       = $existing;
                 $returnMessage = Display::return_message(
                     sprintf(
-                        get_lang('ExistingUserWithSameExtraFieldValue'),
+                        'An existing user with the same %s was found (ID %d), enrolling instead of creating.',
                         $uniqueField,
                         $existing
                     ),
@@ -314,7 +315,7 @@ function save_data(array $users, bool $sendMail = false, ?string $targetFolder =
             // fill in missing fields, generate password, etc.
             $user = complete_missing_data($user);
             $user['Status'] = api_status_key($user['Status']);
-            $redirection = $user['Redirection'] ?? '';
+            $redirection    = $user['Redirection'] ?? '';
 
             $user_id = UserManager::create_user(
                 $user['FirstName'],
@@ -420,9 +421,9 @@ function save_data(array $users, bool $sendMail = false, ?string $targetFolder =
         }
 
         // 7) Record success
-        $user['id'] = $user_id;
+        $user['id']      = $user_id;
         $user['message'] = $returnMessage;
-        $userSaved[] = $user;
+        $userSaved[]     = $user;
     }
 
     // Save with success, error and warning users
@@ -763,7 +764,7 @@ if (isset($_POST['formSent']) && $_POST['formSent'] && $_FILES['import_file']['s
                             'error'
                         )
                     );
-                    header('Location: '.api_get_self());
+                    header('Location: ' . api_get_self());
                     exit;
                 }
             }
