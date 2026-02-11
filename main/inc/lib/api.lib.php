@@ -8960,6 +8960,10 @@ function api_can_login_as($loginAsUserId, $userId = null)
     $userInfo = api_get_user_info($loginAsUserId);
     $isDrh = function () use ($loginAsUserId) {
         if (api_is_drh()) {
+            if (true === api_get_configuration_value('disallow_hrm_login_as')) {
+                return false;
+            }
+
             if (api_drh_can_access_all_session_content()) {
                 $users = SessionManager::getAllUsersFromCoursesFromAllSessionFromStatus(
                     'drh_all',
@@ -8986,14 +8990,26 @@ function api_can_login_as($loginAsUserId, $userId = null)
         return false;
     };
 
-    $loginAsStatusForSessionAdmins = [STUDENT];
+    $allowSessionAdmin = function () use ($userInfo) {
+        if (!api_is_session_admin()) {
+            return false;
+        }
 
-    if (api_get_configuration_value('allow_session_admin_login_as_teacher')) {
-        $loginAsStatusForSessionAdmins[] = COURSEMANAGER;
-    }
+        if (true === api_get_configuration_value('disallow_session_admin_login_as')) {
+            return false;
+        }
+
+        $loginAsStatusForSessionAdmins = [STUDENT];
+
+        if (api_get_configuration_value('allow_session_admin_login_as_teacher')) {
+            $loginAsStatusForSessionAdmins[] = COURSEMANAGER;
+        }
+
+        return in_array($userInfo['status'], $loginAsStatusForSessionAdmins);
+    };
 
     return api_is_platform_admin() ||
-        (api_is_session_admin() && in_array($userInfo['status'], $loginAsStatusForSessionAdmins)) ||
+        $allowSessionAdmin() ||
         $isDrh();
 }
 
