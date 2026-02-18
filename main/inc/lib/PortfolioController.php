@@ -16,6 +16,7 @@ use Chamilo\CourseBundle\Entity\CItemProperty;
 use Chamilo\UserBundle\Entity\User;
 use Doctrine\ORM\Query\Expr\Join;
 use Mpdf\MpdfException;
+use Symfony\Component\Filesystem\Exception\FileNotFoundException;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpFoundation\Request as HttpRequest;
 
@@ -505,7 +506,7 @@ class PortfolioController
             $form->applyFilter('title', 'trim');
         }
         $editorConfig = [
-            'ToolbarSet' => 'NotebookStudent',
+            'ToolbarSet' => 'Documents',
             'Width' => '100%',
             'Height' => '400',
             'cols-size' => [2, 10, 0],
@@ -757,7 +758,7 @@ class PortfolioController
             }
         }
         $editorConfig = [
-            'ToolbarSet' => 'NotebookStudent',
+            'ToolbarSet' => 'Documents',
             'Width' => '100%',
             'Height' => '400',
             'cols-size' => [2, 10, 0],
@@ -979,6 +980,7 @@ class PortfolioController
     {
         $listByUser = false;
         $listHighlighted = $httpRequest->query->has('list_highlighted');
+        $listAlphabetical = $httpRequest->query->has('list_alphabetical');
 
         if ($httpRequest->query->has('user')) {
             $this->owner = api_get_user_entity($httpRequest->query->getInt('user'));
@@ -1041,7 +1043,7 @@ class PortfolioController
         $portfolio = [];
         if ($this->course) {
             $frmTagList = $this->createFormTagFilter($listByUser);
-            $frmStudentList = $this->createFormStudentFilter($listByUser, $listHighlighted);
+            $frmStudentList = $this->createFormStudentFilter($listByUser, $listHighlighted, $listAlphabetical);
             $frmStudentList->setDefaults(['user' => $this->owner->getId()]);
             // it translates the category title with the current user language
             $categories = $this->getCategoriesForIndex(null, 0);
@@ -1061,7 +1063,7 @@ class PortfolioController
         if ($listHighlighted) {
             $items = $this->getHighlightedItems();
         } else {
-            $items = $this->getItemsForIndex($listByUser, $frmTagList);
+            $items = $this->getItemsForIndex($listByUser, $frmTagList, $listAlphabetical);
 
             $foundComments = $this->getCommentsForIndex($frmTagList);
         }
@@ -1086,6 +1088,7 @@ class PortfolioController
 
         $template = new Template(null, false, false, false, false, false, false);
         $template->assign('user', $this->owner);
+        $template->assign('listByUser', $listByUser);
         $template->assign('course', $this->course);
         $template->assign('session', $this->session);
         $template->assign('portfolio', $portfolio);
@@ -1132,7 +1135,7 @@ class PortfolioController
      * @throws \Doctrine\ORM\OptimisticLockException
      * @throws \Doctrine\ORM\TransactionRequiredException
      */
-    public function view(Portfolio $item)
+    public function view(Portfolio $item, $urlUser)
     {
         global $interbreadcrumb;
 
@@ -1203,12 +1206,18 @@ class PortfolioController
             ;
         }
 
-        $comments = $commentsQueryBuilder
-            ->orderBy('comment.root, comment.lft', 'ASC')
-            ->setParameter('item', $item)
-            ->getQuery()
-            ->getArrayResult()
-        ;
+        if (true === api_get_configuration_value('portfolio_show_base_course_post_in_sessions')
+            && $this->session && !$item->getSession() && !$item->isDuplicatedInSession($this->session)
+        ) {
+            $comments = [];
+        } else {
+            $comments = $commentsQueryBuilder
+                ->orderBy('comment.root, comment.lft', 'ASC')
+                ->setParameter('item', $item)
+                ->getQuery()
+                ->getArrayResult()
+            ;
+        }
 
         $clockIcon = Display::returnFontAwesomeIcon('clock-o', '', true);
 
@@ -1408,10 +1417,15 @@ class PortfolioController
             $this->baseUrl.http_build_query(['action' => 'edit_item', 'id' => $item->getId()])
         );
 
+        $urlUserString = "";
+        if (!empty($urlUser)) {
+            $urlUserString = "user=".$urlUser;
+        }
+
         $actions = [];
         $actions[] = Display::url(
             Display::return_icon('back.png', get_lang('Back'), [], ICON_SIZE_MEDIUM),
-            $this->baseUrl
+            $this->baseUrl.$urlUserString
         );
 
         if ($this->itemBelongToOwner($item)) {
@@ -2337,11 +2351,23 @@ class PortfolioController
             $itemDirectory = $item->getCreationDate()->format('Y-m-d-H-i-s');
 
             $itemFilename = sprintf('%s/items/%s/item.html', $tempPortfolioDirectory, $itemDirectory);
-            $itemFileContent = $this->fixImagesSourcesToHtml($itemsHtml[$i]);
+            $imagePaths = [];
+            $itemFileContent = $this->fixMediaSourcesToHtml($itemsHtml[$i], $imagePaths);
 
             $fs->dumpFile($itemFilename, $itemFileContent);
 
             $filenames[] = $itemFilename;
+
+            foreach ($imagePaths as $imagePath) {
+                $inlineFile = dirname($itemFilename).'/'.basename($imagePath);
+
+                try {
+                    $filenames[] = $inlineFile;
+                    $fs->copy($imagePath, $inlineFile);
+                } catch (FileNotFoundException $notFoundException) {
+                    continue;
+                }
+            }
 
             $attachments = $attachmentsRepo->findFromItem($item);
 
@@ -2354,12 +2380,15 @@ class PortfolioController
                     $attachment->getFilename()
                 );
 
-                $fs->copy(
-                    $attachmentsDirectory.$attachment->getPath(),
-                    $attachmentFilename
-                );
-
-                $filenames[] = $attachmentFilename;
+                try {
+                    $fs->copy(
+                        $attachmentsDirectory.$attachment->getPath(),
+                        $attachmentFilename
+                    );
+                    $filenames[] = $attachmentFilename;
+                } catch (FileNotFoundException $notFoundException) {
+                    continue;
+                }
             }
 
             $tblItemsData[] = [
@@ -2384,12 +2413,24 @@ class PortfolioController
         foreach ($comments as $i => $comment) {
             $commentDirectory = $comment->getDate()->format('Y-m-d-H-i-s');
 
-            $commentFileContent = $this->fixImagesSourcesToHtml($commentsHtml[$i]);
+            $imagePaths = [];
+            $commentFileContent = $this->fixMediaSourcesToHtml($commentsHtml[$i], $imagePaths);
             $commentFilename = sprintf('%s/comments/%s/comment.html', $tempPortfolioDirectory, $commentDirectory);
 
             $fs->dumpFile($commentFilename, $commentFileContent);
 
             $filenames[] = $commentFilename;
+
+            foreach ($imagePaths as $imagePath) {
+                $inlineFile = dirname($commentFilename).'/'.basename($imagePath);
+
+                try {
+                    $filenames[] = $inlineFile;
+                    $fs->copy($imagePath, $inlineFile);
+                } catch (FileNotFoundException $notFoundException) {
+                    continue;
+                }
+            }
 
             $attachments = $attachmentsRepo->findFromComment($comment);
 
@@ -2402,12 +2443,15 @@ class PortfolioController
                     $attachment->getFilename()
                 );
 
-                $fs->copy(
-                    $attachmentsDirectory.$attachment->getPath(),
-                    $attachmentFilename
-                );
-
-                $filenames[] = $attachmentFilename;
+                try {
+                    $fs->copy(
+                        $attachmentsDirectory.$attachment->getPath(),
+                        $attachmentFilename
+                    );
+                    $filenames[] = $attachmentFilename;
+                } catch (FileNotFoundException $notFoundException) {
+                    continue;
+                }
             }
 
             $tblCommentsData[] = [
@@ -3600,7 +3644,7 @@ class PortfolioController
     /**
      * @throws Exception
      */
-    private function createFormStudentFilter(bool $listByUser = false, bool $listHighlighted = false): FormValidator
+    private function createFormStudentFilter(bool $listByUser = false, bool $listHighlighted = false, bool $listAlphabeticalOrder = false): FormValidator
     {
         $frmStudentList = new FormValidator(
             'frm_student_list',
@@ -3668,6 +3712,22 @@ class PortfolioController
         }
 
         $frmStudentList->addHtml("<p>$link</p>");
+
+        if (true !== api_get_configuration_value('portfolio_order_post_by_alphabetical_order')) {
+            if ($listAlphabeticalOrder) {
+                $link = Display::url(
+                    get_lang('BackToDateOrder'),
+                    $this->baseUrl
+                );
+            } else {
+                $link = Display::url(
+                    get_lang('SeeAlphabeticalOrder'),
+                    $this->baseUrl.http_build_query(['list_alphabetical' => true])
+                );
+            }
+
+            $frmStudentList->addHtml("<p>$link</p>");
+        }
 
         return $frmStudentList;
     }
@@ -3757,11 +3817,15 @@ class PortfolioController
 
     private function getItemsForIndex(
         bool $listByUser = false,
-        FormValidator $frmFilterList = null
+        FormValidator $frmFilterList = null,
+        bool $alphabeticalOrder = false
     ) {
         $currentUserId = api_get_user_id();
 
         if ($this->course) {
+            $showBaseContentInSession = $this->session
+                && true === api_get_configuration_value('portfolio_show_base_course_post_in_sessions');
+
             $queryBuilder = $this->em->createQueryBuilder();
             $queryBuilder
                 ->select('pi')
@@ -3771,7 +3835,9 @@ class PortfolioController
             $queryBuilder->setParameter('course', $this->course);
 
             if ($this->session) {
-                $queryBuilder->andWhere('pi.session = :session');
+                $queryBuilder->andWhere(
+                    $showBaseContentInSession ? 'pi.session = :session OR pi.session IS NULL' : 'pi.session = :session'
+                );
                 $queryBuilder->setParameter('session', $this->session);
             } else {
                 $queryBuilder->andWhere('pi.session IS NULL');
@@ -3891,9 +3957,22 @@ class PortfolioController
             }
 
             $queryBuilder->setParameter('current_user', $currentUserId);
-            $queryBuilder->orderBy('pi.creationDate', 'DESC');
+            if ($alphabeticalOrder || true === api_get_configuration_value('portfolio_order_post_by_alphabetical_order')) {
+                $queryBuilder->orderBy('pi.title', 'ASC');
+            } else {
+                $queryBuilder->orderBy('pi.creationDate', 'DESC');
+            }
 
             $items = $queryBuilder->getQuery()->getResult();
+
+            if ($showBaseContentInSession) {
+                $items = array_filter(
+                    $items,
+                    fn (Portfolio $item) => !($this->session && !$item->getSession() && $item->isDuplicatedInSession($this->session))
+                );
+            }
+
+            return $items;
         } else {
             $itemsCriteria = [];
             $itemsCriteria['category'] = null;
@@ -3954,6 +4033,20 @@ class PortfolioController
         $form->addButtonSave(get_lang('Save'));
 
         if ($form->validate()) {
+            if ($this->session
+                && true === api_get_configuration_value('portfolio_show_base_course_post_in_sessions')
+                && !$item->getSession()
+            ) {
+                $duplicate = $item->duplicateInSession($this->session);
+
+                $this->em->persist($duplicate);
+                $this->em->flush();
+
+                $item = $duplicate;
+
+                $formAction = $this->baseUrl.http_build_query(['action' => 'view', 'id' => $item->getId()]);
+            }
+
             $values = $form->exportValues();
 
             $parentComment = $this->em->find(PortfolioComment::class, $values['parent']);
@@ -4215,44 +4308,70 @@ class PortfolioController
         return $commentsHtml;
     }
 
-    private function fixImagesSourcesToHtml(string $htmlContent): string
+    /**
+     * @param array $imagePaths Relative paths found in $htmlContent
+     */
+    private function fixMediaSourcesToHtml(string $htmlContent, array &$imagePaths): string
     {
         $doc = new DOMDocument();
         @$doc->loadHTML($htmlContent);
 
-        $elements = $doc->getElementsByTagName('img');
+        $tagsWithSrc = ['img', 'video', 'audio', 'source'];
+        /** @var array<int, \DOMElement> $elements */
+        $elements = [];
 
-        if (empty($elements->length)) {
+        foreach ($tagsWithSrc as $tag) {
+            foreach ($doc->getElementsByTagName($tag) as $element) {
+                if ($element->hasAttribute('src')) {
+                    $elements[] = $element;
+                }
+            }
+        }
+
+        if (empty($elements)) {
             return $htmlContent;
         }
 
-        $webCoursePath = api_get_path(WEB_COURSE_PATH);
-        $webUploadPath = api_get_path(WEB_UPLOAD_PATH);
+        /** @var array<int, \DOMElement> $anchorElements */
+        $anchorElements = $doc->getElementsByTagName('a');
 
-        /** @var \DOMElement $element */
+        $webPath = api_get_path(WEB_PATH);
+        $sysPath = rtrim(api_get_path(SYS_PATH), '/');
+
+        $paths = [
+            '/app/upload/' => $sysPath,
+            '/courses/' => $sysPath.'/app',
+        ];
+
         foreach ($elements as $element) {
             $src = trim($element->getAttribute('src'));
 
-            if (strpos($src, 'http') === 0) {
+            if (!str_starts_with($src, '/')
+                && !str_starts_with($src, $webPath)
+            ) {
                 continue;
             }
 
-            if (strpos($src, '/app/upload/') === 0) {
-                $element->setAttribute(
-                    'src',
-                    preg_replace('/\/app/upload\//', $webUploadPath, $src, 1)
-                );
+            // to search anchors linking to files
+            if ($anchorElements->length > 0) {
+                foreach ($anchorElements as $anchorElement) {
+                    if (!$anchorElement->hasAttribute('href')) {
+                        continue;
+                    }
 
-                continue;
+                    if ($src === $anchorElement->getAttribute('href')) {
+                        $anchorElement->setAttribute('href', basename($src));
+                    }
+                }
             }
 
-            if (strpos($src, '/courses/') === 0) {
-                $element->setAttribute(
-                    'src',
-                    preg_replace('/\/courses\//', $webCoursePath, $src, 1)
-                );
+            $src = str_replace($webPath, '/', $src);
 
-                continue;
+            foreach ($paths as $prefix => $basePath) {
+                if (str_starts_with($src, $prefix)) {
+                    $imagePaths[] = $basePath.urldecode($src);
+                    $element->setAttribute('src', basename($src));
+                }
             }
         }
 

@@ -46,7 +46,7 @@ class Login
                 }
                 $user_account_list = get_lang('YourRegistrationData')." : \n".
                     get_lang('UserName').' : '.$user['loginName']."\n".
-                    get_lang('ResetLink').' : '.$reset_link;
+                    get_lang('ResetLink').' : '.trim($reset_link);
 
                 if ($user_account_list) {
                     $user_account_list = "\n-----------------------------------------------\n".$user_account_list;
@@ -63,7 +63,7 @@ class Login
                     $user_account_list[] =
                         get_lang('YourRegistrationData')." : \n".
                         get_lang('UserName').' : '.$this_user['loginName']."\n".
-                        get_lang('ResetLink').' : '.$reset_link;
+                        get_lang('ResetLink').' : '.trim($reset_link);
                 }
                 if ($user_account_list) {
                     $user_account_list = implode("\n-----------------------------------------------\n", $user_account_list);
@@ -77,7 +77,7 @@ class Login
             $user_account_list =
                 get_lang('YourRegistrationData')." : \n".
                 get_lang('UserName').' : '.$user['loginName']."\n".
-                $reset_link.'';
+                trim($reset_link).'';
         }
 
         return $user_account_list;
@@ -820,7 +820,8 @@ class Login
     }
 
     /**
-     * Returns true if user exists in the platform when asking the password.
+     * Returns the users that correspond to this username or email if exist else false.
+     * If many users correspond to this email or username the users as ordered by registration_date desc.
      *
      * @param string $username (email or username)
      *
@@ -857,7 +858,8 @@ class Login
                     creator_id,
                     auth_source
 				 FROM $tbl_user
-				 WHERE ( $condition AND active = 1) ";
+				 WHERE ( $condition AND active = 1)
+				 ORDER BY registration_date DESC";
         $result = Database::query($query);
         $num_rows = Database::num_rows($result);
         if ($result && $num_rows > 0) {

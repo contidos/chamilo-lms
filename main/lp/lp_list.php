@@ -80,24 +80,26 @@ if (!empty($sessionId)) {
 
 if ($is_allowed_to_edit) {
     $actionLeft = '';
-    $actionLeft .= Display::url(
-        Display::return_icon(
-            'new_learnpath.png',
-            get_lang('LearnpathAddLearnpath'),
-            '',
-            ICON_SIZE_MEDIUM
-        ),
-        api_get_self().'?'.api_get_cidreq().'&action=add_lp'
-    );
-    $actionLeft .= Display::url(
-        Display::return_icon(
-            'import_scorm.png',
-            get_lang('UploadScorm'),
-            '',
-            ICON_SIZE_MEDIUM
-        ),
-        '../upload/index.php?'.api_get_cidreq().'&curdirpath=/&tool='.TOOL_LEARNPATH
-    );
+    if (!(api_get_configuration_value('session_hide_lp_creation') === true && (isset($sessionId) && $sessionId != 0))) {
+        $actionLeft .= Display::url(
+            Display::return_icon(
+                'new_learnpath.png',
+                get_lang('LearnpathAddLearnpath'),
+                '',
+                ICON_SIZE_MEDIUM
+            ),
+            api_get_self().'?'.api_get_cidreq().'&action=add_lp'
+        );
+        $actionLeft .= Display::url(
+            Display::return_icon(
+                'import_scorm.png',
+                get_lang('UploadScorm'),
+                '',
+                ICON_SIZE_MEDIUM
+            ),
+            '../upload/index.php?'.api_get_cidreq().'&curdirpath=/&tool='.TOOL_LEARNPATH
+        );
+    }
 
     if (api_get_setting('service_ppt2lp', 'active') === 'true') {
         $actionLeft .= Display::url(
@@ -200,6 +202,7 @@ $isInvitee = api_is_invitee();
 $hideScormExportLink = api_get_setting('hide_scorm_export_link');
 $hideScormCopyLink = api_get_setting('hide_scorm_copy_link');
 $hideScormPdfLink = api_get_setting('hide_scorm_pdf_link');
+$hideLpCopyInSession = (api_get_configuration_value('session_hide_lp_copy') === true && (isset($sessionId) && $sessionId != 0));
 $options = learnpath::getIconSelect();
 $cidReq = api_get_cidreq();
 
@@ -925,7 +928,7 @@ foreach ($categories as $item) {
                 $dsp_disk = null;
             }
 
-            if ($hideScormCopyLink === 'true') {
+            if ($hideScormCopyLink === 'true' || $hideLpCopyInSession) {
                 $copy = null;
             }
 
@@ -939,6 +942,7 @@ foreach ($categories as $item) {
             );
 
             $listData[] = [
+                'lp_id' => $id,
                 'learnpath_icon' => $icon_learnpath,
                 'url_start' => $url_start_lp,
                 'title' => $my_title,
@@ -1028,7 +1032,8 @@ if ($ending && $allLpTimeValid && api_get_configuration_value('download_files_af
     }
 }
 
-$template = new Template($nameTools);
+$reduced = (isset($reduced) && $reduced);
+$template = new Template($nameTools, !$reduced);
 $template->assign('first_session_category', $firstSessionCategoryId);
 $template->assign('session_star_icon', Display::return_icon('star.png', get_lang('Session')));
 $template->assign('subscription_settings', $subscriptionSettings);
@@ -1045,6 +1050,7 @@ $template->assign('lp_is_shown', $lpIsShown);
 $template->assign('filtered_category', $filteredCategoryId);
 $template->assign('allow_min_time', $allowMinTime);
 $template->assign('allow_dates_for_student', $allowDatesForStudent);
+$template->assign('sec_token', $token);
 
 $templateName = $template->get_template('learnpath/list.tpl');
 $content = $template->fetch($templateName);
