@@ -16,6 +16,11 @@ $includeServices = $plugin->get('include_services') === 'true';
 
 $userInfo = api_get_user_info();
 
+if (empty($userInfo)) {
+    header("Location: course_catalog.php");
+    exit();
+}
+
 $productTypes = $plugin->getProductTypes();
 $saleStatuses = $plugin->getSaleStatuses();
 $paymentTypes = $plugin->getPaymentTypes();

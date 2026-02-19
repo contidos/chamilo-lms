@@ -1653,11 +1653,11 @@ class BuyCoursesPlugin extends Plugin
      *
      * @param int    $itemId      The product ID
      * @param int    $paymentType The payment type
-     * @param string $couponId    The coupon ID
+     * @param int $couponId    The coupon ID
      *
      * @return bool
      */
-    public function registerSale(int $itemId, int $paymentType, string $couponId = null)
+    public function registerSale(int $itemId, int $paymentType, int $couponId = null)
     {
         if (!in_array(
                 $paymentType,

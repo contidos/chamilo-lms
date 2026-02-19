@@ -23,7 +23,7 @@ if (($allow === 'true' && api_is_anonymous()) || !api_is_anonymous()) {
     );
 
     if ($countCourses > 0 && !$userIsAdmin) {
-        api_location($webPluginPath.'src/course_catalog.php');
+        api_location('/main/auth/courses.php');
     }
 
     $countSessions = $plugin->getCatalogSessionList(
@@ -36,7 +36,7 @@ if (($allow === 'true' && api_is_anonymous()) || !api_is_anonymous()) {
     );
 
     if ($countSessions > 0 && !$userIsAdmin) {
-        api_location($webPluginPath.'src/session_catalog.php');
+        api_location('/main/auth/courses.php');
     }
 
     $htmlHeadXtra[] = api_get_css(api_get_path(WEB_PLUGIN_PATH).'buycourses/resources/css/style.css');

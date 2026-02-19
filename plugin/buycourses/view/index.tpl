@@ -22,13 +22,13 @@
 <div class="row">
     <div class="col-md-4">
         <div class="thumbnail">
-            <a href="src/course_catalog.php">
+            <a href="/main/auth/courses.php">
                 <img src="resources/img/128/buycourses.png">
             </a>
             <div class="caption">
                 <p class="text-center">
                     <a class="btn btn-default btn-sm"
-                       href="src/course_catalog.php">{{ 'BuyCourses'|get_plugin_lang('BuyCoursesPlugin') }}</a>
+                       href="/main/auth/courses.php">{{ 'BuyCourses'|get_plugin_lang('BuyCoursesPlugin') }}</a>
                 </p>
             </div>
         </div>

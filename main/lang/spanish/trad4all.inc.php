@@ -9113,4 +9113,10 @@ $TextAppearingAtTheEndOfTheTestWhenTheUserHasFailed = "Texto que aparece al fina
 $SubscribeSessionWhenFinishedFailure = "Suscribir a la sesión al final del examen cuando el usuario no ha aprobado";
 $progressBasedOnVisiblesLPsInEachCourse = "El progreso es calculado en base a lecciones visibles en cada curso";
 $progressBasedOnXVisiblesLPs = "El progreso es calculado en base a %s lecciones visibles en el contexto presente.";
+$DueToInactivityTheSessionIsGoingToCloseJS = "Debido a la inactividad, la sesión se cerrará en";
+$KeepGoingJS = "Continuar";
+$SessionExpiredAtJS = "Sesión caducada el";
+$SessionIsClosingJS = "La sesión se está cerrando por inactividad...";
+$TimeInCourse = "Hola %s, tu tiempo en el curso es:";
+$BaseProgress = "Envío en base al progreso en el curso";
 ?>

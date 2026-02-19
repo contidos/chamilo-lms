@@ -74,16 +74,16 @@ if ($form->validate()) {
         exit;
     }
 
-    $saleId = $plugin->registerSale($item['id'], $formValues['payment_type'], $formValues['c']);
+    $saleId = $plugin->registerSale($item['id'], $formValues['payment_type'], $coupon['id']);
 
     if ($saleId !== false) {
         $_SESSION['bc_sale_id'] = $saleId;
 
-        if (isset($formValues['c'])) {
-            $couponSaleId = $plugin->registerCouponSale($saleId, $formValues['c']);
+        if (isset($formValues['c']) && $coupon !== null) {
+            $couponSaleId = $plugin->registerCouponSale($saleId, $coupon['id']);
             if ($couponSaleId !== false) {
-                $plugin->updateCouponDelivered($formValues['c']);
-                $_SESSION['bc_coupon_id'] = $formValues['c'];
+                $plugin->updateCouponDelivered($coupon['id']);
+                $_SESSION['bc_coupon_id'] = $coupon['id'];
             }
         }
 
@@ -121,7 +121,7 @@ if ($count === 0) {
 $form->addHidden('t', intval($_REQUEST['t']));
 $form->addHidden('i', intval($_REQUEST['i']));
 if ($coupon != null) {
-    $form->addHidden('c', intval($coupon['id']));
+    $form->addHidden('c', $coupon['code']);
 }
 $form->addButton('submit', $plugin->get_lang('ConfirmOrder'), 'check', 'success', 'btn-lg pull-right');
 

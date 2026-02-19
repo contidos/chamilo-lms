@@ -34,6 +34,14 @@ if ($form->validate()) {
     $maxFilter = isset($formValues['max']) ? $formValues['max'] : 0;
 }
 
+if (!empty($minFilter) || $minFilter == "") {
+    $minFilter = 0;
+}
+
+if (!empty($maxFilter) || $maxFilter == "") {
+    $maxFilter = 0;
+}
+
 $form->addHeader($plugin->get_lang('SearchFilter'));
 $form->addText('name', get_lang('CourseName'), false);
 $form->addElement(
