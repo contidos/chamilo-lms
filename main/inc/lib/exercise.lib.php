@@ -114,7 +114,7 @@ class ExerciseLib
                 }
             }
 
-            if (in_array($answerType, [FREE_ANSWER, ORAL_EXPRESSION, UPLOAD_ANSWER]) && $freeze) {
+            if (in_array($answerType, [FREE_ANSWER, ORAL_EXPRESSION, UPLOAD_ANSWER, ANSWER_IN_OFFICE_DOC]) && $freeze) {
                 return '';
             }
 
@@ -283,6 +283,22 @@ class ExerciseLib
                         </script>';
                     }
                     $s .= $multipleForm->returnForm();
+                    break;
+                case ANSWER_IN_OFFICE_DOC:
+                    if ('true' === OnlyofficePlugin::create()->get('enable_onlyoffice_plugin')) {
+                        global $exe_id;
+                        if (!empty($objQuestionTmp->extra)) {
+                            $fileUrl = api_get_course_path()."/exercises/onlyoffice/{$exerciseId}/{$questionId}/".$objQuestionTmp->extra;
+                            $documentUrl = OnlyofficeTools::getPathToView($fileUrl, false, $exe_id, $questionId);
+                            echo '<div class="office-doc-container">';
+                            echo "<iframe src='{$documentUrl}' width='100%' height='600' style='border:none;'></iframe>";
+                            echo '</div>';
+                        } else {
+                            echo '<p>'.get_lang('NoOfficeDocProvided').'</p>';
+                        }
+                    } else {
+                        echo '<p>'.get_lang('OnlyOfficePluginRequired').'</p>';
+                    }
                     break;
                 case ORAL_EXPRESSION:
                     // Add nanog
@@ -2425,6 +2441,8 @@ HOTSPOT;
         $courseId = $values['course_id'] ?? 0;
         $exerciseId = $values['exercise_id'] ?? 0;
         $status = $values['status'] ?? 0;
+        $questionType = $values['questionType'] ?? ($values['questionTypeId'] ?? 0);
+        $showAttemptsInSessions = api_get_configuration_value('show_exercise_attempts_in_all_user_sessions');
         $whereCondition = '';
         if (isset($_GET['filter_by_user']) && !empty($_GET['filter_by_user'])) {
             $filter_user = (int) $_GET['filter_by_user'];
@@ -2470,7 +2488,10 @@ HOTSPOT;
             false,
             false,
             true,
-            $status
+            $status,
+            $showAttemptsInSessions,
+            $questionType,
+            true
         );
 
         if (!empty($result)) {
@@ -2576,7 +2597,7 @@ HOTSPOT;
                             FROM $TBL_EXERCISES_REL_QUESTION terq
                             LEFT JOIN $TBL_EXERCISES_QUESTION teq
                             ON terq.question_id = teq.iid
-                            WHERE teq.type in (".FREE_ANSWER.", ".ORAL_EXPRESSION.", ".ANNOTATION.", ".UPLOAD_ANSWER.")
+                            WHERE teq.type in (".FREE_ANSWER.", ".ORAL_EXPRESSION.", ".ANNOTATION.", ".UPLOAD_ANSWER.", ".ANSWER_IN_OFFICE_DOC.")
             ";
 
             $resultExerciseIds = Database::query($sqlExercise);
@@ -5439,7 +5460,7 @@ EOT;
 
                 // Category report
                 $category_was_added_for_this_test = false;
-                if (isset($objQuestionTmp->category) && !empty($objQuestionTmp->category)) {
+                if (!empty($objQuestionTmp->category)) {
                     if (!isset($category_list[$objQuestionTmp->category]['score'])) {
                         $category_list[$objQuestionTmp->category]['score'] = 0;
                     }
@@ -5477,7 +5498,7 @@ EOT;
                     $category_list[$objQuestionTmp->category]['total_questions']++;
                     $category_was_added_for_this_test = true;
                 }
-                if (isset($objQuestionTmp->category_list) && !empty($objQuestionTmp->category_list)) {
+                if (!empty($objQuestionTmp->category_list)) {
                     foreach ($objQuestionTmp->category_list as $category_id) {
                         $category_list[$category_id]['score'] += $my_total_score;
                         $category_list[$category_id]['total'] += $my_total_weight;
@@ -5486,7 +5507,7 @@ EOT;
                 }
 
                 // No category for this question!
-                if ($category_was_added_for_this_test == false) {
+                if (!$category_was_added_for_this_test) {
                     if (!isset($category_list['none']['score'])) {
                         $category_list['none']['score'] = 0;
                     }
@@ -5541,7 +5562,7 @@ EOT;
                 if ($show_results) {
                     $score = $calculatedScore;
                 }
-                if (in_array($objQuestionTmp->type, [FREE_ANSWER, ORAL_EXPRESSION, ANNOTATION, UPLOAD_ANSWER])) {
+                if (in_array($objQuestionTmp->type, [FREE_ANSWER, ORAL_EXPRESSION, ANNOTATION, UPLOAD_ANSWER, ANSWER_IN_OFFICE_DOC])) {
                     $reviewScore = [
                         'score' => $my_total_score,
                         'comments' => Event::get_comments($exeId, $questionId),
@@ -6237,6 +6258,8 @@ EOT;
      */
     public static function getFeedbackText($message)
     {
+        $message = Security::remove_XSS($message);
+
         return Display::return_message($message, 'warning', false);
     }
 
@@ -6419,6 +6442,7 @@ EOT;
             READING_COMPREHENSION,
             MULTIPLE_ANSWER_TRUE_FALSE_DEGREE_CERTAINTY,
             UPLOAD_ANSWER,
+            ANSWER_IN_OFFICE_DOC,
             MATCHING_COMBINATION,
             FILL_IN_BLANKS_COMBINATION,
             MULTIPLE_ANSWER_DROPDOWN,
@@ -7401,6 +7425,65 @@ EOT;
         }
 
         return false;
+    }
+
+    /**
+     * Get formatted feedback comments for an exam attempt.
+     */
+    public static function getFeedbackComments(int $examId): string
+    {
+        $TBL_TRACK_ATTEMPT = Database::get_main_table(TABLE_STATISTIC_TRACK_E_ATTEMPT);
+        $TBL_QUIZ_QUESTION = Database::get_course_table(TABLE_QUIZ_QUESTION);
+
+        $sql = "SELECT ta.question_id, ta.teacher_comment, q.question AS title
+            FROM $TBL_TRACK_ATTEMPT ta
+            INNER JOIN $TBL_QUIZ_QUESTION q ON ta.question_id = q.iid
+            WHERE ta.exe_id = $examId
+            AND ta.teacher_comment IS NOT NULL
+            AND ta.teacher_comment != ''
+            GROUP BY ta.question_id
+            ORDER BY q.position ASC, ta.id ASC";
+
+        $result = Database::query($sql);
+        $commentsByQuestion = [];
+
+        while ($row = Database::fetch_array($result)) {
+            $questionId = $row['question_id'];
+            $questionTitle = Security::remove_XSS($row['title']);
+            $comment = Security::remove_XSS(trim(strip_tags($row['teacher_comment'])));
+
+            if (!empty($comment)) {
+                if (!isset($commentsByQuestion[$questionId])) {
+                    $commentsByQuestion[$questionId] = [
+                        'title' => $questionTitle,
+                        'comments' => [],
+                    ];
+                }
+                $commentsByQuestion[$questionId]['comments'][] = $comment;
+            }
+        }
+
+        if (empty($commentsByQuestion)) {
+            return "<p>".get_lang('NoAdditionalComments')."</p>";
+        }
+
+        $output = "<h3>".get_lang('TeacherFeedback')."</h3>";
+        $output .= "<table border='1' cellpadding='5' cellspacing='0' width='100%' style='border-collapse: collapse;'>";
+
+        foreach ($commentsByQuestion as $questionId => $data) {
+            $output .= "<tr>
+                        <td><b>".get_lang('Question')." #$questionId:</b> ".$data['title']."</td>
+                    </tr>";
+            foreach ($data['comments'] as $comment) {
+                $output .= "<tr>
+                            <td style='padding-left: 20px;'><i>".get_lang('Feedback').":</i> $comment</td>
+                        </tr>";
+            }
+        }
+
+        $output .= "</table>";
+
+        return $output;
     }
 
     private static function subscribeSessionWhenFinishedFailure(int $exerciseId): void

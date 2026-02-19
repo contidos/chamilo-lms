@@ -104,6 +104,7 @@ class Rest extends WebService
     public const GET_USER_API_KEY = 'get_user_api_key';
     public const GET_USER_LAST_CONNEXION = 'get_user_last_connexion';
     public const GET_USER_TOTAL_CONNEXION_TIME = 'get_user_total_connexion_time';
+    public const GET_USER_PROGRESS_AND_TIME_IN_SESSION = 'get_user_progress_and_time_in_session';
     public const GET_USER_SUB_GROUP = 'get_user_sub_group';
 
     public const GET_COURSES = 'get_courses';
@@ -153,6 +154,9 @@ class Rest extends WebService
     public const DELETE_GROUP_SUB_COURSE = 'delete_group_sub_course';
     public const DELETE_GROUP_SUB_SESSION = 'delete_group_sub_session';
     public const GET_AUDIT_ITEMS = 'get_audit_items';
+    public const SUBSCRIBE_COURSE_TO_SESSION_FROM_EXTRA_FIELD = 'subscribe_course_to_session_from_extra_field';
+    public const SUBSCRIBE_USER_TO_SESSION_FROM_EXTRA_FIELD = 'subscribe_user_to_session_from_extra_field';
+    public const UPDATE_SESSION_FROM_EXTRA_FIELD = 'update_session_from_extra_field';
 
     /**
      * @var Session
@@ -1522,10 +1526,30 @@ class Rest extends WebService
      *
      * @return array
      */
-    public function saveUserMessage($subject, $text, array $receivers)
+    public function saveUserMessage($subject, $text, array $receivers, $only_local)
     {
         foreach ($receivers as $userId) {
-            MessageManager::send_message($userId, $subject, $text);
+            MessageManager::send_message(
+                $userId,
+                $subject,
+                $text,
+                [],
+                [],
+                0,
+                0,
+                0,
+                0,
+                0,
+                false,
+                0,
+                [],
+                false,
+                false,
+                0,
+                [],
+                false,
+                null,
+                $only_local);
         }
 
         return [
@@ -1898,6 +1922,9 @@ class Rest extends WebService
         }
         if (isset($userParam['phone'])) {
             $phone = $userParam['phone'];
+        }
+        if (isset($userParam['official_code'])) {
+            $official_code = $userParam['official_code'];
         }
         if (isset($userParam['expiration_date'])) {
             $expiration_date = $userParam['expiration_date'];
@@ -2515,14 +2542,11 @@ class Rest extends WebService
     }
 
     /**
-     * Finds the session which has a specific value in a specific extra field and return its ID (only that)
+     * Finds the session which has a specific value in a specific extra field and return its ID (only that).
      *
-     * @param string $fieldName
-     * @param string $fieldValue
-     *
-     * @return int The matching session id, or an array with details about the session
      * @throws Exception when no session matched or more than one session matched
      *
+     * @return int The matching session id, or an array with details about the session
      */
     public function getSessionFromExtraField(string $fieldName, string $fieldValue)
     {
@@ -2551,14 +2575,11 @@ class Rest extends WebService
     }
 
     /**
-     * Finds the session which has a specific value in a specific extra field and return its details
+     * Finds the session which has a specific value in a specific extra field and return its details.
      *
-     * @param string $fieldName
-     * @param string $fieldValue
-     *
-     * @return array The matching session id, or an array with details about the session
      * @throws Exception when no session matched or more than one session matched
      *
+     * @return array The matching session id, or an array with details about the session
      */
     public function getSessionInfoFromExtraField(string $fieldName, string $fieldValue): array
     {
@@ -2594,7 +2615,7 @@ class Rest extends WebService
         $extraFields = $extraFieldValues->getAllValuesByItem($session['id']);
         // Only return these properties for each extra_field (the rest is not relevant to a webservice)
         $filter = ['variable', 'value', 'display_text'];
-        $bundle['extra_fields'] = array_map(function($item) use ($filter) {
+        $bundle['extra_fields'] = array_map(function ($item) use ($filter) {
             return array_intersect_key($item, array_flip($filter));
         }, $extraFields);
 
@@ -4322,6 +4343,297 @@ class Rest extends WebService
             $offset,
             $limit
         );
+    }
+
+    /**
+     * Returns the progress and time spent by the user in the session.
+     *
+     * @throws Exception
+     */
+    public function getUserProgressAndTimeInSession(int $userId, int $sessionId): array
+    {
+        $totalProgress = 0;
+        $totalTime = 0;
+        $nbCourses = 0;
+        $courses = SessionManager::getCoursesInSession($sessionId);
+        foreach ($courses as $courseId) {
+            $nbCourses++;
+            $totalTime += Tracking::get_time_spent_on_the_course(
+                $userId,
+                $courseId,
+                $sessionId
+            );
+            $courseInfo = api_get_course_info_by_id($courseId);
+            $totalProgress += Tracking::get_avg_student_progress(
+                $userId,
+                $courseInfo['code'],
+                [],
+                $sessionId
+            );
+        }
+        $userAverageCoursesTime = 0;
+        $userAverageProgress = 0;
+        if ($nbCourses != 0) {
+            $userAverageCoursesTime = $totalTime / $nbCourses;
+            $userAverageProgress = $totalProgress / $nbCourses;
+        }
+
+        return [
+            'userAverageCoursesTime' => $userAverageCoursesTime,
+            'userAverageProgress' => $userAverageProgress,
+        ];
+    }
+
+    /**
+     * Subscribe a specific course to a specific session, identified via extra field values.
+     *
+     * This method:
+     * - Locates the session ID using the provided session extra field name/value via ExtraFieldValue('session').
+     * - Locates the course c_id using the provided course extra field name/value via ExtraFieldValue('course').
+     * - Adds the course to the session using SessionManager::add_courses_to_session() (similar to addCoursesSession()).
+     *
+     * Required parameters:
+     * - session_field_name: Name of the extra field for sessions (e.g., 'peoplesoft_sid').
+     * - session_field_value: Value of the session extra field (e.g., '123450').
+     * - course_field_name: Name of the extra field for courses (e.g., 'peoplesoft_cid').
+     * - course_field_value: Value of the course extra field (e.g., '1').
+     *
+     * @param array $params Associative array of POST parameters.
+     *
+     * @throws Exception
+     *
+     * @return array Response in format: ['error' => bool, 'data' => array] on success, or ['error' => true, 'message' => string] on failure.
+     */
+    public function subscribeCourseToSessionFromExtraField($params)
+    {
+        // Validate required parameters (redundant with v2.php but for safety)
+        $required = ['session_field_name', 'session_field_value', 'course_field_name', 'course_field_value'];
+        foreach ($required as $key) {
+            if (empty($params[$key])) {
+                return [
+                    'error' => true,
+                    'message' => 'Missing required parameter: '.$key,
+                ];
+            }
+        }
+
+        $sessionFieldName = $params['session_field_name'];
+        $sessionFieldValue = $params['session_field_value'];
+        $courseFieldName = $params['course_field_name'];
+        $courseFieldValue = $params['course_field_value'];
+
+        // Get session ID from extra field value using ExtraFieldValue model
+        $sessionValueModel = new ExtraFieldValue('session');
+        $sessionIdList = $sessionValueModel->get_item_id_from_field_variable_and_field_value(
+            $sessionFieldName,
+            $sessionFieldValue,
+            false,
+            false,
+            true
+        );
+        if (empty($sessionIdList)) {
+            return [
+                'error' => true,
+                'message' => 'No session found with extra field value "'.$sessionFieldValue.'".',
+            ];
+        }
+        $sessionId = (int) $sessionIdList[0]['item_id']; // Assume single match
+
+        // Get course c_id from extra field value using ExtraFieldValue model
+        $courseValueModel = new ExtraFieldValue('course');
+        $courseIdList = $courseValueModel->get_item_id_from_field_variable_and_field_value(
+            $courseFieldName,
+            $courseFieldValue,
+            false,
+            false,
+            true
+        );
+        if (empty($courseIdList)) {
+            return [
+                'error' => true,
+                'message' => 'No course found with extra field value "'.$courseFieldValue.'".',
+            ];
+        }
+        $cId = (int) $courseIdList[0]['item_id']; // Assume single match
+
+        // Add course to session using existing core method (mirrors addCoursesSession logic)
+        $success = SessionManager::add_courses_to_session($sessionId, [$cId], false);
+
+        if ($success) {
+            return [
+                'error' => false,
+                'data' => [
+                    'status' => true,
+                    'message' => 'Course subscribed to session',
+                    'id_session' => $sessionId,
+                    'c_id' => $cId,
+                ],
+            ];
+        } else {
+            return [
+                'error' => true,
+                'message' => 'Failed to subscribe course to session.',
+            ];
+        }
+    }
+
+    /**
+     * Subscribe a specific user to a specific session, identified via extra field values.
+     *
+     * This method:
+     * - Locates the session ID using the provided session extra field name/value via ExtraFieldValue('session').
+     * - Locates the user ID using the provided user extra field name/value via ExtraFieldValue('user').
+     * - Adds the user to the session using SessionManager::subscribe_users_to_session() (similar to subscribeUsersToSession()).
+     *
+     * Required parameters:
+     * - session_field_name: Name of the extra field for sessions (e.g., 'peoplesoft_sid').
+     * - session_field_value: Value of the session extra field (e.g., '123450').
+     * - user_field_name: Name of the extra field for users (e.g., 'peoplesoft_uid').
+     * - user_field_value: Value of the user extra field (e.g., '1').
+     *
+     * @param array $params Associative array of POST parameters.
+     *
+     * @return array Response in format: ['error' => bool, 'data' => array] on success, or ['error' => true, 'message' => string] on failure.
+     */
+    public function subscribeUserToSessionFromExtraField($params)
+    {
+        // Validate required parameters (redundant with v2.php but for safety)
+        $required = ['session_field_name', 'session_field_value', 'user_field_name', 'user_field_value'];
+        foreach ($required as $key) {
+            if (empty($params[$key])) {
+                return [
+                    'error' => true,
+                    'message' => 'Missing required parameter: '.$key,
+                ];
+            }
+        }
+
+        $sessionFieldName = $params['session_field_name'];
+        $sessionFieldValue = $params['session_field_value'];
+        $userFieldName = $params['user_field_name'];
+        $userFieldValue = $params['user_field_value'];
+
+        // Get session ID from extra field value using ExtraFieldValue model
+        $sessionValueModel = new ExtraFieldValue('session');
+        $sessionIdList = $sessionValueModel->get_item_id_from_field_variable_and_field_value(
+            $sessionFieldName,
+            $sessionFieldValue,
+            false,
+            false,
+            true
+        );
+        if (empty($sessionIdList)) {
+            return [
+                'error' => true,
+                'message' => 'No session found with extra field value "'.$sessionFieldValue.'".',
+            ];
+        }
+        $sessionId = (int) $sessionIdList[0]['item_id']; // Extract item_id from sub-array, assume single match
+
+        // Get user ID from extra field value using ExtraFieldValue model
+        $userValueModel = new ExtraFieldValue('user');
+        $userIdList = $userValueModel->get_item_id_from_field_variable_and_field_value(
+            $userFieldName,
+            $userFieldValue,
+            false,
+            false,
+            true
+        );
+        if (empty($userIdList)) {
+            return [
+                'error' => true,
+                'message' => 'No user found with extra field value "'.$userFieldValue.'".',
+            ];
+        }
+        $userId = (int) $userIdList[0]['item_id']; // Extract item_id from sub-array, assume single match
+
+        // Add user to session using existing core method (mirrors subscribeUsersToSession logic)
+        $success = SessionManager::subscribeUsersToSession($sessionId, [$userId]);
+
+        if ($success) {
+            return [
+                'error' => false,
+                'data' => [
+                    'status' => true,
+                    'message' => 'User subscribed to session',
+                    'id_session' => $sessionId,
+                    'user_id' => $userId,
+                ],
+            ];
+        } else {
+            return [
+                'error' => true,
+                'message' => 'Failed to subscribe user to session.',
+            ];
+        }
+    }
+
+    /**
+     * Update a specific session, identified via extra field value.
+     *
+     * This method:
+     * - Locates the session ID using the provided extra field name/value via ExtraFieldValue('session').
+     * - Calls updateSession() with the located ID and provided update parameters (e.g., name, coach_username, dates).
+     *
+     * Required parameters:
+     * - field_name: Name of the extra field for sessions (e.g., 'peoplesoft_sid').
+     * - field_value: Value of the session extra field (e.g., PeopleSoft ID).
+     * - Optional update fields: name, coach_username, access_start_date, access_end_date, etc.
+     *
+     * @param array $params Associative array of POST parameters.
+     *
+     * @return array Response in format: ['error' => bool, 'data' => array] on success, or ['error' => true, 'message' => string] on failure.
+     */
+    public function updateSessionFromExtraField($params)
+    {
+        // Validate required parameters (redundant with v2.php but for safety)
+        $required = ['field_name', 'field_value'];
+        foreach ($required as $key) {
+            if (empty($params[$key])) {
+                return [
+                    'error' => true,
+                    'message' => 'Missing required parameter: '.$key,
+                ];
+            }
+        }
+
+        $fieldName = $params['field_name'];
+        $fieldValue = $params['field_value'];
+
+        // Get session ID from extra field value using ExtraFieldValue model
+        $sessionValueModel = new ExtraFieldValue('session');
+        $sessionIdList = $sessionValueModel->get_item_id_from_field_variable_and_field_value(
+            $fieldName,
+            $fieldValue,
+            false,
+            false,
+            true
+        );
+        if (empty($sessionIdList)) {
+            return [
+                'error' => true,
+                'message' => 'No session found with extra field value "'.$fieldValue.'".',
+            ];
+        }
+        $sessionId = (int) $sessionIdList[0]['item_id']; // Extract item_id from sub-array, assume single match
+
+        // Prepare params for updateSession() by adding the located ID
+        $params['id_session'] = $sessionId;
+
+        // Get coach ID if we got it as username
+        if (!empty($params['coach_username'])) {
+            $params['id_coach'] = UserManager::get_user_id_from_username($params['coach_username']);
+        }
+        // Delegate to existing updateSession() method (mirrors its logic)
+        $result = $this->updateSession($params);
+
+        // Override message and include ID in data if successful
+        if (!$result['error']) {
+            $result['data']['id_session'] = $sessionId;
+            $result['data']['message'] = 'Session updated';
+        }
+
+        return $result;
     }
 
     /**

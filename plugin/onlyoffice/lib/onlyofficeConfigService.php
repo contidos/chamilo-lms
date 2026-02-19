@@ -1,6 +1,6 @@
 <?php
 /**
- * (c) Copyright Ascensio System SIA 2024.
+ * (c) Copyright Ascensio System SIA 2025.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -86,6 +86,12 @@ class OnlyofficeConfigService extends DocEditorConfigService
                 }
             }
         }
+
+        // Allow editing if the document is part of an exercise
+        if (!empty($_GET['exerciseId']) || !empty($_GET['exeId'])) {
+            return true;
+        }
+
         $accessRights = $isAllowToEdit || $isMyDir || $isGroupAccess;
 
         return $accessRights;

@@ -5832,7 +5832,7 @@ $Item = "Item";
 $ConfigureDashboardPlugin = "Configure Dashboard Plugin";
 $EditBlocks = "Edit blocks";
 $Never = "Never";
-$YourAccountIsActiveYouCanLoginAndCheckYourCourses = "Dear user,
+$YourAccountIsActiveYouCanLoginAndCheckYourCourses = "Dear user, 
 
 Your account has now been activated on the platform. Please login and enjoy your courses.";
 $SessionFields = "Session fields";
@@ -8007,11 +8007,11 @@ $SpecificDate = "Specific dispatch date";
 $BaseDate = "Dispatch based on the session's start/end dates";
 $AfterOrBefore = "After or before";
 $Before = "Before";
-$ScheduleAnnouncementDescription = "This form allows scheduling announcements to be sent automatically to the students who are taking a course in a session.
+$ScheduleAnnouncementDescription = "This form allows scheduling announcements to be sent automatically to the students who are taking a course in a session. 
 
-There are two types of announcements that can be sent:
+There are two types of announcements that can be sent: 
 
-Specific date: In this case a specific day is selected to make the announcement.
+Specific date: In this case a specific day is selected to make the announcement. 
 
 Based on the start / end date of the session: in this case the number of days to pass before sending the announcement must be indicated. And those days can be associated to before or after the start / end date. For example: 3 days after the start date.";
 $MandatorySurveyNoAnswered = "A mandatory survey is waiting your answer. To enter the course, you must first complete the survey.";
@@ -9088,4 +9088,38 @@ $TextAppearingAtTheEndOfTheTestWhenTheUserHasFailed = "Text appearing at the end
 $SubscribeSessionWhenFinishedFailure = "Subscribe to session at the end of the test when the user has failed";
 $progressBasedOnVisiblesLPsInEachCourse = "Progress is calculated based on lessons visible in each course";
 $progressBasedOnXVisiblesLPs = "Progress is calculated based on %s lessons visible in the present context.";
+$AtLeastOneCorrectAnswerRequired = "At least one correct answer is required";
+$AtLeastOneCorrectAnswerMustHaveAPositiveScore = "At least one correct answer must have a positive score";
+$NoAnswerCanBeEmpty = "No answer can be empty";
+$ScoreMustBeNumeric = "The score must be numeric";
+$TheCorrectAnswerMustHaveAPositiveScore = "The correct answer must have a positive score";
+$ACorrectAnswerIsRequired = "An answer marked as correct is required";
+$NoAdditionalComments = "No additional comments";
+$TeacherFeedback = "Teacher feedback";
+$Learners = "Learners";
+$BackToDateOrder = "Return to the chronological order";
+$SeeAlphabeticalOrder = "View in alphabetical order";
+$HideComment = "Hide comments";
+$AreYouSureYouWantToDeleteThisTicket = "Are you sure you want to delete this ticket ?";
+$TicketDeleted = "Ticket deleted";
+$SubmittedDocument = "Submitted document";
+$AnswerInOfficeDoc = "Answer as office document";
+$UploadOfficeDoc = "Upload office document";
+$AllowedFormats = "Supported formats";
+$TheoreticalTime = "Theoretical time";
+$AverageProgressInSessions = "Average progress in sessions";
+$TimeSpentInCoursesLastWeek = "Time spent in courses last week";
+$ProgressionInSessions = "Session progress";
+$synthesis = "Synthesis";
+$WeeklyTimeSummary = "Weekly time spent summary";
+$ExistingUserWithSameExtraFieldValue = "An existing user with the same %s was found (ID %d), enrolling instead of creating.";
+$SelectExtraField = "Select the extra field to search on";
+$WhatToDoWithUnifiedUsers = "What to do with unified users";
+$ExtraFieldNotFound = "Extra Field not found";
+$NoDuplicatesFound = "No duplicates found";
+$UnifyToThisUser = "Unify on this user";
+$Unify = "Unify";
+$AreYouSureToUnify = "Are you sure to unify";
+$FinalUser = "Final user";
+$WillMergeNUsers = "Will merge {n} users";
 ?>

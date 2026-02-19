@@ -206,7 +206,7 @@ class Exercise
             $this->saveCorrectAnswers = $object->save_correct_answers;
             $this->randomByCat = $object->random_by_category;
             $this->text_when_finished = $object->text_when_finished;
-            $this->text_when_finished_failure = $object->text_when_finished_failure;
+            $this->text_when_finished_failure = isset($object->text_when_finished_failure) ? $object->text_when_finished_failure : null;
             $this->display_category_name = $object->display_category_name;
             $this->pass_percentage = $object->pass_percentage;
             $this->is_gradebook_locked = api_resource_is_locked_by_gradebook($id, LINK_EXERCISE);
@@ -2312,6 +2312,12 @@ class Exercise
                         null,
                         get_lang('HideCorrectAnsweredQuestions')
                     ),
+                    $form->createElement(
+                        'checkbox',
+                        'hide_comment',
+                        null,
+                        get_lang('HideComment')
+                    ),
                 ];
                 $form->addGroup($group, null, get_lang('ResultsConfigurationPage'));
             }
@@ -3958,7 +3964,8 @@ class Exercise
             $answerType == ORAL_EXPRESSION ||
             $answerType == CALCULATED_ANSWER ||
             $answerType == ANNOTATION ||
-            $answerType == UPLOAD_ANSWER
+            $answerType == UPLOAD_ANSWER ||
+            $answerType == ANSWER_IN_OFFICE_DOC
         ) {
             $nbrAnswers = 1;
         }
@@ -4081,7 +4088,12 @@ class Exercise
         $matchingCorrectAnswers = [];
         for ($answerId = 1; $answerId <= $nbrAnswers; $answerId++) {
             $answer = $objAnswerTmp->selectAnswer($answerId);
-            $answerComment = $objAnswerTmp->selectComment($answerId);
+            $hideComment = (int) $this->getPageConfigurationAttribute('hide_comment');
+            if (1 === $hideComment) {
+                $answerComment = null;
+            } else {
+                $answerComment = $objAnswerTmp->selectComment($answerId);
+            }
             $answerCorrect = $objAnswerTmp->isCorrect($answerId);
             $answerWeighting = (float) $objAnswerTmp->selectWeighting($answerId);
             $answerAutoId = $objAnswerTmp->selectId($answerId);
@@ -4504,7 +4516,7 @@ class Exercise
                         if (!$switchableAnswerSet) {
                             // not switchable answer, must be in the same place than teacher order
                             for ($i = 0; $i < count($listCorrectAnswers['words']); $i++) {
-                                $studentAnswer = isset($choice[$i]) ? $choice[$i] : '';
+                                $studentAnswer = $choice[$i] ?? '';
                                 $correctAnswer = $listCorrectAnswers['words'][$i];
 
                                 if ($debug) {
@@ -4515,13 +4527,13 @@ class Exercise
                                 // This value is the user input, not escaped while correct answer is escaped by ckeditor
                                 // Works with cyrillic alphabet and when using ">" chars see #7718 #7610 #7618
                                 // ENT_QUOTES is used in order to transform ' to &#039;
-                                if (!$from_database) {
-                                    $studentAnswer = FillBlanks::clearStudentAnswer($studentAnswer);
-                                    if ($debug) {
-                                        error_log('Student answer cleaned:');
-                                        error_log($studentAnswer);
-                                    }
+                                //if (!$from_database) {
+                                $studentAnswer = FillBlanks::clearStudentAnswer($studentAnswer);
+                                if ($debug) {
+                                    error_log('Student answer cleaned:');
+                                    error_log($studentAnswer);
                                 }
+                                //}
 
                                 $isAnswerCorrect = 0;
                                 if (FillBlanks::isStudentAnswerGood($studentAnswer, $correctAnswer, $from_database)) {
@@ -4582,7 +4594,7 @@ class Exercise
 
                                 $found = false;
                                 for ($j = 0; $j < count($listTeacherAnswerTemp); $j++) {
-                                    $correctAnswer = isset($listTeacherAnswerTemp[$j]) ? $listTeacherAnswerTemp[$j] : '';
+                                    $correctAnswer = $listTeacherAnswerTemp[$j] ?? '';
                                     if (is_array($listTeacherAnswerTemp)) {
                                         $correctAnswer = implode('||', $listTeacherAnswerTemp);
                                     }
@@ -4762,6 +4774,7 @@ class Exercise
                     break;
                 case UPLOAD_ANSWER:
                 case FREE_ANSWER:
+                case ANSWER_IN_OFFICE_DOC:
                     if ($from_database) {
                         $sql = "SELECT answer, marks FROM $TBL_TRACK_ATTEMPT
                                  WHERE
@@ -5423,6 +5436,18 @@ class Exercise
                                 $questionScore,
                                 $results_disabled
                             );
+                        } elseif ($answerType == ANSWER_IN_OFFICE_DOC) {
+                            $exe_info = Event::get_exercise_results_by_attempt($exeId);
+                            $exe_info = $exe_info[$exeId] ?? null;
+                            ExerciseShowFunctions::displayOnlyOfficeAnswer(
+                                $feedback_type,
+                                $exeId,
+                                $exe_info['exe_user_id'] ?? api_get_user_id(),
+                                $this->iid,
+                                $questionId,
+                                $questionScore,
+                                true
+                            );
                         } elseif ($answerType == ORAL_EXPRESSION) {
                             // to store the details of open questions in an array to be used in mail
                             /** @var OralExpression $objQuestionTmp */
@@ -5819,6 +5844,18 @@ class Exercise
                                 $questionId,
                                 $questionScore,
                                 $results_disabled
+                            );
+                            break;
+                        case ANSWER_IN_OFFICE_DOC:
+                            $exe_info = Event::get_exercise_results_by_attempt($exeId);
+                            $exe_info = $exe_info[$exeId] ?? null;
+                            ExerciseShowFunctions::displayOnlyOfficeAnswer(
+                                $feedback_type,
+                                $exeId,
+                                $exe_info['exe_user_id'] ?? api_get_user_id(),
+                                $this->iid,
+                                $questionId,
+                                $questionScore
                             );
                             break;
                         case ORAL_EXPRESSION:
@@ -6462,6 +6499,24 @@ class Exercise
                     $this->iid,
                     false,
                     $questionDuration
+                );
+            } elseif ($answerType == ANSWER_IN_OFFICE_DOC) {
+                $answer = $choice;
+                $exerciseId = $this->iid;
+                $questionId = $quesId;
+                $originalFilePath = $objQuestionTmp->getFileUrl();
+                $originalExtension = !empty($originalFilePath) ? pathinfo($originalFilePath, PATHINFO_EXTENSION) : 'docx';
+                $fileName = "response_{$exeId}.{$originalExtension}";
+                Event::saveQuestionAttempt(
+                    $questionScore,
+                    $answer,
+                    $questionId,
+                    $exeId,
+                    0,
+                    $exerciseId,
+                    false,
+                    $questionDuration,
+                    $fileName
                 );
             } elseif ($answerType == ORAL_EXPRESSION) {
                 $answer = $choice;
@@ -8894,6 +8949,7 @@ class Exercise
                 'hide_total_score' => $values['hide_total_score'] ?? '',
                 'hide_category_table' => $values['hide_category_table'] ?? '',
                 'hide_correct_answered_questions' => $values['hide_correct_answered_questions'] ?? '',
+                'hide_comment' => $values['hide_comment'] ?? '',
             ];
             $type = Type::getType('array');
             $platform = Database::getManager()->getConnection()->getDatabasePlatform();
