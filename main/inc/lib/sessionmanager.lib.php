@@ -2052,6 +2052,22 @@ class SessionManager
             $course_list[] = $row['c_id'];
         }
 
+        // Build list of users already subscribed to the session as students.
+        // This allows us to avoid re-enrolling them into all courses again
+        // when they are already part of the session (preserves manual
+        // unsubscriptions at the course level).
+        $usersAlreadyInSession = [];
+        if (!empty($userList)) {
+            $userIdsStr = "'".implode("','", $userList)."'";
+            $sql = "SELECT user_id FROM $tbl_session_rel_user
+                    WHERE session_id = $sessionId AND relation_type = 0
+                    AND user_id IN ($userIdsStr)";
+            $resUsersInSession = Database::query($sql);
+            while ($row = Database::fetch_array($resUsersInSession)) {
+                $usersAlreadyInSession[] = (int) $row['user_id'];
+            }
+        }
+
         if ($session->getSendSubscriptionNotification() &&
             is_array($userList)
         ) {
@@ -2154,8 +2170,8 @@ class SessionManager
 
                 $usersToSubscribeInCourse = array_filter(
                     $userList,
-                    function ($userId) use ($existingUsers) {
-                        return !in_array($userId, $existingUsers);
+                    function ($userId) use ($existingUsers, $usersAlreadyInSession) {
+                        return !in_array($userId, $existingUsers) && !in_array($userId, $usersAlreadyInSession);
                     }
                 );
 
@@ -10049,7 +10065,7 @@ class SessionManager
         // 2. SESSION DATA
         $row2 = $config['course_field_value'] ? [$config['course_field_value']] : [$courseInfo['title']];
         $row2[] = (new DateTime($sessionInfo['access_start_date']))->format('d/m/Y');
-        $row2[] = (new DateTime($sessionInfo['access_end_date']))->format('d/m/T');
+        $row2[] = (new DateTime($sessionInfo['access_end_date']))->format('d/m/Y');
 
         $extraValuesObj = new ExtraFieldValue('session');
         $sessionExtra = $extraValuesObj->getAllValuesByItem($sessionId);

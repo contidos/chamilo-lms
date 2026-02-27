@@ -9137,6 +9137,14 @@ $TimeSpentInCoursesLastWeek = "Tiempo dedicado en los cursos la semana pasada";
 $ProgressionInSessions = "Progreso en las sesiones";
 $synthesis = "Síntesis";
 $WeeklyTimeSummary = "Resumen de tiempo dedicado por semana";
-$NewTrackingSystem = "Usar nuevo sistema de seguimiento de tiempos";
-$TimeInCourse = "Hola %s, tu tiempo en el curso es:";
+$ExistingUserWithSameExtraFieldValue = "Se encontró el mismo %s con un usuario existente (ID %d), se procederá a matricularlo en lugar de crear uno nuevo.";
+$SelectExtraField = "Seleccione el campo extra para buscar";
+$WhatToDoWithUnifiedUsers = "Que hacer con los usuarios unificados";
+$ExtraFieldNotFound = "Campo extra no encontrado";
+$NoDuplicatesFound = "No se encontraron duplicados";
+$UnifyToThisUser = "Unificar a este usuario";
+$Unify = "Unificar";
+$AreYouSureToUnify = "Estas seguro de unificar";
+$FinalUser = "Usuario final";
+$WillMergeNUsers = "Fusionará {n} usuarios";
 ?>
