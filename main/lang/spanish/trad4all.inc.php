@@ -9137,4 +9137,6 @@ $TimeSpentInCoursesLastWeek = "Tiempo dedicado en los cursos la semana pasada";
 $ProgressionInSessions = "Progreso en las sesiones";
 $synthesis = "Síntesis";
 $WeeklyTimeSummary = "Resumen de tiempo dedicado por semana";
+$NewTrackingSystem = "Usar nuevo sistema de seguimiento de tiempos";
+$TimeInCourse = "Hola %s, tu tiempo en el curso es:";
 ?>
