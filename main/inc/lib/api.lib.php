@@ -4996,7 +4996,7 @@ function api_get_item_property_info($course_id, $tool, $ref, $session_id = 0, $g
  *
  * @return array with all fields from c_item_property, empty array if not found or false if course could not be found
  */
-function api_get_last_item_property_info(int $courseId, string $tool, int $ref, int $sessionId = null, int $groupId = null): array
+function api_get_last_item_property_info(int $courseId, string $tool, int $ref, ?int $sessionId = null, ?int $groupId = null): array
 {
     $tool = Database::escape_string($tool);
     // Definition of tables.
@@ -8960,6 +8960,10 @@ function api_can_login_as($loginAsUserId, $userId = null)
     $userInfo = api_get_user_info($loginAsUserId);
     $isDrh = function () use ($loginAsUserId) {
         if (api_is_drh()) {
+            if (true === api_get_configuration_value('disallow_hrm_login_as')) {
+                return false;
+            }
+
             if (api_drh_can_access_all_session_content()) {
                 $users = SessionManager::getAllUsersFromCoursesFromAllSessionFromStatus(
                     'drh_all',
@@ -8986,14 +8990,26 @@ function api_can_login_as($loginAsUserId, $userId = null)
         return false;
     };
 
-    $loginAsStatusForSessionAdmins = [STUDENT];
+    $allowSessionAdmin = function () use ($userInfo) {
+        if (!api_is_session_admin()) {
+            return false;
+        }
 
-    if (api_get_configuration_value('allow_session_admin_login_as_teacher')) {
-        $loginAsStatusForSessionAdmins[] = COURSEMANAGER;
-    }
+        if (true === api_get_configuration_value('disallow_session_admin_login_as')) {
+            return false;
+        }
+
+        $loginAsStatusForSessionAdmins = [STUDENT];
+
+        if (api_get_configuration_value('allow_session_admin_login_as_teacher')) {
+            $loginAsStatusForSessionAdmins[] = COURSEMANAGER;
+        }
+
+        return in_array($userInfo['status'], $loginAsStatusForSessionAdmins);
+    };
 
     return api_is_platform_admin() ||
-        (api_is_session_admin() && in_array($userInfo['status'], $loginAsStatusForSessionAdmins)) ||
+        $allowSessionAdmin() ||
         $isDrh();
 }
 
