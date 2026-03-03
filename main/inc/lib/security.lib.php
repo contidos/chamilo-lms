@@ -3,6 +3,7 @@
 /* For licensing terms, see /license.txt */
 
 use Chamilo\CoreBundle\Component\HTMLPurifier\Filter\AllowIframes;
+use Chamilo\CoreBundle\Component\HTMLPurifier\Filter\RemoveOnAttributes;
 use ChamiloSession as Session;
 
 /**
@@ -42,7 +43,7 @@ class Security
     public const CHAR_UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     public const CHAR_LOWER = 'abcdefghijklmnopqrstuvwxyz';
     public const CHAR_DIGITS = '0123456789';
-    public const CHAR_SYMBOLS = '!"#$%&\'()*+,-./:;<=>?@[\]^_`{|}~';
+    public const CHAR_SYMBOLS = '!"#$%&\'()*+,-./:;=?@[]^_`{|}~';
 
     public static $clean = [];
 
@@ -137,7 +138,7 @@ class Security
         return disable_dangerous_file($filename);
     }
 
-    public static function getTokenFromSession(string $prefix = ''): string
+    public static function getTokenFromSession(string $prefix = '')
     {
         $secTokenVariable = self::generateSecTokenVariable($prefix);
 
@@ -347,8 +348,16 @@ class Security
             $config->set('Core.ConvertDocumentToFragment', false);
             $config->set('Core.RemoveProcessingInstructions', true);
 
+            $customFilters = [
+                new RemoveOnAttributes(),
+            ];
+
             if (api_get_setting('enable_iframe_inclusion') == 'true') {
-                $config->set('Filter.Custom', [new AllowIframes()]);
+                $customFilters[] = new AllowIframes();
+            }
+
+            if ($customFilters) {
+                $config->set('Filter.Custom', $customFilters);
             }
 
             // Shows _target attribute in anchors
