@@ -3293,7 +3293,8 @@ class SessionManager
         $from = null,
         $to = null,
         $urlId = 0,
-        $onlyThisSessionList = []
+        $onlyThisSessionList = [],
+        $includeSessionWithNoCourse = false
     ) {
         $session_table = Database::get_main_table(TABLE_MAIN_SESSION);
         $session_category_table = Database::get_main_table(TABLE_MAIN_SESSION_CATEGORY);
@@ -3303,6 +3304,12 @@ class SessionManager
         $course_table = Database::get_main_table(TABLE_MAIN_COURSE);
         $urlId = empty($urlId) ? api_get_current_access_url_id() : (int) $urlId;
         $return_array = [];
+        $courseFrom = "LEFT JOIN ".$session_course_table." sco ON (sco.session_id = s.id)
+                INNER JOIN ".$course_table." c ON sco.c_id = c.id";
+
+        if ($includeSessionWithNoCourse) {
+            $courseFrom = "";
+        }
 
         $sql_query = " SELECT
                     DISTINCT(s.id),
@@ -3318,8 +3325,7 @@ class SessionManager
 				INNER JOIN $user_table u ON s.id_coach = u.user_id
 				INNER JOIN $table_access_url_rel_session ar ON ar.session_id = s.id
 				LEFT JOIN  $session_category_table sc ON s.session_category_id = sc.id
-				LEFT JOIN $session_course_table sco ON (sco.session_id = s.id)
-				INNER JOIN $course_table c ON sco.c_id = c.id
+				$courseFrom
 				WHERE ar.access_url_id = $urlId ";
 
         $availableFields = [
@@ -6003,9 +6009,9 @@ class SessionManager
      * @param int $sessionId
      * @param int $courseId
      *
-     * @return array
+     * @return array<int, int>
      */
-    public static function getCoachesByCourseSession($sessionId, $courseId)
+    public static function getCoachesByCourseSession($sessionId, $courseId): array
     {
         $table = Database::get_main_table(TABLE_MAIN_SESSION_COURSE_USER);
         $sessionId = (int) $sessionId;
@@ -6021,7 +6027,7 @@ class SessionManager
         $coaches = [];
         if (Database::num_rows($result) > 0) {
             while ($row = Database::fetch_array($result)) {
-                $coaches[] = $row['user_id'];
+                $coaches[] = (int) $row['user_id'];
             }
         }
 

@@ -15,15 +15,17 @@ use Exception;
 class SectionExport
 {
     private $course;
+    private $activitiesBySection = [];
 
     /**
      * Constructor to initialize the course object.
      *
      * @param object $course The course object to be exported.
      */
-    public function __construct($course)
+    public function __construct($course, array $activitiesBySection = [])
     {
         $this->course = $course;
+        $this->activitiesBySection = $activitiesBySection;
     }
 
     /**
@@ -106,6 +108,12 @@ class SectionExport
      */
     public function getActivitiesForGeneral(): array
     {
+        // Preferred path: reuse precomputed activities from MoodleExport
+        if (isset($this->activitiesBySection[0]) && is_array($this->activitiesBySection[0])) {
+            return $this->activitiesBySection[0];
+        }
+
+        // Fallback to legacy behavior (kept for safety)
         $generalLearnpath = (object) [
             'items' => $this->getGeneralItems(),
             'source_id' => 0,
@@ -113,7 +121,7 @@ class SectionExport
 
         $activities = $this->getActivitiesForSection($generalLearnpath, true);
 
-        if (!in_array('folder', array_column($activities, 'modulename'))) {
+        if (!in_array('folder', array_column($activities, 'modulename'), true)) {
             $activities[] = [
                 'id' => 0,
                 'moduleid' => 0,
@@ -145,12 +153,14 @@ class SectionExport
      */
     public function getSectionData(object $learnpath): array
     {
+        $sectionId = (int) $learnpath->source_id;
+
         return [
-            'id' => $learnpath->source_id,
+            'id' => $sectionId,
             'number' => $learnpath->display_order,
             'name' => $learnpath->name,
             'summary' => $learnpath->description,
-            'sequence' => $learnpath->source_id,
+            'sequence' => $sectionId,
             'visible' => $learnpath->visibility,
             'timemodified' => strtotime($learnpath->modified_on),
             'activities' => $this->getActivitiesForSection($learnpath),
@@ -162,9 +172,15 @@ class SectionExport
      */
     public function getActivitiesForSection(object $learnpath, bool $isGeneral = false): array
     {
-        $activities = [];
-        $sectionId = $isGeneral ? 0 : $learnpath->source_id;
+        $sectionId = $isGeneral ? 0 : (int) $learnpath->source_id;
 
+        // Preferred path: reuse precomputed activities from MoodleExport
+        if (isset($this->activitiesBySection[$sectionId]) && is_array($this->activitiesBySection[$sectionId])) {
+            return $this->activitiesBySection[$sectionId];
+        }
+
+        // Fallback to legacy behavior
+        $activities = [];
         foreach ($learnpath->items as $item) {
             $this->addActivityToList($item, $sectionId, $activities);
         }
@@ -201,16 +217,72 @@ class SectionExport
     }
 
     /**
+     * Normalize resource / LP item types for reliable comparison.
+     */
+    private function normalizeItemTypeForLpComparison(string $type): string
+    {
+        switch ($type) {
+            case 'student_publication':
+            case 'work':
+                return 'work';
+
+            case 'link':
+            case 'url':
+                return 'link';
+
+            case 'survey':
+            case 'feedback':
+                return 'survey';
+
+            default:
+                return $type;
+        }
+    }
+
+    /**
      * Check if an item is associated with any learnpath.
      */
     private function isItemInLearnpath(object $item, string $type): bool
     {
-        if (!empty($this->course->resources[RESOURCE_LEARNPATH])) {
-            foreach ($this->course->resources[RESOURCE_LEARNPATH] as $learnpath) {
-                if (!empty($learnpath->items)) {
-                    foreach ($learnpath->items as $learnpathItem) {
-                        if ($learnpathItem['item_type'] === $type && $learnpathItem['path'] == $item->source_id) {
-                            return true;
+        if (empty($this->course->resources[RESOURCE_LEARNPATH])) {
+            return false;
+        }
+
+        $normalizedType = $this->normalizeItemTypeForLpComparison($type);
+        $itemSourceId = isset($item->source_id) ? (string) $item->source_id : '';
+
+        foreach ($this->course->resources[RESOURCE_LEARNPATH] as $learnpath) {
+            if (empty($learnpath->items)) {
+                continue;
+            }
+
+            foreach ($learnpath->items as $learnpathItem) {
+                $lpType = isset($learnpathItem['item_type'])
+                    ? $this->normalizeItemTypeForLpComparison((string) $learnpathItem['item_type'])
+                    : '';
+
+                if ($lpType !== $normalizedType) {
+                    continue;
+                }
+
+                $lpPath = isset($learnpathItem['path']) ? (string) $learnpathItem['path'] : '';
+
+                // Classic numeric comparison (most LP items)
+                if ($itemSourceId !== '' && $lpPath === $itemSourceId) {
+                    return true;
+                }
+
+                // Extra fallback for documents if LP stores a path instead of numeric id
+                if ($normalizedType === 'document' && $itemSourceId !== '' && ctype_digit($itemSourceId)) {
+                    $doc = \DocumentManager::get_document_data_by_id((int) $itemSourceId, $this->course->code);
+                    if (!empty($doc['path'])) {
+                        $docPath = (string) $doc['path'];
+                        $candidates = [$docPath, 'document/'.$docPath, '/'.$docPath];
+
+                        foreach ($candidates as $candidate) {
+                            if ($lpPath === $candidate) {
+                                return true;
+                            }
                         }
                     }
                 }
@@ -222,6 +294,9 @@ class SectionExport
 
     /**
      * Add an activity to the activities list.
+     * Generic approach: for any activity in a real section (LP sectionId > 0),
+     * force a unique moduleid per LP item occurrence:
+     *   moduleid = 900000000 + lp_item_id.
      */
     private function addActivityToList(array $item, int $sectionId, array &$activities): void
     {
@@ -249,14 +324,14 @@ class SectionExport
             'feedback' => FeedbackExport::class,
         ];
 
-        if ($item['id'] == 'course_homepage') {
+        if (($item['id'] ?? null) == 'course_homepage') {
             $item['item_type'] = 'page';
             $item['path'] = 0;
         }
 
-        $itemType = $item['item_type'] === 'link' ? 'url' :
-            ($item['item_type'] === 'work' || $item['item_type'] === 'student_publication' ? 'assign' :
-                ($item['item_type'] === 'survey' ? 'feedback' : $item['item_type']));
+        $itemType = ($item['item_type'] ?? '') === 'link' ? 'url' :
+            (($item['item_type'] ?? '') === 'work' || ($item['item_type'] ?? '') === 'student_publication' ? 'assign' :
+                (($item['item_type'] ?? '') === 'survey' ? 'feedback' : ($item['item_type'] ?? '')));
 
         switch ($itemType) {
             case 'quiz':
@@ -266,33 +341,43 @@ class SectionExport
             case 'forum':
             case 'feedback':
             case 'page':
-                $activityId = $itemType === 'glossary' ? 1 : (int) $item['path'];
+                $activityId = $itemType === 'glossary' ? 1 : (int) ($item['path'] ?? 0);
                 $exportClass = $activityClassMap[$itemType];
                 $exportInstance = new $exportClass($this->course);
                 $activityData = $exportInstance->getData($activityId, $sectionId);
                 break;
 
             case 'document':
-                $documentId = (int) $item['path'];
+                $documentId = (int) ($item['path'] ?? 0);
                 $document = \DocumentManager::get_document_data_by_id($documentId, $this->course->code);
 
                 if ($document) {
-                    $isRoot = substr_count($document['path'], '/') === 1;
                     $documentType = $this->getDocumentType($document['filetype'], $document['path']);
-                    if ($documentType === 'page' && $isRoot) {
-                        $activityClass = $activityClassMap['page'];
-                        $exportInstance = new $activityClass($this->course);
-                        $activityData = $exportInstance->getData($item['path'], $sectionId);
-                    } elseif ($sectionId > 0 && $documentType && isset($activityClassMap[$documentType])) {
+
+                    if ($sectionId > 0 && $documentType && isset($activityClassMap[$documentType])) {
                         $activityClass = $activityClassMap[$documentType];
                         $exportInstance = new $activityClass($this->course);
-                        $activityData = $exportInstance->getData($item['path'], $sectionId);
+                        $activityData = $exportInstance->getData($documentId, $sectionId);
+                    } elseif ($sectionId === 0 && $documentType === 'page') {
+                        // Keep your original behavior for general section if you want
+                        $activityClass = $activityClassMap['page'];
+                        $exportInstance = new $activityClass($this->course);
+                        $activityData = $exportInstance->getData($documentId, $sectionId);
                     }
                 }
                 break;
         }
 
-        // Add the activity to the list if the data exists
+        // Generic override: unique moduleid per LP occurrence (sectionId > 0)
+        if (!empty($activityData) && $sectionId > 0) {
+            $lpItemId = isset($item['id']) ? (int) $item['id'] : 0;
+            $modName = (string) ($activityData['modulename'] ?? '');
+
+            if ($lpItemId > 0 && !in_array($modName, ['folder', 'glossary'], true)) {
+                $activityData['moduleid'] = 900000000 + $lpItemId;
+            }
+        }
+
         if ($activityData) {
             $activities[] = [
                 'id' => $activityData['id'],
@@ -349,7 +434,8 @@ class SectionExport
         $xmlContent .= '<inforef>'.PHP_EOL;
 
         foreach ($sectionData['activities'] as $activity) {
-            $xmlContent .= '  <activity id="'.$activity['id'].'">'.htmlspecialchars($activity['name']).'</activity>'.PHP_EOL;
+            $refId = $activity['moduleid'] ?? $activity['id'];
+            $xmlContent .= '  <activity id="'.$refId.'">'.htmlspecialchars($activity['name']).'</activity>'.PHP_EOL;
         }
 
         $xmlContent .= '</inforef>'.PHP_EOL;

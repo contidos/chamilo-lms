@@ -7842,7 +7842,7 @@ $IconsModeSVGComment = "Esta opción permite, si es activada, preferir el format
 $FilterByTags = "Filtrar por tags";
 $ImportFromMoodle = "Importar desde Moodle";
 $ImportFromMoodleInfo = "Importar un archivo de backup de curso de Moodle (.mbz) dentro de este curso de Chamilo";
-$ImportFromMoodleInstructions = "La funcionalidad de importación desde Moodle podría no soportar todos los tipos de contenido de Moodle, dado el hecho que no todas las funcionalidades existen en ambas plataformas, y que Moodle y Chamilo siguen evolucionando continua y rápidamente. Esta funcionalidad de importación debería ser considerada como un trabajo en progreso. Consulte la página siguiente para mayor información: <a href='https://support.chamilo.org/projects/chamilo-18/wiki/Moodle_import'>https://support.chamilo.org/projects/chamilo-18/wiki/Moodle_import</a>";
+$ImportFromMoodleInstructions = "La funcionalidad de importación desde Moodle podría no soportar todos los tipos de contenido de Moodle, dado el hecho que no todas las funcionalidades existen en ambas plataformas, y que Moodle y Chamilo siguen evolucionando continua y rápidamente. Esta funcionalidad de importación debería ser considerada como un trabajo en progreso. Consulte la página siguiente para mayor información: <a href='https://github.com/chamilo/chamilo-lms/wiki/Import-from-Moodle'>https://github.com/chamilo/chamilo-lms/wiki/Import-from-Moodle</a>";
 $MoodleFile = "Archivo de curso de Moodle";
 $FailedToImportThisIsNotAMoodleFile = "La importación tuvo un problema: este archivo no parece ser un archivo de backup de curso de Moodle (.mbz)";
 $ThisQuestionIsNotSupportedYet = "Este tipo de pregunta todavía no está soportado";
@@ -9147,6 +9147,4 @@ $Unify = "Unificar";
 $AreYouSureToUnify = "Estas seguro de unificar";
 $FinalUser = "Usuario final";
 $WillMergeNUsers = "Fusionará {n} usuarios";
-$NewTrackingSystem = "Usar nuevo sistema de seguimiento de tiempos";
-$TimeInCourse = "Hola %s, tu tiempo en el curso es:";
 ?>

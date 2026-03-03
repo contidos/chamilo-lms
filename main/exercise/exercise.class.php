@@ -4536,7 +4536,7 @@ class Exercise
                                 //}
 
                                 $isAnswerCorrect = 0;
-                                if (FillBlanks::isStudentAnswerGood($studentAnswer, $correctAnswer, $from_database)) {
+                                if (FillBlanks::isStudentAnswerGood($studentAnswer, $correctAnswer, $from_database, true)) {
                                     // gives the related weighting to the student
                                     $questionScore += $answerWeighting[$i];
                                     // increments total score
@@ -4995,7 +4995,7 @@ class Exercise
                                 if (false === $this->showExpectedChoice() &&
                                     false === $showTotalScoreAndUserChoicesInLastAttempt
                                 ) {
-                                    $user_answer = '';
+                                    $this->hideExpectedAnswer = true;
                                 }
                                 switch ($answerType) {
                                     case MATCHING:
@@ -5057,9 +5057,6 @@ class Exercise
                                         echo '</tr>';
                                         break;
                                     case DRAGGABLE:
-                                        if (false == $showTotalScoreAndUserChoicesInLastAttempt) {
-                                            $s_answer_label = '';
-                                        }
                                         if (RESULT_DISABLE_SHOW_SCORE_ATTEMPT_SHOW_ANSWERS_LAST_ATTEMPT_NO_FEEDBACK == $this->results_disabled) {
                                             if (false === $showTotalScoreAndUserChoicesInLastAttempt && empty($s_user_answer)) {
                                                 break;
@@ -5067,35 +5064,15 @@ class Exercise
                                         }
 
                                         echo '<tr>';
-                                        if ($this->showExpectedChoice()) {
-                                            if (!in_array($this->results_disabled, [
-                                                RESULT_DISABLE_SHOW_ONLY_IN_CORRECT_ANSWER,
-                                                //RESULT_DISABLE_SHOW_SCORE_AND_EXPECTED_ANSWERS_AND_RANKING,
-                                            ])
-                                            ) {
-                                                echo '<td>'.$user_answer.'</td>';
-                                            } else {
-                                                $status = Display::label(get_lang('Correct'), 'success');
-                                            }
+                                        if ($this->showExpectedChoice() || $this->showExpectedChoiceColumn()) {
                                             echo '<td>'.$s_answer_label.'</td>';
+                                            echo '<td>'.$user_answer.'</td>';
+                                            echo '<td>'.$real_list[$i_answer_correct_answer].'</td>';
                                             echo '<td>'.$status.'</td>';
                                         } else {
                                             echo '<td>'.$s_answer_label.'</td>';
                                             echo '<td>'.$user_answer.'</td>';
-                                            echo '<td>'.$counterAnswer.'</td>';
                                             echo '<td>'.$status.'</td>';
-                                            echo '<td>';
-                                            if (in_array($answerType, [MATCHING, MATCHING_COMBINATION, MATCHING_DRAGGABLE, MATCHING_DRAGGABLE_COMBINATION])) {
-                                                if (isset($real_list[$i_answer_correct_answer]) &&
-                                                    $showTotalScoreAndUserChoicesInLastAttempt === true
-                                                ) {
-                                                    echo Display::span(
-                                                        $real_list[$i_answer_correct_answer],
-                                                        ['style' => 'color: #008000; font-weight: bold;']
-                                                    );
-                                                }
-                                            }
-                                            echo '</td>';
                                         }
                                         echo '</tr>';
                                         break;
@@ -10043,15 +10020,31 @@ class Exercise
                                 );
                             } else {
                                 if ($row['active'] == 0 || $visibility == 0) {
-                                    $visibility = Display::url(
-                                        Display::return_icon(
+                                    $visibleOnBaseCourse = api_get_item_visibility(
+                                        $courseInfo,
+                                        TOOL_QUIZ,
+                                        $row['iid'],
+                                        0
+                                    );
+
+                                    if ($visibleOnBaseCourse) {
+                                        $visibility = Display::url(
+                                            Display::return_icon(
+                                                'invisible.png',
+                                                get_lang('Activate'),
+                                                '',
+                                                ICON_SIZE_SMALL
+                                            ),
+                                            'exercise.php?'.api_get_cidreq().'&choice=enable&sec_token='.$token.'&exerciseId='.$row['iid']
+                                        );
+                                    } else {
+                                        $visibility = Display::return_icon(
                                             'invisible.png',
                                             get_lang('Activate'),
                                             '',
                                             ICON_SIZE_SMALL
-                                        ),
-                                        'exercise.php?'.api_get_cidreq().'&choice=enable&sec_token='.$token.'&exerciseId='.$row['iid']
-                                    );
+                                        );
+                                    }
                                 } else {
                                     // else if not active
                                     $visibility = Display::url(
