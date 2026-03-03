@@ -5071,7 +5071,8 @@ class Tracking
                 FROM $tbl_session_course sc
                 INNER JOIN $courseTable c
                 ON sc.c_id = c.id
-                WHERE session_id= $session_id";
+                WHERE session_id= $session_id
+                ORDER BY position ASC";
 
         $result = Database::query($sql);
 
@@ -6535,10 +6536,7 @@ class Tracking
                         $user_id,
                         $course_code,
                         [],
-                        $session_id_from_get,
-                        false,
-                        false,
-                        $lpShowMaxProgress
+                        $session_id_from_get
                     );
 
                     $total_time_login = self::get_time_spent_on_the_course(
