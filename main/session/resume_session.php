@@ -181,7 +181,7 @@ $theoreticalTimeEnabled = api_get_configuration_value('display_theoretical_time'
 $courseListToShow = Display::page_subheader(get_lang('CourseList').$url);
 
 $courseListToShow .= '<table id="session-list-course" class="table table-hover table-striped data_table">
-<thead>+<tr>';
+<thead><tr>';
 if ($theoreticalTimeEnabled) {
     $courseListToShow .= '<th></th>
       <th width="30%">'.get_lang('CourseTitle').'</th>
@@ -392,6 +392,12 @@ $url .= Display::url(
             'all_students' => 1,
         ]
     )
+);
+$url .= Display::url(
+    Display::return_icon('excel.png', get_lang('Progress')),
+    $codePath.'session/session_student_progress.php?'.http_build_query([
+        'session_id' => $sessionId,
+    ])
 );
 
 $userListToShow = Display::page_subheader(get_lang('UserList').$url);

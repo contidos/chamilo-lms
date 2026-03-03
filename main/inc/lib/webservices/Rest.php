@@ -3,12 +3,12 @@
 /* For licensing terms, see /license.txt */
 
 use Chamilo\CoreBundle\Entity\Course;
-use Chamilo\CoreBundle\Entity\ExtraFieldValues;
 use Chamilo\CoreBundle\Entity\Session;
 use Chamilo\CourseBundle\Entity\CLpCategory;
 use Chamilo\CourseBundle\Entity\CNotebook;
 use Chamilo\CourseBundle\Entity\Repository\CNotebookRepository;
 use Chamilo\UserBundle\Entity\User;
+use Symfony\Component\HttpFoundation\ParameterBag;
 use Symfony\Component\HttpFoundation\Request as HttpRequest;
 
 /**
@@ -61,7 +61,9 @@ class Rest extends WebService
     public const GET_COURSE_LINKS = 'course_links';
     public const GET_COURSE_WORKS = 'course_works';
     public const GET_COURSE_EXERCISES = 'course_exercises';
+    public const GET_COURSE_GRADEBOOK = 'course_gradebook';
     public const GET_COURSES_DETAILS_BY_EXTRA_FIELD = 'courses_details_by_extra_field';
+    public const GET_COURSE_BY_CODE = 'course_details_by_code';
 
     public const SAVE_COURSE_NOTEBOOK = 'save_course_notebook';
 
@@ -127,6 +129,7 @@ class Rest extends WebService
     public const ADD_USERS_SESSION = 'add_users_session';
     public const SUBSCRIBE_USER_TO_SESSION_FROM_USERNAME = 'subscribe_user_to_session_from_username';
     public const SUBSCRIBE_USERS_TO_SESSION = 'subscribe_users_to_session';
+    public const ADD_SESSION_COURSE_COACHES = 'add_session_course_coaches';
     public const UNSUBSCRIBE_USERS_FROM_SESSION = 'unsubscribe_users_from_session';
     public const GET_USERS_SUBSCRIBED_TO_SESSION = 'get_users_subscribed_to_session';
 
@@ -184,7 +187,7 @@ class Rest extends WebService
      *
      * @param int $userId
      */
-    private function __getConfiguredUsernameById(int $userId = null): string
+    private function __getConfiguredUsernameById(?int $userId = null): string
     {
         if (empty($userId)) {
             return '';
@@ -241,12 +244,7 @@ class Rest extends WebService
         }
     }
 
-    /**
-     * @param string $encoded
-     *
-     * @return array
-     */
-    public static function decodeParams($encoded)
+    public static function decodeParams(string $encoded): array
     {
         return json_decode($encoded);
     }
@@ -501,6 +499,40 @@ class Rest extends WebService
         }
 
         return $data;
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function getCourseByCode(string $q, int $sessionId = 0): array
+    {
+        if (!api_is_teacher() && !api_is_platform_admin()) {
+            self::throwNotAllowedException();
+        }
+
+        if (strlen($q) < 3) {
+            throw new Exception(get_lang('TooShort'));
+        }
+
+        $courseList = CourseManager::searchCourse($q, $sessionId);
+        $em = Database::getManager();
+
+        return array_map(
+            function ($courseInfo) use ($em) {
+                /** @var Course $course */
+                $course = $em->find(Course::class, $courseInfo['id']);
+
+                return [
+                    'id' => $course->getId(),
+                    'title' => $course->getTitle(),
+                    'code' => $course->getCode(),
+                    'directory' => $course->getDirectory(),
+                    'urlPicture' => CourseManager::getPicturePath($course, true),
+                    'teachers' => CourseManager::getTeacherListFromCourseCodeToString($course->getCode()),
+                ];
+            },
+            $courseList
+        );
     }
 
     /**
@@ -1238,20 +1270,11 @@ class Rest extends WebService
             'username' => $this->user->getUsername(),
             'officialCode' => $this->user->getOfficialCode(),
             'phone' => $this->user->getPhone(),
-            'extra' => [],
         ];
 
-        $fieldValue = new ExtraFieldValue('user');
-        $extraInfo = $fieldValue->getAllValuesForAnItem($this->user->getId(), true);
+        $extraInfo = (new ExtraFieldValue('user'))->getAllValuesForAnItem($this->user->getId(), true);
 
-        foreach ($extraInfo as $extra) {
-            /** @var ExtraFieldValues $extraValue */
-            $extraValue = $extra['value'];
-            $result['extra'][] = [
-                'title' => $extraValue->getField()->getDisplayText(true),
-                'value' => $extraValue->getValue(),
-            ];
-        }
+        $result['extra'] = ExtraFieldValue::formatValues($extraInfo);
 
         return $result;
     }
@@ -1831,25 +1854,23 @@ class Rest extends WebService
         return $out;
     }
 
-    public function addCourse(array $courseParam): array
+    /**
+     * @throws Exception
+     */
+    public function addCourse(ParameterBag $request): array
     {
         self::protectAdminEndpoint();
 
-        $idCampus = isset($courseParam['id_campus']) ? $courseParam['id_campus'] : 1;
-        $title = isset($courseParam['title']) ? $courseParam['title'] : '';
-        $wantedCode = isset($courseParam['wanted_code']) ? $courseParam['wanted_code'] : null;
-        $diskQuota = isset($courseParam['disk_quota']) ? $courseParam['disk_quota'] : '100';
-        $visibility = isset($courseParam['visibility']) ? (int) $courseParam['visibility'] : null;
-        $removeCampusId = $courseParam['remove_campus_id_from_wanted_code'] ?? 0;
-        $language = $courseParam['language'] ?? '';
+        $idCampus = $request->getInt('id_campus', 1);
+        $title = $request->get('title');
+        $wantedCode = $request->get('wanted_code');
+        $diskQuota = $request->getInt('disk_quota', 100);
+        $visibility = $request->getInt('visibility');
+        $removeCampusId = $request->getBoolean('remove_campus_id_from_wanted_code');
+        $language = $request->get('language');
 
-        if (isset($courseParam['visibility'])) {
-            if ($courseParam['visibility'] &&
-                $courseParam['visibility'] >= 0 &&
-                $courseParam['visibility'] <= 3
-            ) {
-                $visibility = (int) $courseParam['visibility'];
-            }
+        if (!isset(Course::getStatusList()[$visibility])) {
+            throw new Exception(get_lang('VisibilityCannotBeChanged'));
         }
 
         $params = [];
@@ -1863,10 +1884,14 @@ class Rest extends WebService
         $params['disk_quota'] = $diskQuota;
         $params['course_language'] = $language;
 
-        foreach ($courseParam as $key => $value) {
+        foreach ($request->all() as $key => $value) {
             if (substr($key, 0, 6) === 'extra_') { //an extra field
                 $params[$key] = $value;
             }
+        }
+
+        if ('true' === api_get_setting('teacher_can_select_course_template')) {
+            $params['course_template'] = $request->getInt('course_template');
         }
 
         $courseInfo = CourseManager::create_course($params, $params['user_id'], $idCampus);
@@ -2548,7 +2573,7 @@ class Rest extends WebService
      *
      * @return int The matching session id, or an array with details about the session
      */
-    public function getSessionFromExtraField(string $fieldName, string $fieldValue)
+    public function getSessionFromExtraField(string $fieldName, string $fieldValue): int
     {
         // find sessions that have that value in the given field
         $valueModel = new ExtraFieldValue('session');
@@ -2571,7 +2596,7 @@ class Rest extends WebService
         }
 
         // return sessionId
-        return intval($sessionIdList[0]['item_id']);
+        return (int) $sessionIdList[0]['item_id'];
     }
 
     /**
@@ -4637,6 +4662,132 @@ class Rest extends WebService
     }
 
     /**
+     * @throws Exception
+     */
+    public function addSessionCourseCoaches(ParameterBag $request)
+    {
+        $sessionId = $request->getInt('id_session');
+        $courseId = $request->getInt('course_id');
+
+        $em = Database::getManager();
+        $countSession = $em->getRepository(Session::class)->count(['id' => $sessionId]);
+
+        if (!$countSession) {
+            throw new Exception(get_lang('NoSession'));
+        }
+
+        if (!SessionManager::cantEditSession($sessionId)) {
+            throw new Exception(get_lang('NotAllowed'));
+        }
+
+        $countCourse = $em->getRepository(Course::class)->count(['id' => $courseId]);
+
+        if (!$countCourse) {
+            throw new Exception(get_lang('NoCourse'));
+        }
+
+        $coachesToSubscribe = array_filter(
+            array_map(fn ($coachId) => (int) $coachId, $request->get('coach_id', []))
+        );
+        $subscribedCoaches = SessionManager::getCoachesByCourseSession($sessionId, $courseId);
+        $coachesToRemove = array_diff($subscribedCoaches, $coachesToSubscribe);
+
+        foreach ($coachesToSubscribe as $coachId) {
+            SessionManager::set_coach_to_course_session(
+                $coachId,
+                $sessionId,
+                $courseId
+            );
+        }
+
+        foreach ($coachesToRemove as $coachId) {
+            SessionManager::set_coach_to_course_session($coachId, $sessionId, $courseId, true);
+        }
+
+        Event::addEvent(
+            LOG_WS.self::ADD_SESSION_COURSE_COACHES,
+            'session_id-course_id-coach_ids',
+            (int) $_POST['id_session'].':'.implode(',', $coachesToSubscribe)
+        );
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function getCourseGradebook(): array
+    {
+        $isDrhOfCourse = CourseManager::isUserSubscribedInCourseAsDrh(
+            $this->user->getId(),
+            api_get_course_info($this->course->getCode())
+        );
+
+        $isDrhOfSession = $this->session
+            && !empty(SessionManager::getSessionFollowedByDrh($this->user->getId(), $this->session->getId()));
+
+        if (!$isDrhOfCourse && !$isDrhOfSession) {
+            GradebookUtils::block_students();
+        }
+
+        Event::event_access_tool(TOOL_GRADEBOOK);
+
+        $cats = Category::load(
+            null,
+            null,
+            $this->course->getCode(),
+            null,
+            null,
+            $this->session ? $this->session->getId() : null,
+            false
+        );
+
+        $cats = array_filter(
+            $cats,
+            fn ($cat) => $cat->get_parent_id() == 0
+        );
+
+        if (empty($cats)) {
+            throw new Exception(get_lang('NoCategory'));
+        }
+
+        $cat = array_shift($cats);
+
+        $allEval = $cat->get_evaluations(0, true);
+        $allLinks = $cat->get_links(0, true);
+
+        $users = GradebookUtils::get_all_users($allEval, $allLinks);
+
+        $mainCourseCategory = Category::load(
+            null,
+            null,
+            $this->course->getCode(),
+            null,
+            null,
+            $this->session ? $this->session->getId() : null
+        );
+
+        $flatViewTable = new FlatViewTable(
+            $cat,
+            $users,
+            $allEval,
+            $allLinks,
+            true,
+            0,
+            null,
+            $mainCourseCategory[0]
+        );
+        $flatViewTable->setAutoFill(false);
+        $flatViewTable->set_additional_parameters(['export_pdf' => true]);
+
+        $headers = $this->formatGradebookHeaders($flatViewTable->datagen);
+        $rows = $this->formatGradebookRows($headers, $flatViewTable->datagen);
+
+        return [
+            'headers' => $headers,
+            'rows' => $rows,
+        ];
+    }
+
+    /**
      * Generate an API key for webservices access for the given user ID.
      */
     protected static function generateApiKeyForUser(int $userId): string
@@ -4683,5 +4834,66 @@ class Rest extends WebService
 
         return api_get_self().'?'
             .http_build_query(array_merge($queryParams, $additionalParams));
+    }
+
+    private function formatGradebookHeaders(FlatViewDataGenerator $dataGen): array
+    {
+        $result = [];
+        $colIndex = 0;
+
+        foreach ($dataGen->get_header_names() as $header) {
+            if (is_array($header)) {
+                $groupLabel = preg_replace(
+                    '/<a[^>]*>(.*?)<\/a>\s*(.*?)<\/span>/i',
+                    "$1\n$2",
+                    $header['header'] ?? 'group_'.$colIndex
+                );
+                $groupLabel = strip_tags($groupLabel);
+
+                foreach ($header['items'] as $item) {
+                    $item = preg_replace('/<br>\s*<small>(.*?)<\/small>/', "\n$1", $item);
+                    $item = strip_tags($item);
+
+                    $result[] = [
+                        'key' => 'col_'.$colIndex,
+                        'label' => trim($item),
+                        'group_label' => trim($groupLabel),
+                    ];
+                    $colIndex++;
+                }
+            } else {
+                $header = strip_tags($header);
+
+                $result[] = [
+                    'key' => 'col_'.$colIndex,
+                    'label' => trim($header),
+                    'group_label' => null,
+                ];
+                $colIndex++;
+            }
+        }
+
+        return $result;
+    }
+
+    private function formatGradebookRows(array $headers, FlatViewDataGenerator $dataGen): array
+    {
+        $keys = array_column($headers, 'key');
+
+        $rows = [];
+
+        foreach ($dataGen->get_data() as $row) {
+            array_shift($row);
+            $cleaned = array_map(static fn ($v) => is_string($v) ? trim(strip_tags($v)) : $v, $row);
+            $mapped = [];
+
+            foreach ($keys as $i => $key) {
+                $mapped[$key] = $cleaned[$i] ?? null;
+            }
+
+            $rows[] = $mapped;
+        }
+
+        return $rows;
     }
 }
