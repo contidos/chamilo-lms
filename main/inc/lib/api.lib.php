@@ -5168,7 +5168,7 @@ function languageCodeToCountryIsoCodeForFlags($languageIsoCode)
         case 'ca':
             $country = 'es';
             if ($allow) {
-                $country = 'catalan';
+                $country = 'es-ca';
             }
             break;
         case 'cs':
@@ -5186,13 +5186,13 @@ function languageCodeToCountryIsoCodeForFlags($languageIsoCode)
         case 'eu': // Euskera
             $country = 'es';
             if ($allow) {
-                $country = 'basque';
+                $country = 'eu';
             }
             break;
         case 'gl': // galego
             $country = 'es';
             if ($allow) {
-                $country = 'galician';
+                $country = 'es-ga';
             }
             break;
         case 'he':

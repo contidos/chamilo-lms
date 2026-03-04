@@ -7349,4 +7349,6 @@ $LastVisitedCourse = "Último curso visitado";
 $YouDidNotVisitACourseHereTheCourseList = "Aínda non visitou ningún curso, aquí está a súa lista de cursos.";
 $NoEntity = "Sen organización";
 $UserByEntityReport = "Usuario por entidade";
+$progressBasedOnVisiblesLPsInEachCourse = "O progreso é calculado en base as leccións visibles en cada curso";
+$progressBasedOnXVisiblesLPs = "O progreso é calculado en base a %s leccions visibles no contexto presente.";
 ?>

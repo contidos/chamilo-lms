@@ -2395,6 +2395,13 @@ class learnpath
             $row = Database::fetch_array($rs, 'ASSOC');
             if (!empty($row['category_id'])) {
                 $category = self::getCategory($row['category_id']);
+
+//echo "jcp -> ".$student_id;
+
+                if(empty($student_id)){
+                    $student_id = api_get_user_id();
+                }
+
                 if (self::categoryIsVisibleForStudent($category, api_get_user_entity($student_id)) === false) {
                     return false;
                 }

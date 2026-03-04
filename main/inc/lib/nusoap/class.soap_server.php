@@ -591,22 +591,17 @@ class nusoap_server extends nusoap_base
                     $this->debug('in invoke_method, calling function using eval()');
                     $reflectionFunction = new ReflectionFunction($this->methodname);
                     $params = $reflectionFunction->getParameters();
-
                     if (count($params) !== count($this->methodparams)) {
                         throw new Exception('Paremeter count mismatch');
                     }
-
                     $this->methodreturn = $reflectionFunction->invokeArgs(array_values($this->methodparams));
                 } else {
                     $reflectionMethod = new ReflectionMethod($class, $method);
                     $params = $reflectionMethod->getParameters();
-
                     if (count($params) !== count($this->methodparams)) {
                         throw new Exception('Paremeter count mismatch');
                     }
-
                     $instance = null;
-
                     if ($delim == '..') {
                         if (!$reflectionMethod->isStatic()) {
                             throw new Exception("Method '$method' is not static");
@@ -615,21 +610,16 @@ class nusoap_server extends nusoap_base
                         if ($reflectionMethod->isStatic()) {
                             throw new Exception("Method '$method' is static");
                         }
-
                         $instance = new $class();
                     }
-
                     $this->methodreturn = $reflectionMethod->invokeArgs($instance, array_values($this->methodparams));
                 }
-
                 $this->debug('in invoke_method, methodreturn: ' . $this->varDump($this->methodreturn));
             } catch (ReflectionException $e) {
                 $this->fault('SOAP-ENV:Client', 'Error invoking method: '.$e->getMessage());
-
 				return;
             } catch (Exception $e) {
                 $this->fault('SOAP-ENV:Client', $e->getMessage());
-
                 return;
             }
 		} else {
