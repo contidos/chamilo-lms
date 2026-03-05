@@ -247,7 +247,7 @@ function save_ticket()
         $exercise_id,
         $lp_id
     )) {
-        header('Location:'.api_get_path(WEB_CODE_PATH).'ticket/tickets.php');
+        header('Location:'.api_get_path(WEB_CODE_PATH).'ticket/tickets.php?project_id='.$project_id);
         exit;
     } else {
         Display::addFlash(Display::return_message(get_lang('ThereWasAnErrorRegisteringTheTicket')));
@@ -255,7 +255,7 @@ function save_ticket()
 }
 
 $interbreadcrumb[] = [
-    'url' => api_get_path(WEB_CODE_PATH).'ticket/tickets.php',
+    'url' => api_get_path(WEB_CODE_PATH).'ticket/tickets.php?project_id='.$projectId,
     'name' => get_lang('MyTickets'),
 ];
 
@@ -373,7 +373,7 @@ $form->addHtmlEditor(
     ]
 );
 
-if (api_is_platform_admin()) {
+if (api_is_platform_admin() || (api_get_configuration_value('allow_session_admin_manage_tickets_and_export_ticket_report') && api_is_session_admin())) {
     $form->addSelectAjax(
         'user_id',
         get_lang('Assign'),
@@ -525,7 +525,7 @@ Display::display_header(get_lang('ComposeMessage'));
 echo '<div class="actions">';
 echo Display::url(
     Display::return_icon('back.png', get_lang('Tickets'), [], ICON_SIZE_MEDIUM),
-    api_get_path(WEB_CODE_PATH).'ticket/tickets.php'
+    api_get_path(WEB_CODE_PATH).'ticket/tickets.php?project_id='.$projectId
 );
 echo '</div>';
 

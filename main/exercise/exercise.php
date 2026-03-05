@@ -266,6 +266,22 @@ if (!empty($action) && $is_allowedToEdit) {
                         break;
                     }
 
+                    if (!empty($sessionId)) {
+                        $visibleOnBaseCourse = api_get_item_visibility(
+                            $courseInfo,
+                            TOOL_QUIZ,
+                            $objExerciseTmp->iid,
+                            0
+                        );
+                        if (!$visibleOnBaseCourse) {
+                            Display::addFlash(Display::return_message(
+                                sprintf(get_lang('CannotChangeVisibilityOfBaseCourseResourceX'), $objExerciseTmp->name),
+                                'error'
+                            ));
+                            break;
+                        }
+                    }
+
                     // enables an exercise
                     if (empty($sessionId)) {
                         $objExerciseTmp->enable();
@@ -366,6 +382,22 @@ if ($is_allowedToEdit) {
                         if ($limitTeacherAccess && !api_is_platform_admin()) {
                             // Teacher change exercise
                             break;
+                        }
+
+                        if (!empty($sessionId)) {
+                            $visibleOnBaseCourse = api_get_item_visibility(
+                                $courseInfo,
+                                TOOL_QUIZ,
+                                $objExerciseTmp->iid,
+                                0
+                            );
+                            if (!$visibleOnBaseCourse) {
+                                Display::addFlash(Display::return_message(
+                                    sprintf(get_lang('CannotChangeVisibilityOfBaseCourseResourceX'), $objExerciseTmp->name),
+                                    'error'
+                                ));
+                                break;
+                            }
                         }
 
                         // Enables an exercise
@@ -600,7 +632,7 @@ if ($is_allowedToEdit) {
 
 if (!in_array($origin, ['learnpath', 'mobileapp'])) {
     //so we are not in learnpath tool
-    Display::display_header($nameTools, get_lang('Exercise'));
+    Display::display_header($nameTools, 'Exercise');
     if (isset($_GET['message']) && in_array($_GET['message'], ['ExerciseEdited'])) {
         echo Display::return_message(get_lang('ExerciseEdited'), 'confirmation');
     }

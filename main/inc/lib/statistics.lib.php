@@ -41,7 +41,7 @@ class Statistics
      *
      * @return int Number of courses counted
      */
-    public static function countCourses(string $categoryCode = null, string $dateFrom = null, string $dateUntil = null)
+    public static function countCourses(?string $categoryCode = null, ?string $dateFrom = null, ?string $dateUntil = null)
     {
         $courseTable = Database::get_main_table(TABLE_MAIN_COURSE);
         $accessUrlRelCourseTable = Database::get_main_table(TABLE_MAIN_ACCESS_URL_REL_COURSE);
@@ -449,7 +449,7 @@ class Statistics
                 FROM $categoryTable
                 ORDER BY tree_pos";
         $res = Database::query($sql);
-        $categories = [];
+        $categories = [null => get_lang('NoCategory')];
         while ($category = Database::fetch_object($res)) {
             $categories[$category->code] = $category->name;
         }
@@ -1072,9 +1072,7 @@ class Statistics
             $parameters = [];
 
             $parameters['report'] = 'activities';
-            if (isset($_GET['keyword'])) {
-                $parameters['keyword'] = Security::remove_XSS($_GET['keyword']);
-            }
+            $parameters['keyword'] = Security::remove_XSS($_GET['keyword']);
 
             $table->set_additional_parameters($parameters);
             $table->set_header(0, get_lang('EventType'));
@@ -1724,7 +1722,7 @@ class Statistics
      * Return de number of certificates generated.
      * This function is resource intensive.
      */
-    public static function countCertificatesByQuarter(string $dateFrom = null, string $dateUntil = null): int
+    public static function countCertificatesByQuarter(?string $dateFrom = null, ?string $dateUntil = null): int
     {
         $tableGradebookCertificate = Database::get_main_table(TABLE_MAIN_GRADEBOOK_CERTIFICATE);
 
@@ -1935,10 +1933,18 @@ class Statistics
             get_lang('Progress'),
         ];
 
+        $extraField = new ExtraField('user');
+        $extraFields = $extraField->get_all(['filter = ?' => 1], 'option_order');
+
+        foreach ($extraFields as $field) {
+            $headers[] = $field['variable'];
+        }
+
         $exportData = [$headers];
         foreach ($sessions as $session) {
             $sessionId = (int) $session['id'];
             $students = SessionManager::get_users_by_session($sessionId);
+            $extraValueObj = new ExtraFieldValue('user');
 
             foreach ($students as $student) {
                 $studentId = $student['user_id'];
@@ -1951,7 +1957,7 @@ class Statistics
                 $averageScore = round(Tracking::getAverageStudentScore($studentId, $courseCode, [], $sessionId));
                 $averageProgress = round(Tracking::get_avg_student_progress($studentId, $courseCode, [], $sessionId));
 
-                $exportData[] = [
+                $userData = [
                     $courseInfo['name'],
                     $session['name'],
                     $studentInfo['lastname'],
@@ -1962,6 +1968,13 @@ class Statistics
                     $averageScore,
                     $averageProgress,
                 ];
+
+                foreach ($extraFields as $field) {
+                    $extraValue = $extraValueObj->get_values_by_handler_and_field_id($studentId, $field['id'], true);
+                    $userData[] = $extraValue['value'] ?? '';
+                }
+
+                $exportData[] = $userData;
             }
         }
 

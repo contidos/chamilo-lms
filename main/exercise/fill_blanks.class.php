@@ -338,14 +338,16 @@ class FillBlanks extends Question
             null,
             get_lang('TypeTextBelow').', '.get_lang('And').' '.get_lang('UseTagForBlank')
         );
-        $form->addElement(
-            'html_editor',
+        $form->addHtmlEditor(
             'answer',
             Display::return_icon('fill_field.png'),
-            ['id' => 'answer'],
-            ['ToolbarSet' => 'TestQuestionDescription']
+            true,
+            false,
+            [
+                'id' => 'answer',
+                'ToolbarSet' => 'TestQuestionDescription',
+            ]
         );
-        $form->addRule('answer', get_lang('GiveText'), 'required');
 
         //added multiple answers
         $form->addElement('checkbox', 'multiple_answer', '', get_lang('FillInBlankSwitchable'));
@@ -402,6 +404,8 @@ class FillBlanks extends Question
 
         // remove starting and ending space and &nbsp;
         $answer = api_preg_replace("/\xc2\xa0/", " ", $answer);
+        // remove invisible Unicode characters introduced by word processors
+        $answer = self::stripInvisibleChars($answer);
 
         // start and end separator
         $blankStartSeparator = self::getStartSeparator($form->getSubmitValue('select_separator'));
@@ -746,13 +750,13 @@ class FillBlanks extends Question
                     $listSeveral
                 );
                 //$studentAnswer = htmlspecialchars($studentAnswer);
-                $result = in_array($studentAnswer, $listSeveral);
+                $result = in_array(self::trimOption($studentAnswer), $listSeveral);
                 break;
             case self::FILL_THE_BLANK_STANDARD:
             default:
                 $correctAnswer = api_html_entity_decode($correctAnswer);
                 //$studentAnswer = htmlspecialchars($studentAnswer);
-                $result = $studentAnswer == self::trimOption($correctAnswer);
+                $result = self::trimOption($studentAnswer) == self::trimOption($correctAnswer);
                 break;
         }
 
@@ -822,15 +826,14 @@ class FillBlanks extends Question
         $listDetails = explode(':', $listArobaseSplit[0]);
 
         // < number of item after the ::[score]:[size]:[separator_id]@ , here there are 3
+        $listWeightings = explode(',', $listDetails[0]);
         if (count($listDetails) < 3) {
-            $listWeightings = explode(',', $listDetails[0]);
             $listSizeOfInput = [];
             for ($i = 0; $i < count($listWeightings); $i++) {
                 $listSizeOfInput[] = 200;
             }
             $blankSeparatorNumber = 0; // 0 is [...]
         } else {
-            $listWeightings = explode(',', $listDetails[0]);
             $listSizeOfInput = explode(',', $listDetails[1]);
             $blankSeparatorNumber = $listDetails[2];
         }
@@ -891,7 +894,7 @@ class FillBlanks extends Question
                     // should always be
                     $i++;
                 }
-                $listAnswerResults['student_answer'][] = $listAnswerResults['words'][$i];
+                $listAnswerResults['student_answer'][] = Security::remove_XSS($listAnswerResults['words'][$i]);
                 if ($i + 1 < count($listAnswerResults['words'])) {
                     // should always be
                     $i++;
@@ -1199,7 +1202,8 @@ class FillBlanks extends Question
         $answer,
         $feedbackType,
         $resultsDisabled = false,
-        $showTotalScoreAndUserChoices = false
+        $showTotalScoreAndUserChoices = false,
+        $exercise
     ) {
         $result = '';
         $listStudentAnswerInfo = self::getAnswerInfo($answer, true);
@@ -1213,7 +1217,8 @@ class FillBlanks extends Question
                     $listStudentAnswerInfo['words'][$i],
                     $feedbackType,
                     $resultsDisabled,
-                    $showTotalScoreAndUserChoices
+                    $showTotalScoreAndUserChoices,
+                    $exercise
                 );
             } else {
                 $listStudentAnswerInfo['student_answer'][$i] = self::getHtmlWrongAnswer(
@@ -1221,7 +1226,8 @@ class FillBlanks extends Question
                     $listStudentAnswerInfo['words'][$i],
                     $feedbackType,
                     $resultsDisabled,
-                    $showTotalScoreAndUserChoices
+                    $showTotalScoreAndUserChoices,
+                    $exercise
                 );
             }
         }
@@ -1233,13 +1239,13 @@ class FillBlanks extends Question
                     continue;
                 }
             }
-            $result .= isset($listStudentAnswerInfo['common_words'][$i]) ? $listStudentAnswerInfo['common_words'][$i] : '';
-            $studentLabel = isset($listStudentAnswerInfo['student_answer'][$i]) ? $listStudentAnswerInfo['student_answer'][$i] : '';
+            $result .= $listStudentAnswerInfo['common_words'][$i] ?? '';
+            $studentLabel = $listStudentAnswerInfo['student_answer'][$i] ?? '';
             $result .= $studentLabel;
         }
 
         // the last common word (should be </p>)
-        $result .= isset($listStudentAnswerInfo['common_words'][$i]) ? $listStudentAnswerInfo['common_words'][$i] : '';
+        $result .= $listStudentAnswerInfo['common_words'][$i] ?? '';
 
         return $result;
     }
@@ -1253,8 +1259,6 @@ class FillBlanks extends Question
      * @param int    $feedbackType
      * @param bool   $resultsDisabled
      * @param bool   $showTotalScoreAndUserChoices
-     *
-     * @return string
      */
     public static function getHtmlAnswer(
         $answer,
@@ -1262,10 +1266,14 @@ class FillBlanks extends Question
         $right,
         $feedbackType,
         $resultsDisabled = false,
-        $showTotalScoreAndUserChoices = false
-    ) {
+        $showTotalScoreAndUserChoices = false,
+        $exercise
+    ): string {
         $hideExpectedAnswer = false;
         $hideUserSelection = false;
+        if (!$exercise->showExpectedChoiceColumn()) {
+            $hideExpectedAnswer = true;
+        }
         switch ($resultsDisabled) {
             case RESULT_DISABLE_SHOW_SCORE_AND_EXPECTED_ANSWERS_AND_RANKING:
             case RESULT_DISABLE_SHOW_ONLY_IN_CORRECT_ANSWER:
@@ -1354,7 +1362,8 @@ class FillBlanks extends Question
         $correct,
         $feedbackType,
         $resultsDisabled = false,
-        $showTotalScoreAndUserChoices = false
+        $showTotalScoreAndUserChoices = false,
+        $exercise
     ) {
         return self::getHtmlAnswer(
             $answer,
@@ -1362,7 +1371,8 @@ class FillBlanks extends Question
             true,
             $feedbackType,
             $resultsDisabled,
-            $showTotalScoreAndUserChoices
+            $showTotalScoreAndUserChoices,
+            $exercise
         );
     }
 
@@ -1382,7 +1392,8 @@ class FillBlanks extends Question
         $correct,
         $feedbackType,
         $resultsDisabled = false,
-        $showTotalScoreAndUserChoices = false
+        $showTotalScoreAndUserChoices = false,
+        $exercise
     ) {
         return self::getHtmlAnswer(
             $answer,
@@ -1390,7 +1401,8 @@ class FillBlanks extends Question
             false,
             $feedbackType,
             $resultsDisabled,
-            $showTotalScoreAndUserChoices
+            $showTotalScoreAndUserChoices,
+            $exercise
         );
     }
 
@@ -1398,10 +1410,8 @@ class FillBlanks extends Question
      * Check if a answer is correct by its text.
      *
      * @param string $answerText
-     *
-     * @return bool
      */
-    public static function isCorrect($answerText)
+    public static function isCorrect($answerText): bool
     {
         $answerInfo = self::getAnswerInfo($answerText, true);
         $correctAnswerList = $answerInfo['words'];
@@ -1420,10 +1430,8 @@ class FillBlanks extends Question
      * Clear the answer entered by student.
      *
      * @param string $answer
-     *
-     * @return string
      */
-    public static function clearStudentAnswer($answer)
+    public static function clearStudentAnswer($answer): string
     {
         $answer = htmlentities(api_utf8_encode($answer), ENT_QUOTES);
         $answer = str_replace('&#039;', '&#39;', $answer); // fix apostrophe
@@ -1434,7 +1442,23 @@ class FillBlanks extends Question
     }
 
     /**
-     * Removes double spaces between words.
+     * Strips invisible/problematic Unicode characters introduced by word
+     * processors such as Microsoft Word.
+     * U+00A0 is normalised to a regular space; all others are removed.
+     */
+    private static function stripInvisibleChars(string $text): string
+    {
+        $text = str_replace("\u{00A0}", ' ', $text); // Non-Breaking Space → space
+
+        return str_replace(
+            ["\u{00AD}", "\u{200B}", "\u{200C}", "\u{200D}", "\u{2060}", "\u{FEFF}"],
+            '',
+            $text
+        );
+    }
+
+    /**
+     * Strips invisible characters and normalises whitespace.
      *
      * @param string $text
      *
@@ -1443,7 +1467,8 @@ class FillBlanks extends Question
     private static function trimOption($text)
     {
         $text = trim($text);
+        $text = self::stripInvisibleChars($text);
 
-        return preg_replace("/\s+/", ' ', $text);
+        return preg_replace("/\s+/", ' ', trim($text));
     }
 }

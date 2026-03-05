@@ -21,11 +21,11 @@ class GradeBookResult
     /**
      * Exports the complete report as a CSV file.
      *
-     * @param string $dato Document path inside the document tool
+     * @param array $dato Document path inside the document tool
      *
      * @return bool False on error
      */
-    public function exportCompleteReportCSV($dato)
+    public function exportCompleteReportCSV(array $dato)
     {
         $filename = 'gradebook_results_'.gmdate('YmdGis').'.csv';
         $data = '';
@@ -80,19 +80,16 @@ class GradeBookResult
      * Exports the complete report as an XLS file.
      *
      * @param array $data
-     *
-     * @throws PHPExcel_Exception
-     * @throws PHPExcel_Writer_Exception
      */
     public function exportCompleteReportXLS($data)
     {
         $filename = 'gradebook-results-'.api_get_local_time().'.xlsx';
 
-        $spreadsheet = new PHPExcel();
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $spreadsheet->setActiveSheetIndex(0);
         $worksheet = $spreadsheet->getActiveSheet();
         $line = 1;
-        $column = 0;
+        $column = 1;
         // headers.
         foreach ($data[0] as $headerData) {
             $title = $headerData;
@@ -100,7 +97,7 @@ class GradeBookResult
                 $title = $headerData['header'];
             }
             $title = html_entity_decode(strip_tags($title));
-            $worksheet->SetCellValueByColumnAndRow(
+            $worksheet->setCellValueByColumnAndRow(
                 $column,
                 $line,
                 $title
@@ -110,9 +107,9 @@ class GradeBookResult
         $line++;
         $cant_students = count($data[1]);
         for ($i = 0; $i < $cant_students; $i++) {
-            $column = 0;
+            $column = 1;
             foreach ($data[1][$i] as $col_name) {
-                $worksheet->SetCellValueByColumnAndRow(
+                $worksheet->setCellValueByColumnAndRow(
                     $column,
                     $line,
                     html_entity_decode(strip_tags($col_name))
@@ -123,7 +120,7 @@ class GradeBookResult
         }
 
         $file = api_get_path(SYS_ARCHIVE_PATH).api_replace_dangerous_char($filename);
-        $writer = new PHPExcel_Writer_Excel2007($spreadsheet);
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
         $writer->save($file);
         DocumentManager::file_send_for_download($file, true, $filename);
         exit;

@@ -432,13 +432,13 @@ $LatestVersionIs = "La última versión es";
 $YourVersionNotUpToDate = "Su versión no está actualizada";
 $Hotpotatoes = "Hotpotatoes";
 $ZeroMeansNoQuestionWillBeSelectedMinusOneMeansThatAllQuestionsWillBeSelected = "-1 = Todas las preguntas serán seleccionadas. 0 = Ninguna pregunta será seleccionada.";
-$EmailNotificationTemplateDescription = "Puede modificar el correo enviado a los usuarios al terminar el ejercicio. Puede usar los siguientes términos: 
+$EmailNotificationTemplateDescription = "Puede modificar el correo enviado a los usuarios al terminar el ejercicio. Puede usar los siguientes términos:
 
 {{ student.username }}
-{{ student.firstname }} 
+{{ student.firstname }}
 {{ student.lastname }}
-{{ student.official_code }} 
-{{ exercise.title }} 
+{{ student.official_code }}
+{{ exercise.title }}
 {{ exercise.start_time }}
 {{ exercise.end_time }}
 {{ course.title }}
@@ -6158,7 +6158,7 @@ $LastConnexionDate = "Fecha de la última conexión";
 $ToolVideoconference = "Videoconferencia";
 $BigBlueButtonEnableTitle = "Herramienta de videoconferencia BigBlueButton";
 $BigBlueButtonEnableComment = "Seleccione si desea habilitar la herramienta de videoconferencia BigBlueButton. Una vez activada, se mostrará como una herramienta en la página principal todos los curso. Los profesores podrán lanzar una videoconferencia en cualquier momento, pero los estudiantes sólo podrán unirse a una ya lanzada.
-Si no dispone de un servidor BigBlueButton, pruebe a 
+Si no dispone de un servidor BigBlueButton, pruebe a
 <a href=\"http://bigbluebutton.org/\" target=\"_blank\">configurar uno</a> o pida ayuda a los <a href=\"http://www.chamilo.org/en/providers\" target=\"_blank\">proveedores oficiales de Chamilo</a>.
 BigBlueButton es libre, pero su instalación requiere ciertas habilidades técnicas que no todo el mundo posee. Puede instalarlo por su cuenta o buscar ayuda profesional con el consiguiente costo. En la lógica del software libre, nosotros le ofrecemos las herramientas para hacer más fácil su trabajo y le recomendamos profesionales (los proveedores oficiales de Chamilo) que serán capaces de ayudarle.";
 $BigBlueButtonHostTitle = "Servidor BigBlueButton";
@@ -6176,7 +6176,7 @@ La carpeta de los usuarios y las carpetas que contiene de cada uno de ellos, se 
 
 Si se hace visible la carpeta de los usuarios y la carpeta de uno o más alumnos, el resto de los alumnos podrán ver todo su contenido. En este caso, el alumno propietario de la carpeta también podrá desde la herramienta documentos (sólo dentro de su carpeta): crear y editar documentos web, convertir un documento web en una plantilla para uso personal, crear y editar dibujos SVG y PNG, grabar archivos de audio en formato WAV, convertir texto en audio en formato MP3, realizar capturas a través de su webcam, enviar documentos, crear carpetas, mover carpetas y archivos, borrar carpetas y archivos, y descargar copias de seguridad de su carpeta.
 
-Por otra parte, la herramienta documentos se sincroniza con el gestor de archivos del editor web, así que los cambios en la gestión de los documentos realizados en una u otra afectarán a ambas. 
+Por otra parte, la herramienta documentos se sincroniza con el gestor de archivos del editor web, así que los cambios en la gestión de los documentos realizados en una u otra afectarán a ambas.
 
 Así pues, la carpeta de usuario no sólo es un lugar para depositar los archivos, sino que se convierte en un completo gestor de los documentos que los estudiantes utilizan durante el curso. Además, recuerde que cualquier usuario podrá copiar un archivo, que sea visible, de cualquier carpeta de la herramienta documentos (sea o no la suya) a su portafolios o área personal de documentos de la red social, donde estará disponible para que lo pueda usar en otros cursos.";
 $HelpFolderChat = "INFORMACIÓN SOLO VISIBLE POR EL PROFESORADO:\nEsta carpeta contiene todas las sesiones que se han realizado en el chat. Aunque muchas veces las sesiones en el chat pueden ser triviales, en otras pueden ser dignas de ser tratadas como un documento más de trabajo. Para ello, sin cambiar la visibilidad de esta carpeta, haga visible el archivo y enlácelo donde considere oportuno. No se recomienda hacer visible esta carpeta.";
@@ -6323,7 +6323,7 @@ $MySocialGroups = "Mis grupos";
 $SocialGroups = "Grupos";
 $CreateASocialGroup = "Crear un grupo social";
 $StatsUsersDidNotLoginInLastPeriods = "No conectados por un tiempo";
-$LastXMonths = "Últimos %i meses";
+$LastXMonths = "Últimos %d meses";
 $NeverConnected = "Nunca conectados";
 $EnableAccessibilityFontResizeTitle = "Funcionalidad de redimensionamiento de fuentes";
 $EnableAccessibilityFontResizeComment = "Activar esta opción mostrará una serie de opciones de redimensionamiento de fuentes en la parte superior derecha de su campus. Esto permitirá a las personas con problemas de vista leer más fácilmente los contenidos de sus cursos.";
@@ -7842,7 +7842,7 @@ $IconsModeSVGComment = "Esta opción permite, si es activada, preferir el format
 $FilterByTags = "Filtrar por tags";
 $ImportFromMoodle = "Importar desde Moodle";
 $ImportFromMoodleInfo = "Importar un archivo de backup de curso de Moodle (.mbz) dentro de este curso de Chamilo";
-$ImportFromMoodleInstructions = "La funcionalidad de importación desde Moodle podría no soportar todos los tipos de contenido de Moodle, dado el hecho que no todas las funcionalidades existen en ambas plataformas, y que Moodle y Chamilo siguen evolucionando continua y rápidamente. Esta funcionalidad de importación debería ser considerada como un trabajo en progreso. Consulte la página siguiente para mayor información: <a href='https://support.chamilo.org/projects/chamilo-18/wiki/Moodle_import'>https://support.chamilo.org/projects/chamilo-18/wiki/Moodle_import</a>";
+$ImportFromMoodleInstructions = "La funcionalidad de importación desde Moodle podría no soportar todos los tipos de contenido de Moodle, dado el hecho que no todas las funcionalidades existen en ambas plataformas, y que Moodle y Chamilo siguen evolucionando continua y rápidamente. Esta funcionalidad de importación debería ser considerada como un trabajo en progreso. Consulte la página siguiente para mayor información: <a href='https://github.com/chamilo/chamilo-lms/wiki/Import-from-Moodle'>https://github.com/chamilo/chamilo-lms/wiki/Import-from-Moodle</a>";
 $MoodleFile = "Archivo de curso de Moodle";
 $FailedToImportThisIsNotAMoodleFile = "La importación tuvo un problema: este archivo no parece ser un archivo de backup de curso de Moodle (.mbz)";
 $ThisQuestionIsNotSupportedYet = "Este tipo de pregunta todavía no está soportado";
@@ -9097,4 +9097,54 @@ $AdminID = "ID de administrador";
 $MoodleVersion = "Versión de Moodle";
 $CreateExport = "Crear archivo de exporte";
 $MoodleExportAdminIDComment = "Moodle requiere la indentificación de algún usuario para almacenarla dentro de los archivos XML del formato .mbz. Por favor indique un número de ID interno (entero) del usuario quien está exportando este curso, o el ID interno del usuario en Moodle para el usuario quien será propietario de los recursos importados. Si tiene duda, puede simplemente marcar '1' y algunos datos falsos para seguir.";
+$DropboxVulnerabilityWarning = "Recuerde únicamente descargar archivos enviados por personas conocidas. Si tiene dudas, use un anti-virus en su computadora para reducir el riesgo de daños a sus datos.";
+$SessionExpiredAt = "Sesión expirada el";
+$DueToInactivityTheSessionIsGoingToClose = "Debido a su inactividad, esta sesión se cerrará en";
+$KeepGoing = "Seguir conectado";
+$SessionIsClosing = "Su sesión se está cerrando";
+$CannotChangeVisibilityOfBaseCourseResourceX = "La visibilidad de %s del curso base no puede ser cambiada desde una sesión.";
+$UsingAIProviderX = "Usando el proveedor de IA %s";
+$AIProvider = "Proveedor de IA";
+$AdvancedUserEdition = "Edición avanzada de usuarios";
+$FieldsToEdit = "Campos a editar";
+$SaveAll = "Guardar todo";
+$SaveOne = "Guardar este elemento";
+$TextAppearingAtTheEndOfTheTestWhenTheUserHasFailed = "Texto que aparece al final del examen cuando el usuario no ha aprobado";
+$SubscribeSessionWhenFinishedFailure = "Suscribir a la sesión al final del examen cuando el usuario no ha aprobado";
+$progressBasedOnVisiblesLPsInEachCourse = "El progreso es calculado en base a lecciones visibles en cada curso";
+$progressBasedOnXVisiblesLPs = "El progreso es calculado en base a %s lecciones visibles en el contexto presente.";
+$AtLeastOneCorrectAnswerRequired = "Por lo menos una respuesta debe ser marcada como correcta";
+$AtLeastOneCorrectAnswerMustHaveAPositiveScore = "Por lo menos una respuesta correcta debe tener un score positivo";
+$NoAnswerCanBeEmpty = "Ninguna respuesta puede ser vacía";
+$ScoreMustBeNumeric = "La nota debe ser numérica";
+$TheCorrectAnswerMustHaveAPositiveScore = "La respuesta correcta debe tener un score positivo";
+$ACorrectAnswerIsRequired = "Una respuesta debe ser marcada como correcta";
+$NoAdditionalComments = "No hay comentarios adicionales";
+$TeacherFeedback = "Comentario del profesor";
+$Learners = "ASISTENTES";
+$BackToDateOrder = "Retorno al orden cronológico";
+$SeeAlphabeticalOrder = "Ver en orden alfabético";
+$HideComment = "Ocultar comentarios";
+$AreYouSureYouWantToDeleteThisTicket = "¿Estás seguro de que quieres eliminar este ticket?";
+$TicketDeleted = "Ticket eliminado";
+$SubmittedDocument = "Documento entregado";
+$AnswerInOfficeDoc = "Respuesta como documento de ofimática";
+$UploadOfficeDoc = "Subir documento ofimático";
+$AllowedFormats = "Formatos soportados";
+$TheoreticalTime = "Tiempo teórico";
+$AverageProgressInSessions = "Progreso medio en las sesiones";
+$TimeSpentInCoursesLastWeek = "Tiempo dedicado en los cursos la semana pasada";
+$ProgressionInSessions = "Progreso en las sesiones";
+$synthesis = "Síntesis";
+$WeeklyTimeSummary = "Resumen de tiempo dedicado por semana";
+$ExistingUserWithSameExtraFieldValue = "Se encontró el mismo %s con un usuario existente (ID %d), se procederá a matricularlo en lugar de crear uno nuevo.";
+$SelectExtraField = "Seleccione el campo extra para buscar";
+$WhatToDoWithUnifiedUsers = "Que hacer con los usuarios unificados";
+$ExtraFieldNotFound = "Campo extra no encontrado";
+$NoDuplicatesFound = "No se encontraron duplicados";
+$UnifyToThisUser = "Unificar a este usuario";
+$Unify = "Unificar";
+$AreYouSureToUnify = "Estas seguro de unificar";
+$FinalUser = "Usuario final";
+$WillMergeNUsers = "Fusionará {n} usuarios";
 ?>

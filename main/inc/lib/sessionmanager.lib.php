@@ -2,6 +2,7 @@
 
 /* For licensing terms, see /license.txt */
 
+use Chamilo\CoreBundle\Component\HTMLPurifier\Filter\RemoveOnAttributes;
 use Chamilo\CoreBundle\Entity\Course;
 use Chamilo\CoreBundle\Entity\ExtraField;
 use Chamilo\CoreBundle\Entity\Repository\SequenceResourceRepository;
@@ -2051,6 +2052,22 @@ class SessionManager
             $course_list[] = $row['c_id'];
         }
 
+        // Build list of users already subscribed to the session as students.
+        // This allows us to avoid re-enrolling them into all courses again
+        // when they are already part of the session (preserves manual
+        // unsubscriptions at the course level).
+        $usersAlreadyInSession = [];
+        if (!empty($userList)) {
+            $userIdsStr = "'".implode("','", $userList)."'";
+            $sql = "SELECT user_id FROM $tbl_session_rel_user
+                    WHERE session_id = $sessionId AND relation_type = 0
+                    AND user_id IN ($userIdsStr)";
+            $resUsersInSession = Database::query($sql);
+            while ($row = Database::fetch_array($resUsersInSession)) {
+                $usersAlreadyInSession[] = (int) $row['user_id'];
+            }
+        }
+
         if ($session->getSendSubscriptionNotification() &&
             is_array($userList)
         ) {
@@ -2153,8 +2170,8 @@ class SessionManager
 
                 $usersToSubscribeInCourse = array_filter(
                     $userList,
-                    function ($userId) use ($existingUsers) {
-                        return !in_array($userId, $existingUsers);
+                    function ($userId) use ($existingUsers, $usersAlreadyInSession) {
+                        return !in_array($userId, $existingUsers) && !in_array($userId, $usersAlreadyInSession);
                     }
                 );
 
@@ -2695,6 +2712,8 @@ class SessionManager
                                 $cat->set_weight($origCat->get_weight());
                                 $cat->set_visible(0);
                                 $cat->set_certificate_min_score($origCat->getCertificateMinScore());
+                                $cat->setGenerateCertificates($origCat->getGenerateCertificates());
+                                $cat->setIsRequirement($origCat->getIsRequirement());
                                 $cat->add();
                                 $sessionGradeBookCategoryId = $cat->get_id();
                                 $sessionCategoriesId[$origCat->get_id()] = $sessionGradeBookCategoryId;
@@ -3064,7 +3083,10 @@ class SessionManager
     ) {
         $tbl_session_category = Database::get_main_table(TABLE_MAIN_SESSION_CATEGORY);
 
-        $name = Database::escape_string(trim($sname));
+        $name = trim($sname);
+        $name = html_filter($name);
+        $name = RemoveOnAttributes::filter($name);
+        $name = Database::escape_string($name);
 
         $year_start = intval($syear_start);
         $month_start = intval($smonth_start);
@@ -3148,7 +3170,9 @@ class SessionManager
         $sday_end
     ) {
         $tbl_session_category = Database::get_main_table(TABLE_MAIN_SESSION_CATEGORY);
-        $name = html_filter(trim($sname));
+        $name = trim($sname);
+        $name = html_filter($name);
+        $name = RemoveOnAttributes::filter($name);
         $year_start = intval($syear_start);
         $month_start = intval($smonth_start);
         $day_start = intval($sday_start);
@@ -3269,7 +3293,8 @@ class SessionManager
         $from = null,
         $to = null,
         $urlId = 0,
-        $onlyThisSessionList = []
+        $onlyThisSessionList = [],
+        $includeSessionWithNoCourse = false
     ) {
         $session_table = Database::get_main_table(TABLE_MAIN_SESSION);
         $session_category_table = Database::get_main_table(TABLE_MAIN_SESSION_CATEGORY);
@@ -3279,6 +3304,12 @@ class SessionManager
         $course_table = Database::get_main_table(TABLE_MAIN_COURSE);
         $urlId = empty($urlId) ? api_get_current_access_url_id() : (int) $urlId;
         $return_array = [];
+        $courseFrom = "LEFT JOIN ".$session_course_table." sco ON (sco.session_id = s.id)
+                INNER JOIN ".$course_table." c ON sco.c_id = c.id";
+
+        if ($includeSessionWithNoCourse) {
+            $courseFrom = "";
+        }
 
         $sql_query = " SELECT
                     DISTINCT(s.id),
@@ -3294,8 +3325,7 @@ class SessionManager
 				INNER JOIN $user_table u ON s.id_coach = u.user_id
 				INNER JOIN $table_access_url_rel_session ar ON ar.session_id = s.id
 				LEFT JOIN  $session_category_table sc ON s.session_category_id = sc.id
-				LEFT JOIN $session_course_table sco ON (sco.session_id = s.id)
-				INNER JOIN $course_table c ON sco.c_id = c.id
+				$courseFrom
 				WHERE ar.access_url_id = $urlId ";
 
         $availableFields = [
@@ -3461,7 +3491,12 @@ class SessionManager
                 ORDER BY name ASC';
         $result = Database::query($sql);
         if (Database::num_rows($result) > 0) {
-            $data = Database::store_result($result, 'ASSOC');
+            $data = [];
+
+            while ($category = Database::fetch_assoc($result)) {
+                $category['name'] = Security::remove_XSS($category['name']);
+                $data[] = $category;
+            }
 
             return $data;
         }
@@ -4623,7 +4658,9 @@ class SessionManager
             $s['duration'],
             $s['description'],
             $s['show_description'],
-            $extraFieldsValuesToCopy
+            $extraFieldsValuesToCopy,
+            0,
+            $s['send_subscription_notification']
         );
 
         if (!is_numeric($sid) || empty($sid)) {
@@ -5084,7 +5121,7 @@ class SessionManager
                     }
                 }
 
-                $session_name = $enreg['SessionName'];
+                $session_name = trim(trim(api_utf8_decode($enreg['SessionName']), '"'));
 
                 if ($debug) {
                     $logger->addInfo('---------------------------------------');
@@ -5536,6 +5573,7 @@ class SessionManager
                     }
                 }
 
+                $position = 0;
                 foreach ($courses as $course) {
                     $courseArray = bracketsToArray($course);
                     $course_code = $courseArray[0];
@@ -5546,7 +5584,7 @@ class SessionManager
 
                         // Adding the course to a session.
                         $sql = "INSERT IGNORE INTO $tbl_session_course
-                                SET c_id = '$courseId', session_id='$session_id'";
+                                SET c_id = '$courseId', session_id='$session_id', position = '$position'";
                         Database::query($sql);
 
                         self::installCourse($session_id, $courseInfo['real_id']);
@@ -5934,6 +5972,7 @@ class SessionManager
                             }
                         }
                         $inserted_in_course[$course_code] = $courseInfo['title'];
+                        $position++;
                     }
                 }
                 $access_url_id = api_get_current_access_url_id();
@@ -5970,9 +6009,9 @@ class SessionManager
      * @param int $sessionId
      * @param int $courseId
      *
-     * @return array
+     * @return array<int, int>
      */
-    public static function getCoachesByCourseSession($sessionId, $courseId)
+    public static function getCoachesByCourseSession($sessionId, $courseId): array
     {
         $table = Database::get_main_table(TABLE_MAIN_SESSION_COURSE_USER);
         $sessionId = (int) $sessionId;
@@ -5988,7 +6027,7 @@ class SessionManager
         $coaches = [];
         if (Database::num_rows($result) > 0) {
             while ($row = Database::fetch_array($result)) {
-                $coaches[] = $row['user_id'];
+                $coaches[] = (int) $row['user_id'];
             }
         }
 
@@ -8085,16 +8124,31 @@ class SessionManager
 
         $form->addElement('checkbox', 'show_description', null, get_lang('ShowDescription'));
 
+        $visibilityOptions = [
+            SESSION_VISIBLE_READ_ONLY => get_lang('SessionReadOnly'),
+            SESSION_VISIBLE => get_lang('SessionAccessible'),
+            SESSION_INVISIBLE => api_ucfirst(get_lang('SessionNotAccessible')),
+        ];
+
+        $visibilityOptionsConfiguration = api_get_configuration_value('session_visibility_after_end_date_options_configuration');
+        if (!empty($visibilityOptionsConfiguration)) {
+            foreach ($visibilityOptionsConfiguration['visibility_options_to_hide'] as $option) {
+                $option = trim($option);
+                if (defined($option)) {
+                    $constantValue = constant($option);
+                    if (isset($visibilityOptions[$constantValue])) {
+                        unset($visibilityOptions[$constantValue]);
+                    }
+                }
+            }
+        }
+
         $visibilityGroup = [];
         $visibilityGroup[] = $form->createElement(
             'select',
             'session_visibility',
             null,
-            [
-                SESSION_VISIBLE_READ_ONLY => get_lang('SessionReadOnly'),
-                SESSION_VISIBLE => get_lang('SessionAccessible'),
-                SESSION_INVISIBLE => api_ucfirst(get_lang('SessionNotAccessible')),
-            ]
+            $visibilityOptions
         );
         $form->addGroup(
             $visibilityGroup,
@@ -8367,6 +8421,8 @@ class SessionManager
         // Column config
         $operators = ['cn', 'nc'];
         $date_operators = ['gt', 'ge', 'lt', 'le'];
+
+        $columnModel = [];
 
         switch ($listType) {
             case 'my_space':
@@ -9974,6 +10030,146 @@ class SessionManager
                 $event->getColor()
             );
         }
+    }
+
+    /**
+     * Export an Excel report for a specific course within a session.
+     *
+     * The report includes session details and a list of certified users
+     * with their extra field values.
+     *
+     * @param int    $sessionId  ID of the session
+     * @param string $courseCode Course code of the course in the session
+     */
+    public static function exportCourseSessionReport(int $sessionId, string $courseCode): void
+    {
+        $courseInfo = api_get_course_info($courseCode);
+        $sessionInfo = api_get_session_info($sessionId);
+
+        if (empty($courseInfo) || empty($sessionInfo)) {
+            exit('Invalid course or session.');
+        }
+
+        $config = api_get_configuration_value('session_course_excel_export');
+        if (empty($config)) {
+            exit('Configuration not set.');
+        }
+
+        $sessionFields = $config['session_fields'] ?? [];
+        $userFieldsBefore = $config['user_fields_before'] ?? [];
+        $userFieldsAfter = $config['user_fields_after'] ?? [];
+
+        // 1. SESSION HEADER
+        $header1 = [''];
+        $header1[] = $config['session_start_date_header'] ?? get_lang('StartDate');
+        $header1[] = $config['session_end_date_header'] ?? get_lang('EndDate');
+
+        foreach ($sessionFields as $entry) {
+            $header1[] = $entry['header'] ?? '';
+        }
+
+        // 2. SESSION DATA
+        $row2 = $config['course_field_value'] ? [$config['course_field_value']] : [$courseInfo['title']];
+        $row2[] = (new DateTime($sessionInfo['access_start_date']))->format('d/m/Y');
+        $row2[] = (new DateTime($sessionInfo['access_end_date']))->format('d/m/Y');
+
+        $extraValuesObj = new ExtraFieldValue('session');
+        $sessionExtra = $extraValuesObj->getAllValuesByItem($sessionId);
+        $sessionExtraMap = array_column($sessionExtra, 'value', 'variable');
+
+        foreach ($sessionFields as $entry) {
+            if (!empty($entry['field'])) {
+                $value = $sessionExtraMap[$entry['field']] ?? '';
+                if (!empty($entry['numberOfLetter']) && $entry['numberOfLetter'] > 0) {
+                    $value = mb_substr($value, 0, $entry['numberOfLetter']);
+                }
+            } else {
+                $value = '';
+            }
+            $row2[] = $value;
+        }
+
+        // 3. USER HEADER
+        $header3 = [''];
+
+        foreach ($userFieldsBefore as $entry) {
+            $header3[] = $entry['header'] ?? '';
+        }
+
+        $header3[] = $config['user_firstname_header'] ?? get_lang('FirstName');
+        $header3[] = $config['user_lastname_header'] ?? get_lang('LastName');
+
+        foreach ($userFieldsAfter as $entry) {
+            $header3[] = $entry['header'] ?? '';
+        }
+
+        // 4. USERS WITH CERTIFICATE
+        $dataRows = [];
+
+        $tblCat = Database::get_main_table(TABLE_MAIN_GRADEBOOK_CATEGORY);
+        $sql = "
+            SELECT id FROM $tblCat
+            WHERE course_code = '".Database::escape_string($courseCode)."'
+            AND session_id = ".intval($sessionId)."
+            AND generate_certificates = 1
+            LIMIT 1
+        ";
+        $res = Database::query($sql);
+        $row = Database::fetch_array($res);
+        $catId = $row ? (int) $row['id'] : 0;
+
+        if ($catId > 0) {
+            $tableCertificate = Database::get_main_table(TABLE_MAIN_GRADEBOOK_CERTIFICATE);
+            $sql = "SELECT DISTINCT user_id FROM $tableCertificate WHERE cat_id = $catId";
+            $res = Database::query($sql);
+
+            $rowIndex = 0;
+            while ($cert = Database::fetch_array($res)) {
+                $userId = $cert['user_id'];
+                $userInfo = api_get_user_info($userId);
+
+                $row = [];
+                $row[] = get_lang('Learners');
+
+                $userExtraObj = new ExtraFieldValue('user');
+                $userExtra = $userExtraObj->getAllValuesByItem($userId);
+                $userExtraMap = array_column($userExtra, 'value', 'variable');
+
+                foreach ($userFieldsBefore as $entry) {
+                    if (!empty($entry['field'])) {
+                        $value = $userExtraMap[$entry['field']] ?? '';
+                    } else {
+                        $value = '';
+                    }
+                    $row[] = $value;
+                }
+
+                $row[] = $userInfo['firstname'];
+                $row[] = $userInfo['lastname'];
+
+                foreach ($userFieldsAfter as $entry) {
+                    if (!empty($entry['field'])) {
+                        $value = $userExtraMap[$entry['field']] ?? '';
+                    } else {
+                        $value = '';
+                    }
+                    $row[] = $value;
+                }
+
+                $dataRows[] = $row;
+                $rowIndex++;
+            }
+        }
+
+        // 5. EXPORT FINAL
+        $rows = [];
+        $rows[] = $header1;
+        $rows[] = $row2;
+        $rows[] = $header3;
+        $rows = array_merge($rows, $dataRows);
+
+        $filename = 'session_'.$sessionId.'_course_'.$courseCode;
+        Export::arrayToXls($rows, $filename);
     }
 
     /**
