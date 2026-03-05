@@ -168,3 +168,66 @@ footer.bgfooter a{
 footer.bgfooter a:hover{
   color: #CCC;
 }
+
+/* ========================================
+   COLORES PERSONALIZADOS PARA BOTONES
+   ======================================== */
+
+/* Botones primarios en color burdeos del tema */
+.btn-primary {
+    color: #fff !important;
+    background-color: #A70228 !important;
+    border-color: #A70228 !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active,
+.btn-primary.active {
+    background-color: #800020 !important;
+    border-color: #800020 !important;
+}
+
+/* Botones de éxito en burdeos oscuro */
+.btn-success {
+    color: #fff !important;
+    background-color: #800020 !important;
+    border-color: #800020 !important;
+}
+
+.btn-success:hover,
+.btn-success:focus,
+.btn-success:active {
+    background-color: #6D0019 !important;
+    border-color: #6D0019 !important;
+}
+
+/* Botones de información en burdeos claro */
+.btn-info {
+    color: #fff !important;
+    background-color: #A90329 !important;
+    border-color: #A90329 !important;
+}
+
+.btn-info:hover,
+.btn-info:focus,
+.btn-info:active {
+    background-color: #8f0222 !important;
+    border-color: #8f0222 !important;
+}
+
+/* Botones de peligro en burdeos muy oscuro */
+.btn-danger {
+    color: #fff !important;
+    background-color: #6D0019 !important;
+    border-color: #6D0019 !important;
+}
+
+/* Badges en color del tema */
+.badge-primary {
+    background-color: #A70228 !important;
+}
+
+#lp_notification_control {
+    display:none;
+}
