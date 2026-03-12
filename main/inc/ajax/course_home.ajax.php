@@ -748,6 +748,78 @@ switch ($action) {
         }
 
         break;
+    case 'get_counter':
+        require_once __DIR__.'/../global.inc.php';
+        $userId = api_get_user_id();
+        $courseId = isset($_REQUEST['course_id']) ? (int) $_REQUEST['course_id'] : 0;
+        $sessionId = isset($_REQUEST['session_id']) ? (int) $_REQUEST['session_id'] : 0;
+
+        $contentCounter = '';
+        $showCourseTimeCounterOnSessions = api_get_configuration_value('course_home_show_time_counter');
+        $showCourseTimeCounterOnThisSession = SessionManager::getFilteredExtraFields($sessionId,['show_time_counter_on_course']);
+        $showCourseTimeSpent = false;
+
+        if (!empty($showCourseTimeCounterOnThisSession) && $showCourseTimeCounterOnThisSession[0]['value']) {
+            $showCourseTimeSpent = true;
+        }
+
+        if ($showCourseTimeCounterOnSessions && $sessionId != 0 && $showCourseTimeSpent) {
+            /*Event::eventCourseLoginUpdate($courseId, $userId, $sessionId, 0.08);
+
+            $timeSpentOnCourse = Tracking::get_time_spent_on_the_course($userId, $courseId, $sessionId);
+
+            $hours = intdiv($timeSpentOnCourse, 3600) + '';
+            $minutes = intdiv($timeSpentOnCourse % 3600, 60);
+
+            $timeComplete = sprintf("%02d%02d", $hours, $minutes);
+
+            $userInfo = api_get_user_info($user_id);
+            $firstName = $userInfo['firstname'];
+            $contentCounter = '<span style="padding:5px; color: #fff;">'.sprintf(get_lang('TimeInCourse'), $firstName).'</span>
+                                <span style = "background-color:#fff; color: black; border-radius: 4px; padding: 5px;">'.$timeComplete[0].'</span>
+                                <span style = "background-color:#fff; color: black; border-radius: 4px; padding: 5px;">'.$timeComplete[1].'</span>
+                                <span style = "background-color:#fff; color: black; border-radius: 4px; padding: 5px;">:</span>
+                                <span style = "background-color:#fff; color: black; border-radius: 4px; padding: 5px;">'.$timeComplete[2].'</span>
+                                <span style = "background-color:#fff; color: black; border-radius: 4px; padding: 5px;">'.$timeComplete[3].'</span>
+                                ';*/
+
+            //Event::eventCourseLoginUpdate($courseId, $userId, $sessionId, 0.08);
+            //Event::accessCourse();
+
+            $logInfo = [
+                'tool' => 'Chrono',
+            ];
+            Event::registerLog($logInfo);
+
+            $timeSpentOnCourse = Tracking::get_time_spent_on_the_course($userId, $courseId, $sessionId);
+
+            $hours = intdiv($timeSpentOnCourse, 3600);
+            $minutes = intdiv($timeSpentOnCourse % 3600, 60);
+
+            $hoursStr = strval($hours);
+            $minutesStr = sprintf("%02d", $minutes);
+
+            $userInfo = api_get_user_info($userId);
+            $firstName = $userInfo['firstname'];
+            $contentCounter = '<span style="padding:5px; color: #fff;">'.sprintf(get_lang('TimeInCourse'), $firstName).'</span>
+            ';
+
+            foreach (str_split($hoursStr) as $digit) {
+                $contentCounter .= '<span style="background-color:#fff; color: black; border-radius: 4px; padding: 5px;">'.$digit.'</span>
+                ';
+            }
+
+            $contentCounter .= '<span style="background-color:#fff; color: black; border-radius: 4px; padding: 5px;">:</span>
+            ';
+
+            foreach (str_split($minutesStr) as $digit) {
+                $contentCounter .= '<span style="background-color:#fff; color: black; border-radius: 4px; padding: 5px;">'.$digit.'</span>
+                ';
+            }
+        }
+
+        echo $contentCounter;
+        break;
     default:
         echo '';
 }

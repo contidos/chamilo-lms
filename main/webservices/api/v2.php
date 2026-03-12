@@ -154,7 +154,12 @@ try {
             $receivers = $_POST['receivers'] ?? [];
             $subject = !empty($_POST['subject']) ? $_POST['subject'] : null;
             $text = !empty($_POST['text']) ? $_POST['text'] : null;
-            $data = $restApi->saveUserMessage($subject, $text, $receivers);
+            if (!empty($_POST['only_local']) && ('false' != $_POST['only_local'])) {
+                $only_local = true;
+            } else {
+                $only_local = false;
+            }
+            $data = $restApi->saveUserMessage($subject, $text, $receivers, $only_local);
             Event::addEvent(LOG_WS.$action, 'username', $username);
             $restResponse->setData($data);
             break;
@@ -652,6 +657,25 @@ try {
             $restResponse->setData(
                 $restApi->getUserTotalConnexionTime(
                     $username
+                )
+            );
+            break;
+        case Rest::GET_USER_PROGRESS_AND_TIME_IN_SESSION:
+            $userId = (string) $_REQUEST['user_id'];
+            $sessionId = (string) $_REQUEST['session_id'];
+
+            if (empty($userId)) {
+                throw new Exception('user_id not provided');
+            }
+            if (empty($sessionId)) {
+                throw new Exception('session_id not provided');
+            }
+
+            Event::addEvent(LOG_WS.$action, 'user_id', $userId);
+            $restResponse->setData(
+                $restApi->getUserProgressAndTimeInSession(
+                    $userId,
+                    $sessionId
                 )
             );
             break;

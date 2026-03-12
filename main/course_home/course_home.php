@@ -527,7 +527,144 @@ if ($allow === true) {
     }
 }
 
-$content = '<div id="course_tools">'.$diagram.$content.'</div>';
+
+$showCourseTimeCounterOnSessions = api_get_configuration_value('course_home_show_time_counter');
+$showCourseTimeCounterOnThisSession = SessionManager::getFilteredExtraFields($sessionId,["show_time_counter_on_course"]);
+
+$showCourseTimeSpent = false;
+
+if (!empty($showCourseTimeCounterOnThisSession) && $showCourseTimeCounterOnThisSession[0]['value']) {
+    $showCourseTimeSpent = true;
+}
+
+$contentCounter = '';
+
+if ($sessionId != 0 && $showCourseTimeCounterOnSessions && $showCourseTimeSpent) {
+    $timeSpentOnCourse = Tracking::get_time_spent_on_the_course($user_id, $courseId, $sessionId);
+    $hours = gmdate("H",$timeSpentOnCourse);
+    $minutes = gmdate("i",$timeSpentOnCourse);
+
+    $userInfo = api_get_user_info($user_id);
+    $firstName = $userInfo['firstname'];
+
+
+    $contentCounter = '<style>
+        .button-counter-container {
+            display: inline-block;
+            background: linear-gradient(to bottom, #c4d82e 0%,#5b8b3e 100%);
+            color: white;
+            padding: 5px 10px;
+            margin: 2px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .button-counter-container:hover {
+            background-color: #007a8c;
+        }
+
+        .counter-container {
+            display: none;
+            position: absolute;
+            background: linear-gradient(to bottom, #c4d82e 0%,#5b8b3e 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            white-space: nowrap;
+            margin-top: 1px;
+        }
+
+        .counter-container.show {
+            display: block;
+            animation: slideDown 0.3s ease-in-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>';
+
+    $htmlHeadXtra[] = '<script>
+        $(document).ready(function() {
+
+            var ctaHtml = `
+                <div id="view_as_link" class="pull-right">
+                    <div class="button-counter-container" id="container-counter-button">
+                        <i class="fa fa-clock-o"></i>
+                    </div>
+                    <div id="container-course-counter" class="counter-container">
+                        <div id="course-counter" class="cta-content">
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            var targetElement = $("#view_as_link");
+    
+            if (targetElement.length === 0) {
+                targetElement = $(".breadcrumb").first();
+            }
+    
+            if (targetElement.length > 0) {
+                targetElement.before(ctaHtml);
+            }
+
+            $("#container-counter-button").hover(
+                function() {
+                    OpenCourseHomeCounter();
+                },
+                function() {
+                }
+            );
+
+            OpenCourseHomeCounter(10000);
+        });
+        
+        function OpenCourseHomeCounter(timeToWait = 10000) {
+            $.ajax({
+                type: "GET",
+                url: "'.api_get_path(WEB_AJAX_PATH).'course_home.ajax.php?'.api_get_cidreq().'&a=get_counter&course_id='.$courseId.'&session_id='.$sessionId.'",
+                success: function (data) {
+                    $("#course-counter").html(data);
+                    
+                    $("#container-course-counter").css("display", "block");
+    
+                    var contentWidth = $("#container-course-counter").outerWidth();
+                    var buttonWidth = $("#container-counter-button").outerWidth();
+    
+                    var leftPosition = $("#container-counter-button").offset().left + (buttonWidth) - (contentWidth);
+    
+                    $("#container-course-counter").css({
+                        "left": leftPosition + "px",
+                        "top": ($("#container-counter-button").offset().top + $("#container-counter-button").outerHeight()) + "px"
+                    });
+    
+                    $("#container-course-counter").addClass("show");
+        
+                    setTimeout(function() {
+                        $("#container-course-counter").removeClass("show");
+                        $("#container-course-counter").css("display", "none");
+                    }, timeToWait);
+                },
+                error: function() {
+                    console.log("Error updating counter ");
+                }
+            });
+        }
+    </script>'; 
+    }
+
+$content = $contentCounter.'<div id="course_tools">'.$diagram.$content.'</div>';
 
 // Deleting the objects
 Session::erase('_gid');

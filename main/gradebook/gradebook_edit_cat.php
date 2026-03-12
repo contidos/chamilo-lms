@@ -89,6 +89,14 @@ if ($form->validate()) {
     }
 
     $cat->save();
+
+    $minTimeNeeded = api_get_configuration_value('certificate_generation_minimum_time') ? true : false;
+    if ($minTimeNeeded) {
+        if (isset($values['certif_min_time'])) {
+            CourseManager::update_course_extra_field_value(api_get_course_id(), "certificate_minimum_time", $values['certif_min_time']);
+        }
+    }
+
     header('Location: '.Category::getUrl().'editcat=&selectcat='.$cat->get_parent_id());
     exit;
 }

@@ -130,6 +130,28 @@ class Event
         return true;
     }
 
+    public static function eventLogin_bbb($userId, $first, $end, $ip)
+    {
+        $userInfo = api_get_user_info($userId);
+        $userId = (int) $userId;
+
+        if (empty($userInfo)) {
+            return false;
+        }
+
+        $table = Database::get_main_table(TABLE_STATISTIC_TRACK_E_LOGIN);
+
+        $sql = "INSERT INTO $table (login_user_id, user_ip, login_date, logout_date) VALUES
+                    ($userId,
+                    '$ip',
+                    '$first',
+                    '$end'
+                )";
+        Database::query($sql);
+
+        return true;
+    }    
+
     /**
      * @param int $sessionId
      *
@@ -2242,6 +2264,32 @@ class Event
         }
     }
 
+
+    public static function eventCourseLogin_bbb($courseId, $user_id, $sessionId, $first, $end, $ip)
+    {
+        $table = Database::get_main_table(TABLE_STATISTIC_TRACK_E_COURSE_ACCESS);
+
+        // $counter represents the number of time this record has been refreshed
+        $counter = $counter = rand(1, 17);
+
+        $sql = "INSERT INTO $table(c_id, user_ip, user_id, login_course_date, logout_course_date, counter, session_id)
+                VALUES($courseId, '$ip', $user_id, '$first', '$end', $counter, $sessionId)";
+        $courseAccessId = Database::query($sql);
+
+        /*if ($courseAccessId) {
+            CourseManager::update_course_ranking(
+                null,
+                null,
+                null,
+                null,
+                true,
+                false
+            );
+
+            return true;
+        }*/
+    }
+
     /**
      * Updates the user - course - session every X minutes
      * In order to avoid.
@@ -2740,6 +2788,37 @@ class Event
 
         return true;
     }
+
+
+    public static function registerLog_bbb($logInfo)
+    {
+        $loginAs = (int) Session::read('login_as') === true;
+
+        $logInfo['user_id'] = isset($logInfo['user_id']) ? $logInfo['user_id'] : api_get_user_id();
+        $logInfo['date_reg'] = isset($logInfo['date_reg']) ? $logInfo['date_reg'] : api_get_utc_datetime();
+        $logInfo['tool'] = !empty($logInfo['tool']) ? $logInfo['tool'] : '';
+        $logInfo['tool_id'] = !empty($logInfo['tool_id']) ? (int) $logInfo['tool_id'] : 0;
+        $logInfo['tool_id_detail'] = !empty($logInfo['tool_id_detail']) ? (int) $logInfo['tool_id_detail'] : 0;
+        $logInfo['action'] = !empty($logInfo['action']) ? $logInfo['action'] : '';
+        $logInfo['action_details'] = !empty($logInfo['action_details']) ? $logInfo['action_details'] : '';
+        $logInfo['ip_user'] = isset($logInfo['ip']) ? $logInfo['ip'] : api_get_real_ip();
+        $logInfo['user_agent'] = $_SERVER['HTTP_USER_AGENT'];
+        $logInfo['session_id'] = $logInfo['session_id'];
+        $logInfo['c_id'] = $logInfo['c_id'];
+        $logInfo['ch_sid'] = session_id();
+        $logInfo['login_as'] = $loginAs;
+        $logInfo['info'] = !empty($logInfo['info']) ? $logInfo['info'] : '';
+        $logInfo['url'] = $_SERVER['REQUEST_URI'];
+        $logInfo['current_id'] = isset($logInfo['current_id']) ? $logInfo['current_id'] : Session::read('last_id', 0);
+
+        $id = Database::insert('track_e_access_complete', $logInfo);
+        if ($id && empty($logInfo['current_id'])) {
+            Session::write('last_id', $id);
+        }
+
+        return true;
+    }
+
 
     public static function getAttemptQuestionDuration($exeId, $questionId)
     {

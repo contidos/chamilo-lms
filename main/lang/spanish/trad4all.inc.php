@@ -7203,7 +7203,7 @@ $ShowUsersNotAddedInTheURL = "Mostrar usuarios no añadidos a la URL";
 $UserNotAddedInURL = "Usuarios no añadidos a la URL";
 $UsersRegisteredInNoSession = "Usuarios no registrados en ninguna sesión";
 $CommandLineInterpreter = "Intérprete de comandos en línea (CLI)";
-$PleaseVisitOurWebsite = "Visite nuestro sitio web https://chamilo.org/download";
+$PleaseVisitOurWebsite = "Visite nuestro sitio web http://www.chamilo.org";
 $SpaceUsedOnSystemCannotBeMeasuredOnWindows = "El espacio usado en el disco no puede ser medido en sistemas basados en Windows";
 $XOldTablesDeleted = "%d tablas antiguas eliminadas";
 $XOldDatabasesDeleted = "%d bases de datos antiguas eliminadas";
@@ -8041,11 +8041,13 @@ $AfterOrBefore = "Antes o después";
 $Before = "Antes de";
 $ScheduleAnnouncementDescription = "Este formulario permite programar anuncios/avisos para que sean enviados de manera automática a los alumnos que están realizando un curso en una sesión.
 
-Existe dos tipos de anuncios que se pueden enviar:
+Existe tres tipos de anuncios que se pueden enviar:
 
 Envío en una fecha concreta: En este caso se selecciona un día concreto para hacer el envío.
 
-Envío en base a la fecha de inicio/finalización de la sesión: en este caso se ha de indicar el número de días que han de pasar antes de enviar el anuncio. Y esos días pueden estar asociados a antes o después de la fecha de inicio/finalización. Por ejemplo: 3 días después de fecha de inicio.";
+Envío en base a la fecha de inicio/finalización de la sesión: en este caso se ha de indicar el número de días que han de pasar antes de enviar el anuncio. Y esos días pueden estar asociados a antes o después de la fecha de inicio/finalización. Por ejemplo: 3 días después de fecha de inicio.
+
+Envío en base al progreso y fecha de inicio/finalización del curso: En este caso se especifica el progreso que debe tener los alumnos y el número de días que han de pasar antes de enviar el anuncio.";
 $MandatorySurveyNoAnswered = "Usted tiene pendiente una encuesta obligatoria. Para ingresar al curso, primero deberá completarla";
 $ShowPreviousButton = "Mostrar el botón 'anterior'";
 $AllTickets = "Todos los tickets";
@@ -8807,7 +8809,7 @@ $QuizRemindSubject = "Tienes un nuevo mensaje de %s";
 $QuizFirstRemindBody = "Hola \%s,<br /><br /> Un nuevo ejercicio %s ha sido agregado en el curso %s.<br /><br />Curso: %s <br />Ejercicio: %s <br />";
 $QuizLastRemindBody = "Visitar el ejercicio en <a href=\"%s\">%s</a><br />";
 $QuizDhrRemindBody = "Hola %s,<br /><br />Como padre, estan recibiendo este correo para avisarle que %s tiene un nuevo ejercicio %s en el curso %s.<br /><br />Estudiante: %s<br /> Curso: %s<br />Ejercicio: %s<br />";
-$QuizRemindDuration = "Duración del ejercicio: %s <br />";
+$QuizRemindDuration = "Duration del ejercicio: %s <br />";
 $QuizRemindStartDate = "Fecha de inicio del ejercicio: %s <br />";
 $QuizRemindEndDate = "Fecha de fin del ejercicio: %s <br />";
 $CareerDiagramLegend = "Leyenda del diagrama de carrera";
@@ -9058,43 +9060,11 @@ $HideCareersHierarchy = "Ocultar jerarquías";
 $ShowCareersHierarchy = "Mostrar jerarquías";
 $ParentCareer = "Carrera padre";
 $CareerCannotBeDeletedAsItHasChildren = "Esta carrera no puede ser eliminada hasta que las carreras hijas a ésta sean eliminadas o movidas a otra carrera.";
-$EmailUsedTwiceInImportFile = "Este correo electrónico ya está usado por otro usuario en el mismo archivo.";
-$NotificationInYourForums = "Hay nuevos posts en los foros siguientes de tus cursos.";
-$ExtraFieldIdComment = "Este identificador es interno al sistema y no debe contener espacios ni caracteres especiales. Podrá ser usado también por plugins para filtrar entre los elementos que lo usan.";
-$IncludeLastLogin = "Incluir último login";
-$DuplicatedUsersByMail = "Usuarios duplicados por e-mail";
-$ThisReportOnlyListsUsersThatHaveTheSameEmail = "Este reporte solo lista usuarios que tienen el mismo e-mail.";
-$CancelNotifyMe = "Dejar de notificarme";
-$EmptyExpirationDate = "La fecha de expiración no puede ser vacía.";
-$MailingTestNotSent = "El correo de prueba no ha podido ser enviado. Puede que la dirección introducida sea incorrecta, que pertenezca a un usuario inactivo, o que su servidor de correos no esté bien configurado (ver archivo mail.conf.php).";
-$PasswordExpiredPleaseSetNewPassword = "Su contraseña se ha vencido. Por favor, defina una nueva contraseña antes de seguir.";
-$CopyIframeCodeToIncludeExercise = "Copie el código del iframe a continuación para incluir el ejercicio:";
-$MyMissingSignatures = "Mis firmas faltantes";
-$OnlyShowActiveUsers = "Mostrar solo usuarios activos";
-$UpdateCourseListXMLCSV = "Actualizar la lista de cursos";
-$CodeIsRequired = "Se necesita un código";
-$CourseCodeDoesNotExist = "Este codigo de curso no existe";
-$DuplicateCode = "Código duplicado";
-$CoursesUpdatedSuccessfully = "Cursos actualizados exitósamente";
-$UpdateFailedForCourses = "La actualización falló para los cursos siguientes";
-$HoursMinutesSeconds = "%02d h %02d m %02d s";
-$IfYourLPsAreScormsYouShouldSelectThemFromTheScorms = "Si sus lecciones de aprendizaje son paquetes scorm, debe seleccionar la carpeta correspondiente en la parte SCORM";
-$QuestionsWithNoAutomaticCorrection = "Preguntas sin corrección automática";
-$UsersReportByCourseInSessions = "Reporte de progreso de usuarios por curso, en todas las sesiones";
-$UsersReport = "Reporte de usuarios";
-$SelectAllUsers = "Seleccionar todos los usuarios";
-$SelectUsers = "Seleccionar usuarios";
-$ValidationDate = "Fecha de validación";
-$LearningpathName = "Nombre de lección";
-$StartingAccessDate = "Fecha de inicio de acceso";
-$EndingAccessDate = "Fecha de finalización del acceso";
-$TimeReport = "Informe de tiempo de accesso";
-$BillingReport = "Informe de facturación";
-$ExportToMoodle = "Exportar para Moodle";
-$ExportToMoodleInfo = "Exportar los contenidos del curso en el formato .mbz de Moodle, listo para importar en un portal Moodle";
-$MoodleExportCreated = "Exportación Moodle creada";
-$AdminID = "ID de administrador";
-$MoodleVersion = "Versión de Moodle";
-$CreateExport = "Crear archivo de exporte";
-$MoodleExportAdminIDComment = "Moodle requiere la indentificación de algún usuario para almacenarla dentro de los archivos XML del formato .mbz. Por favor indique un número de ID interno (entero) del usuario quien está exportando este curso, o el ID interno del usuario en Moodle para el usuario quien será propietario de los recursos importados. Si tiene duda, puede simplemente marcar '1' y algunos datos falsos para seguir.";
+$DueToInactivityTheSessionIsGoingToCloseJS = "Debido a la inactividad, la sesión se cerrará en";
+$KeepGoingJS = "Continuar";
+$SessionExpiredAtJS = "Sesión caducada el";
+$SessionIsClosingJS = "La sesión se está cerrando por inactividad...";
+$TimeInCourse = "Hola %s, tu tiempo en el curso es:";
+$BaseProgress = "Envío en base al progreso en el curso";
+$ProgressLessEqual = "Progreso menor o igual";
 ?>

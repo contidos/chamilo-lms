@@ -37,7 +37,7 @@ if ($reset && $userId) {
     Display::addFlash(
         Display::return_message($messageText, 'info', false)
     );
-    header('Location: '.api_get_path(WEB_PATH));
+    header('Location: '.api_get_path(WEB_PATH).'?recoverPassword=&action=password_sended');
     exit;
 }
 
