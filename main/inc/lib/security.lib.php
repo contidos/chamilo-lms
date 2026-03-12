@@ -43,7 +43,7 @@ class Security
     public const CHAR_UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     public const CHAR_LOWER = 'abcdefghijklmnopqrstuvwxyz';
     public const CHAR_DIGITS = '0123456789';
-    public const CHAR_SYMBOLS = '!"#$%&\'()*+,-./:;<=>?@[\]^_`{|}~';
+    public const CHAR_SYMBOLS = '!"#$%&\'()*+,-./:;=?@[]^_`{|}~';
 
     public static $clean = [];
 
@@ -138,7 +138,7 @@ class Security
         return disable_dangerous_file($filename);
     }
 
-    public static function getTokenFromSession(string $prefix = ''): string
+    public static function getTokenFromSession(string $prefix = '')
     {
         $secTokenVariable = self::generateSecTokenVariable($prefix);
 
@@ -310,7 +310,7 @@ class Security
      *
      * @return mixed Filtered string or array
      */
-    public static function remove_XSS($var, int $user_status = null, bool $filter_terms = false)
+    public static function remove_XSS($var, ?int $user_status = null, bool $filter_terms = false)
     {
         if ($filter_terms) {
             $var = self::filter_terms($var);

@@ -49,19 +49,23 @@ class QuizExport extends ActivityExport
      */
     public function getData(int $quizId, int $sectionId): array
     {
-        $quizResources = $this->course->resources[RESOURCE_QUIZ];
+        $quizResources = $this->course->resources[RESOURCE_QUIZ] ?? [];
 
         foreach ($quizResources as $quiz) {
             if ($quiz->obj->iid == -1) {
                 continue;
             }
-
-            if ($quiz->obj->iid == $quizId) {
+            if ((int) $quiz->obj->iid === $quizId) {
                 $contextid = $quiz->obj->c_id;
+
+                $name = $quiz->obj->title ?? '';
+                if ($sectionId > 0) {
+                    $name = $this->lpItemTitle($sectionId, RESOURCE_QUIZ, $quizId, $name);
+                }
 
                 return [
                     'id' => $quiz->obj->iid,
-                    'name' => $quiz->obj->title,
+                    'name' => $name,
                     'intro' => $quiz->obj->description,
                     'timeopen' => $quiz->obj->start_time ?? 0,
                     'timeclose' => $quiz->obj->end_time ?? 0,
@@ -105,6 +109,7 @@ class QuizExport extends ActivityExport
                     'completionpass' => $quiz->obj->completionpass ?? 0,
                     'completionminattempts' => $quiz->obj->completionminattempts ?? 0,
                     'allowofflineattempts' => $quiz->obj->allowofflineattempts ?? 0,
+                    'navmethod' => $quiz->obj->navmethod ?? 'free',
                     'users' => [],
                     'files' => [],
                 ];
@@ -172,11 +177,13 @@ class QuizExport extends ActivityExport
 
         foreach ($quizResources as $questionId => $questionData) {
             if (in_array($questionId, $this->course->resources[RESOURCE_QUIZ][$quizId]->obj->question_ids)) {
+                $categoryId = $questionData->question_category ?? 0;
+                $categoryId = $categoryId > 0 ? $categoryId : $this->getDefaultCategoryId();
                 $questions[] = [
                     'id' => $questionData->source_id,
                     'questiontext' => $questionData->question,
                     'qtype' => $this->mapQuestionType($questionData->quiz_type),
-                    'questioncategoryid' => $questionData->question_category ?? 0,
+                    'questioncategoryid' => $categoryId,
                     'answers' => $this->getAnswersForQuestion($questionData->source_id),
                     'maxmark' => $questionData->ponderation ?? 1,
                 ];
@@ -207,13 +214,16 @@ class QuizExport extends ActivityExport
      */
     private function getAnswersForQuestion(int $questionId): array
     {
+        static $globalCounter = 0;
         $answers = [];
         $quizResources = $this->course->resources[RESOURCE_QUIZQUESTION] ?? [];
 
         foreach ($quizResources as $questionData) {
             if ($questionData->source_id == $questionId) {
                 foreach ($questionData->answers as $answer) {
+                    $globalCounter++;
                     $answers[] = [
+                        'id' => $questionId * 1000 + $globalCounter,
                         'text' => $answer['answer'],
                         'fraction' => $answer['correct'] == '1' ? 100 : 0,
                         'feedback' => $answer['comment'],
@@ -244,6 +254,11 @@ class QuizExport extends ActivityExport
         }
 
         return $feedbacks;
+    }
+
+    private function getDefaultCategoryId(): int
+    {
+        return 1;
     }
 
     /**
@@ -309,9 +324,10 @@ class QuizExport extends ActivityExport
 
         // Add question instances
         $xmlContent .= '    <question_instances>'.PHP_EOL;
+        $slotIndex = 1;
         foreach ($quizData['questions'] as $question) {
             $xmlContent .= '      <question_instance id="'.$question['id'].'">'.PHP_EOL;
-            $xmlContent .= '        <slot>'.$question['id'].'</slot>'.PHP_EOL;
+            $xmlContent .= '        <slot>'.$slotIndex.'</slot>'.PHP_EOL;
             $xmlContent .= '        <page>1</page>'.PHP_EOL;
             $xmlContent .= '        <requireprevious>0</requireprevious>'.PHP_EOL;
             $xmlContent .= '        <questionid>'.$question['id'].'</questionid>'.PHP_EOL;
@@ -319,6 +335,7 @@ class QuizExport extends ActivityExport
             $xmlContent .= '        <includingsubcategories>$@NULL@$</includingsubcategories>'.PHP_EOL;
             $xmlContent .= '        <maxmark>'.$question['maxmark'].'</maxmark>'.PHP_EOL;
             $xmlContent .= '      </question_instance>'.PHP_EOL;
+            $slotIndex++;
         }
         $xmlContent .= '    </question_instances>'.PHP_EOL;
 
@@ -410,8 +427,10 @@ class QuizExport extends ActivityExport
         }
         $xmlContent .= '          </answers>'.PHP_EOL;
         $xmlContent .= '          <truefalse id="'.($question['id'] ?? '0').'">'.PHP_EOL;
-        $xmlContent .= '            <trueanswer>'.($question['answers'][0]['id'] ?? '0').'</trueanswer>'.PHP_EOL;
-        $xmlContent .= '            <falseanswer>'.($question['answers'][1]['id'] ?? '0').'</falseanswer>'.PHP_EOL;
+        $trueId = $question['answers'][0]['id'] ?? 0;
+        $falseId = $question['answers'][1]['id'] ?? 0;
+        $xmlContent .= '            <trueanswer>'.$trueId.'</trueanswer>'.PHP_EOL;
+        $xmlContent .= '            <falseanswer>'.$falseId.'</falseanswer>'.PHP_EOL;
         $xmlContent .= '          </truefalse>'.PHP_EOL;
         $xmlContent .= '        </plugin_qtype_truefalse_question>'.PHP_EOL;
 

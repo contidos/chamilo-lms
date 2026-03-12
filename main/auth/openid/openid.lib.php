@@ -165,7 +165,7 @@ function _openid_parse_message($message) {
  */
 function _openid_nonce() {
     // YYYY-MM-DDThh:mm:ssTZD UTC, plus some optional extra unique chars
-    return gmstrftime('%Y-%m-%dT%H:%M:%S%Z') .
+    return gmdate('Y-m-d\TH:i:sT') .
             chr(mt_rand(0, 25) + 65) .
             chr(mt_rand(0, 25) + 65) .
             chr(mt_rand(0, 25) + 65) .
@@ -201,14 +201,14 @@ function _openid_meta_httpequiv($equiv, $html) {
 
 /**
  * Sign certain keys in a message
- * @param $association - object loaded from openid_association or openid_server_association table
+ * @param $association - array loaded from openid_association or openid_server_association table
  *              - important fields are ->assoc_type and ->mac_key
  * @param $message_array - array of entire message about to be sent
  * @param $keys_to_sign - keys in the message to include in signature (without
  *  'openid.' appended)
  */
-function _openid_signature($association, $message_array, $keys_to_sign) {
-    $signature = '';
+function _openid_signature(array $association, $message_array, $keys_to_sign): string
+{
     $sign_data = array();
 
     foreach ($keys_to_sign as $key) {
@@ -218,7 +218,7 @@ function _openid_signature($association, $message_array, $keys_to_sign) {
     }
 
     $message = _openid_create_message($sign_data);
-    $secret = base64_decode($association->mac_key);
+    $secret = base64_decode($association['mac_key']);
     $signature = _openid_hmac($secret, $message);
 
     return base64_encode($signature);

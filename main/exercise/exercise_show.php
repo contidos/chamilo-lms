@@ -444,6 +444,7 @@ foreach ($questionList as $questionId) {
         case GLOBAL_MULTIPLE_ANSWER:
         case FREE_ANSWER:
         case UPLOAD_ANSWER:
+        case ANSWER_IN_OFFICE_DOC:
         case ORAL_EXPRESSION:
         case MATCHING:
         case MATCHING_COMBINATION:
@@ -612,7 +613,7 @@ foreach ($questionList as $questionId) {
         if ($isFeedbackAllowed && $action !== 'export') {
             $name = 'fckdiv'.$questionId;
             $marksname = 'marksName'.$questionId;
-            if (in_array($answerType, [FREE_ANSWER, ORAL_EXPRESSION, ANNOTATION, UPLOAD_ANSWER])) {
+            if (in_array($answerType, [FREE_ANSWER, ORAL_EXPRESSION, ANNOTATION, UPLOAD_ANSWER, ANSWER_IN_OFFICE_DOC])) {
                 $url_name = get_lang('EditCommentsAndMarks');
             } else {
                 $url_name = get_lang('AddComments');
@@ -689,7 +690,7 @@ foreach ($questionList as $questionId) {
         }
 
         if ($is_allowedToEdit && $isFeedbackAllowed && $action !== 'export') {
-            if (in_array($answerType, [FREE_ANSWER, ORAL_EXPRESSION, ANNOTATION, UPLOAD_ANSWER])) {
+            if (in_array($answerType, [FREE_ANSWER, ORAL_EXPRESSION, ANNOTATION, UPLOAD_ANSWER, ANSWER_IN_OFFICE_DOC])) {
                 $marksname = 'marksName'.$questionId;
                 $arrmarks[] = $questionId;
 
@@ -846,7 +847,7 @@ foreach ($questionList as $questionId) {
         }
     }
 
-    if (in_array($objQuestionTmp->type, [FREE_ANSWER, ORAL_EXPRESSION, ANNOTATION, UPLOAD_ANSWER])) {
+    if (in_array($objQuestionTmp->type, [FREE_ANSWER, ORAL_EXPRESSION, ANNOTATION, UPLOAD_ANSWER, ANSWER_IN_OFFICE_DOC])) {
         $scoreToReview = [
             'score' => $my_total_score,
             'comments' => isset($comnt) ? $comnt : null,
@@ -973,9 +974,15 @@ if ('export' === $action) {
 
     $content = Security::remove_XSS($content);
 
+    $includeOfficialCode = "";
+    if (true === api_get_configuration_value('quiz_result_pdf_export_include_official_code_in_file_name')) {
+        $includeOfficialCode = $user_info['official_code'].' ';
+    }
+
     $params = [
         'filename' => api_replace_dangerous_char(
             $objExercise->name.' '.
+            $includeOfficialCode.
             $user_info['complete_name'].' '.
             api_get_local_time()
         ),
@@ -998,7 +1005,7 @@ if ('export' === $action) {
         if (!is_dir($exportFolderPath)) {
             @mkdir($exportFolderPath);
         }
-        $pdfFileName = $user_info['firstname'].' '.$user_info['lastname'].'-attemptId'.$id.'.pdf';
+        $pdfFileName = $includeOfficialCode.$user_info['firstname'].' '.$user_info['lastname'].'-attemptId'.$id.'.pdf';
         $pdfFileName = api_replace_dangerous_char($pdfFileName);
         $fileNameToSave = $exportFolderPath.'/'.$pdfFileName;
         $pdf->html_to_pdf_with_template($content, true, false, true, [], 'F', $fileNameToSave);

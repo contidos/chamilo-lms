@@ -457,15 +457,11 @@ class UserManager
         if (empty($expirationDate) || $expirationDate == '0000-00-00 00:00:00') {
             // Default expiration date
             // if there is a default duration of a valid account then
-            // we have to change the expiration_date accordingly
+            // the expiration_date has to be set taking it into account before calling create_user()
             // Accept 0000-00-00 00:00:00 as a null value to avoid issues with
             // third party code using this method with the previous (pre-1.10)
             // value of 0000...
-            if (api_get_setting('account_valid_duration') != '') {
-                $expirationDate = new DateTime($currentDate);
-                $days = (int) api_get_setting('account_valid_duration');
-                $expirationDate->modify('+'.$days.' day');
-            }
+            $expirationDate = null;
         } else {
             $expirationDate = api_get_utc_datetime($expirationDate);
             $expirationDate = new \DateTime($expirationDate, new DateTimeZone('UTC'));
@@ -6992,7 +6988,7 @@ SQL;
 
     public static function blockIfMaxLoginAttempts(array $userInfo)
     {
-        if (false === (bool) $userInfo['active'] || null === $userInfo['last_login']) {
+        if (!isset($userInfo['active']) || false === (bool) $userInfo['active'] || null === $userInfo['last_login']) {
             return;
         }
 
@@ -8169,6 +8165,202 @@ SQL;
     }
 
     /**
+     * Search for users based on given filters.
+     */
+    public static function searchUsers(array $filters = [], array $editableFields = []): array
+    {
+        $where = [];
+
+        $accessUrlRelUserTable = Database::get_main_table(TABLE_MAIN_ACCESS_URL_REL_USER);
+        $userGroupTable = Database::get_main_table(TABLE_USERGROUP_REL_USER);
+
+        $isMultipleUrl = (api_is_platform_admin() || api_is_session_admin()) && api_get_multiple_access_url();
+        $urlId = api_get_current_access_url_id();
+
+        if (!empty($filters['keywordFirstname'])) {
+            $where[] = "u.firstname LIKE '%".Database::escape_string($filters['keywordFirstname'])."%'";
+        }
+        if (!empty($filters['keywordLastname'])) {
+            $where[] = "u.lastname LIKE '%".Database::escape_string($filters['keywordLastname'])."%'";
+        }
+        if (!empty($filters['keywordUsername'])) {
+            $where[] = "u.username LIKE '%".Database::escape_string($filters['keywordUsername'])."%'";
+        }
+        if (!empty($filters['keywordEmail'])) {
+            $where[] = "u.email LIKE '%".Database::escape_string($filters['keywordEmail'])."%'";
+        }
+        if (!empty($filters['keywordOfficialCode'])) {
+            $where[] = "u.official_code LIKE '%".Database::escape_string($filters['keywordOfficialCode'])."%'";
+        }
+        if (!empty($filters['keywordStatus']) && $filters['keywordStatus'] !== '%') {
+            $where[] = "u.status = '".Database::escape_string($filters['keywordStatus'])."'";
+        }
+        if (!empty($filters['keywordActive']) && empty($filters['keywordInactive'])) {
+            $where[] = "u.active = 1";
+        } elseif (empty($filters['keywordActive']) && !empty($filters['keywordInactive'])) {
+            $where[] = "u.active = 0";
+        }
+
+        if ($isMultipleUrl) {
+            $where[] = "u.id IN (SELECT user_id FROM $accessUrlRelUserTable WHERE access_url_id = $urlId)";
+        }
+
+        if (!empty($filters['class_id'])) {
+            $where[] = "u.id IN (SELECT user_id FROM $userGroupTable WHERE usergroup_id = ".(int) $filters['class_id'].")";
+        }
+
+        $extraField = new ExtraField('user');
+        $extraFieldResults = null;
+        $extraFieldHasData = false;
+
+        foreach ($filters as $key => $value) {
+            if (str_starts_with($key, 'extra_')) {
+                if (is_array($value)) {
+                    $value = array_filter($value, function ($v) {
+                        return $v !== null && $v !== '';
+                    });
+                }
+
+                if (empty($value)) {
+                    continue;
+                }
+
+                $variable = substr($key, 6);
+                $fieldInfo = $extraField->get_handler_field_info_by_field_variable($variable);
+                if ($fieldInfo) {
+                    $extraFieldHasData = true;
+                    $values = is_array($value) ? $value : [$value];
+
+                    $fieldResults = [];
+                    foreach ($values as $singleValue) {
+                        if (empty($singleValue)) {
+                            continue;
+                        }
+
+                        if ($fieldInfo['field_type'] == ExtraField::FIELD_TYPE_TAG) {
+                            $result = $extraField->getAllUserPerTag($fieldInfo['id'], $singleValue);
+                            $result = empty($result) ? [] : array_column($result, 'user_id');
+                        } else {
+                            $result = UserManager::get_extra_user_data_by_value($variable, $singleValue, true);
+                        }
+
+                        if (!empty($result)) {
+                            $fieldResults[] = $result;
+                        }
+                    }
+
+                    if (!empty($values) && empty($fieldResults)) {
+                        $extraFieldResults = [];
+                        break;
+                    }
+
+                    $mergedFieldResults = call_user_func_array('array_merge', $fieldResults);
+
+                    if ($extraFieldResults === null) {
+                        $extraFieldResults = $mergedFieldResults;
+                    } else {
+                        $extraFieldResults = array_intersect($extraFieldResults, $mergedFieldResults);
+                    }
+
+                    if (empty($extraFieldResults)) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        if ($extraFieldHasData && $extraFieldResults === null) {
+            $extraFieldResults = [];
+        }
+
+        if ($extraFieldHasData) {
+            if (empty($extraFieldResults)) {
+                $where[] = "u.id IN ('-1')";
+            } else {
+                $where[] = "u.id IN ('".implode("','", array_unique($extraFieldResults))."')";
+            }
+        }
+
+        $fields = ['u.id', 'u.username'];
+
+        if (!empty($editableFields)) {
+            foreach ($editableFields as $field) {
+                $fields[] = "u.".Database::escapeField($field);
+            }
+        }
+
+        $sortableFields = [
+            0 => 'u.id',
+            1 => 'u.username',
+        ];
+
+        $columnIndex = $_GET['users_column'] ?? 0;
+        $direction = strtoupper($_GET['users_direction'] ?? 'ASC');
+
+        if (!in_array($direction, ['ASC', 'DESC'])) {
+            $direction = 'ASC';
+        }
+
+        $orderBy = $sortableFields[$columnIndex] ?? 'u.id';
+
+        $sql = "SELECT ".implode(", ", $fields)." FROM ".Database::get_main_table(TABLE_MAIN_USER)." u";
+        if (!empty($where)) {
+            $sql .= " WHERE ".implode(" AND ", $where);
+        }
+        $sql .= " ORDER BY $orderBy $direction";
+
+        return Database::store_result(Database::query($sql), 'ASSOC');
+    }
+
+    /**
+     * Check or fetch a user by extra‑field on this portal.
+     *
+     * @param string $value    The extra‑field value to test (e.g. DNI).
+     * @param bool   $returnId If true, return the existing user ID or null; otherwise return true/false for uniqueness.
+     *
+     * @return bool|int|null When $returnId===false: true if unique, false if already exists.
+     *                       When $returnId===true: existing user ID or null if none.
+     */
+    public static function isExtraFieldValueUniquePerUrl(string $value, bool $returnId = false)
+    {
+        $field = api_get_configuration_value('extra_field_to_validate_on_user_registration');
+        if (empty($field) || $value === '') {
+            // If there's nothing to check, treat as “unique” or “no ID”
+            return $returnId ? null : true;
+        }
+
+        $accessUrlId = api_get_current_access_url_id();
+
+        $tUser = Database::get_main_table(TABLE_MAIN_USER);
+        $tField = Database::get_main_table(TABLE_EXTRA_FIELD);
+        $tValue = Database::get_main_table(TABLE_EXTRA_FIELD_VALUES);
+        $tRelUrl = Database::get_main_table(TABLE_MAIN_ACCESS_URL_REL_USER);
+
+        $sql = "
+        SELECT u.id
+        FROM   {$tUser} u
+        JOIN   {$tValue} v   ON v.item_id    = u.id
+        JOIN   {$tField} f   ON f.id         = v.field_id
+        JOIN   {$tRelUrl} url ON url.user_id = u.id
+        WHERE  f.variable        = '".Database::escape_string($field)."'
+          AND  v.value           = '".Database::escape_string($value)."'
+          AND  url.access_url_id = {$accessUrlId}
+        LIMIT  1
+    ";
+
+        $result = Database::query($sql);
+        $row = Database::fetch_array($result, 'ASSOC');
+
+        if ($returnId) {
+            // return the existing user ID, or null if none
+            return $row['id'] ?? null;
+        }
+
+        // return true if no match was found (i.e. unique), false otherwise
+        return empty($row);
+    }
+
+    /**
      * @return EncoderFactory
      */
     private static function getEncoderFactory()
@@ -8260,153 +8452,5 @@ SQL;
         }
 
         return $url;
-    }
-
-    /**
-     * Search for users based on given filters.
-     */
-    public static function searchUsers(array $filters = [], array $editableFields = []): array
-    {
-        $where = [];
-
-        $accessUrlRelUserTable = Database::get_main_table(TABLE_MAIN_ACCESS_URL_REL_USER);
-        $userGroupTable = Database::get_main_table(TABLE_USERGROUP_REL_USER);
-
-        $isMultipleUrl = (api_is_platform_admin() || api_is_session_admin()) && api_get_multiple_access_url();
-        $urlId = api_get_current_access_url_id();
-
-        if (!empty($filters['keywordFirstname'])) {
-            $where[] = "u.firstname LIKE '%".Database::escape_string($filters['keywordFirstname'])."%'";
-        }
-        if (!empty($filters['keywordLastname'])) {
-            $where[] = "u.lastname LIKE '%".Database::escape_string($filters['keywordLastname'])."%'";
-        }
-        if (!empty($filters['keywordUsername'])) {
-            $where[] = "u.username LIKE '%".Database::escape_string($filters['keywordUsername'])."%'";
-        }
-        if (!empty($filters['keywordEmail'])) {
-            $where[] = "u.email LIKE '%".Database::escape_string($filters['keywordEmail'])."%'";
-        }
-        if (!empty($filters['keywordOfficialCode'])) {
-            $where[] = "u.official_code LIKE '%".Database::escape_string($filters['keywordOfficialCode'])."%'";
-        }
-        if (!empty($filters['keywordStatus']) && $filters['keywordStatus'] !== '%') {
-            $where[] = "u.status = '".Database::escape_string($filters['keywordStatus'])."'";
-        }
-        if (!empty($filters['keywordActive']) && empty($filters['keywordInactive'])) {
-            $where[] = "u.active = 1";
-        } elseif (empty($filters['keywordActive']) && !empty($filters['keywordInactive'])) {
-            $where[] = "u.active = 0";
-        }
-
-        if ($isMultipleUrl) {
-            $where[] = "u.id IN (SELECT user_id FROM $accessUrlRelUserTable WHERE access_url_id = $urlId)";
-        }
-
-        if (!empty($filters['class_id'])) {
-            $where[] = "u.id IN (SELECT user_id FROM $userGroupTable WHERE usergroup_id = " . (int)$filters['class_id'] . ")";
-        }
-
-        $extraField = new ExtraField('user');
-        $extraFieldResults = null;
-        $extraFieldHasData = false;
-
-        foreach ($filters as $key => $value) {
-            if (str_starts_with($key, 'extra_')) {
-                if (is_array($value)) {
-                    $value = array_filter($value, function ($v) {
-                        return $v !== null && $v !== '';
-                    });
-                }
-
-                if (empty($value)) {
-                    continue;
-                }
-
-                $variable = substr($key, 6);
-                $fieldInfo = $extraField->get_handler_field_info_by_field_variable($variable);
-                if ($fieldInfo) {
-                    $extraFieldHasData = true;
-                    $values = is_array($value) ? $value : [$value];
-
-                    $fieldResults = [];
-                    foreach ($values as $singleValue) {
-                        if (empty($singleValue)) {
-                            continue;
-                        }
-
-                        if ($fieldInfo['field_type'] == ExtraField::FIELD_TYPE_TAG) {
-                            $result = $extraField->getAllUserPerTag($fieldInfo['id'], $singleValue);
-                            $result = empty($result) ? [] : array_column($result, 'user_id');
-                        } else {
-                            $result = UserManager::get_extra_user_data_by_value($variable, $singleValue, true);
-                        }
-
-                        if (!empty($result)) {
-                            $fieldResults[] = $result;
-                        }
-                    }
-
-                    if (!empty($values) && empty($fieldResults)) {
-                        $extraFieldResults = [];
-                        break;
-                    }
-
-                    $mergedFieldResults = call_user_func_array('array_merge', $fieldResults);
-
-                    if ($extraFieldResults === null) {
-                        $extraFieldResults = $mergedFieldResults;
-                    } else {
-                        $extraFieldResults = array_intersect($extraFieldResults, $mergedFieldResults);
-                    }
-
-                    if (empty($extraFieldResults)) {
-                        break;
-                    }
-                }
-            }
-        }
-
-        if ($extraFieldHasData && $extraFieldResults === null) {
-            $extraFieldResults = [];
-        }
-
-        if ($extraFieldHasData) {
-            if (empty($extraFieldResults)) {
-                $where[] = "u.id IN ('-1')";
-            } else {
-                $where[] = "u.id IN ('" . implode("','", array_unique($extraFieldResults)) . "')";
-            }
-        }
-
-        $fields = ['u.id', 'u.username'];
-
-        if (!empty($editableFields)) {
-            foreach ($editableFields as $field) {
-                $fields[] = "u." . Database::escapeField($field);
-            }
-        }
-
-        $sortableFields = [
-            0 => 'u.id',
-            1 => 'u.username'
-        ];
-
-        $columnIndex = $_GET['users_column'] ?? 0;
-        $direction = strtoupper($_GET['users_direction'] ?? 'ASC');
-
-        if (!in_array($direction, ['ASC', 'DESC'])) {
-            $direction = 'ASC';
-        }
-
-        $orderBy = $sortableFields[$columnIndex] ?? 'u.id';
-
-        $sql = "SELECT " . implode(", ", $fields) . " FROM " . Database::get_main_table(TABLE_MAIN_USER) . " u";
-        if (!empty($where)) {
-            $sql .= " WHERE " . implode(" AND ", $where);
-        }
-        $sql .= " ORDER BY $orderBy $direction";
-
-        return Database::store_result(Database::query($sql), 'ASSOC');
     }
 }

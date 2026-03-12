@@ -78,7 +78,7 @@ class FileExport
                             'component' => 'mod_assign',
                             'filearea' => 'introattachment',
                             'itemid' => (int) $work->params['id'],
-                            'filepath' => '/',
+                            'filepath' => '/Documents/',
                             'documentpath' => 'document/'.$docData['path'],
                             'filename' => basename($docData['path']),
                             'userid' => $adminId,
@@ -97,6 +97,17 @@ class FileExport
         }
 
         return $filesData;
+    }
+
+    /**
+     * Get MIME type based on the file extension.
+     */
+    public function getMimeType($filePath): string
+    {
+        $extension = pathinfo($filePath, PATHINFO_EXTENSION);
+        $mimeTypes = $this->getMimeTypes();
+
+        return $mimeTypes[$extension] ?? 'application/octet-stream';
     }
 
     /**
@@ -157,12 +168,14 @@ class FileExport
      */
     private function createFileXmlEntry(array $file): string
     {
+        $itemId = isset($file['itemid']) ? (int) $file['itemid'] : 0;
+
         return '  <file id="'.$file['id'].'">'.PHP_EOL.
             '    <contenthash>'.htmlspecialchars($file['contenthash']).'</contenthash>'.PHP_EOL.
             '    <contextid>'.$file['contextid'].'</contextid>'.PHP_EOL.
             '    <component>'.htmlspecialchars($file['component']).'</component>'.PHP_EOL.
             '    <filearea>'.htmlspecialchars($file['filearea']).'</filearea>'.PHP_EOL.
-            '    <itemid>0</itemid>'.PHP_EOL.
+            '    <itemid>'.$itemId.'</itemid>'.PHP_EOL.
             '    <filepath>'.htmlspecialchars($file['filepath']).'</filepath>'.PHP_EOL.
             '    <filename>'.htmlspecialchars($file['filename']).'</filename>'.PHP_EOL.
             '    <userid>'.$file['userid'].'</userid>'.PHP_EOL.
@@ -186,16 +199,58 @@ class FileExport
      */
     private function processDocument(array $filesData, object $document): array
     {
-        if ($document->file_type === 'file') {
-            $filesData['files'][] = $this->getFileData($document);
-        } elseif ($document->file_type === 'folder') {
-            $folderFiles = \DocumentManager::getAllDocumentsByParentId($this->course->info, $document->source_id);
-            foreach ($folderFiles as $file) {
-                $filesData['files'][] = $this->getFolderFileData($file, (int) $document->source_id);
-            }
+        // Only real files are exported; folders are represented implicitly by "filepath"
+        if ($document->file_type !== 'file') {
+            return $filesData;
         }
 
+        // Base file data (contenthash, size, title, etc.)
+        $fileData = $this->getFileData($document);
+
+        // Rebuild the relative filepath so Moodle can recreate the Documents tree
+        // without the internal Chamilo "document" prefix.
+        $filepath = $this->buildMoodleFilepathFromChamiloPath((string) $document->path);
+
+        // Attach this file to the global "Documents" folder activity
+        $fileData['filepath'] = $filepath;
+        $fileData['contextid'] = ActivityExport::DOCS_MODULE_ID;
+        $fileData['component'] = 'mod_folder';
+        $fileData['filearea'] = 'content';
+        $fileData['itemid'] = ActivityExport::DOCS_MODULE_ID;
+
+        $filesData['files'][] = $fileData;
+
         return $filesData;
+    }
+
+    /**
+     * Build a Moodle filepath from a Chamilo document path.
+     * Example:
+     *   document/repertoire1/file.pdf   -> /repertoire1/
+     *   /document/repertoire1/file.pdf  -> /repertoire1/
+     *   /file.pdf                       -> /.
+     */
+    private function buildMoodleFilepathFromChamiloPath(string $documentPath): string
+    {
+        $normalizedPath = $this->stripChamiloDocumentPrefix($documentPath);
+        $normalizedPath = ltrim(str_replace('\\', '/', $normalizedPath), '/');
+
+        $relDir = dirname($normalizedPath);
+
+        return $this->ensureTrailingSlash($relDir === '.' ? '/' : '/'.$relDir.'/');
+    }
+
+    /**
+     * Remove the internal Chamilo document prefix from a path.
+     */
+    private function stripChamiloDocumentPrefix(string $path): string
+    {
+        $path = str_replace('\\', '/', trim($path));
+
+        // Remove leading "/document/" or "document/" only once
+        $path = preg_replace('#^/?document/#', '', $path);
+
+        return $path;
     }
 
     /**
@@ -233,22 +288,22 @@ class FileExport
     /**
      * Get file data for files inside a folder.
      */
-    private function getFolderFileData(array $file, int $sourceId): array
+    private function getFolderFileData(array $file, int $sourceId, string $parentPath = '/'): array
     {
         $adminData = MoodleExport::getAdminUserData();
         $adminId = $adminData['id'];
         $contenthash = hash('sha1', basename($file['path']));
         $mimetype = $this->getMimeType($file['path']);
         $filename = basename($file['path']);
-        $filepath = $this->ensureTrailingSlash(dirname($file['path']));
+        $filepath = $this->buildMoodleFilepathFromChamiloPath((string) $file['path']);
 
         return [
             'id' => $file['id'],
             'contenthash' => $contenthash,
-            'contextid' => $sourceId,
+            'contextid' => ActivityExport::DOCS_MODULE_ID,
             'component' => 'mod_folder',
             'filearea' => 'content',
-            'itemid' => (int) $file['id'],
+            'itemid' => ActivityExport::DOCS_MODULE_ID,
             'filepath' => $filepath,
             'documentpath' => 'document/'.$file['path'],
             'filename' => $filename,
@@ -267,20 +322,15 @@ class FileExport
     /**
      * Ensure the directory path has a trailing slash.
      */
-    private function ensureTrailingSlash($path): string
+    private function ensureTrailingSlash(string $path): string
     {
-        return empty($path) || $path === '.' || $path === '/' ? '/' : rtrim($path, '/').'/';
-    }
+        if (empty($path) || $path === '.' || $path === '/') {
+            return '/';
+        }
 
-    /**
-     * Get MIME type based on the file extension.
-     */
-    private function getMimeType($filePath): string
-    {
-        $extension = pathinfo($filePath, PATHINFO_EXTENSION);
-        $mimeTypes = $this->getMimeTypes();
+        $path = preg_replace('/\/+/', '/', $path);
 
-        return $mimeTypes[$extension] ?? 'application/octet-stream';
+        return rtrim($path, '/').'/';
     }
 
     /**

@@ -4,6 +4,10 @@
 /**
  * Responses to AJAX calls for the document upload.
  */
+
+use Chamilo\CoreBundle\Component\Editor\Driver\Driver;
+use Chamilo\CoreBundle\Component\Editor\Driver\PersonalDriver;
+
 require_once __DIR__.'/../global.inc.php';
 
 $action = $_REQUEST['a'];
@@ -199,6 +203,10 @@ switch ($action) {
         }
         break;
     case 'ck_uploadimage':
+        if (true !== api_get_configuration_value('enable_uploadimage_editor')) {
+            exit;
+        }
+
         api_protect_course_script(true);
 
         // it comes from uploaimage drag and drop ckeditor
@@ -210,6 +218,44 @@ switch ($action) {
 
         $data = [];
         $fileUpload = $_FILES['upload'];
+
+        try {
+            new Image($fileUpload['tmp_name']);
+        } catch (Exception $e) {
+            echo json_encode([
+                'uploaded' => 0,
+                'error' => [
+                    'message' => get_lang('MissingImagesDetected'),
+                ],
+            ]);
+
+            exit;
+        }
+
+        $mimeType = mime_content_type($fileUpload['tmp_name']);
+
+        $isMimeAccepted = (new Driver())->mimeAccepted($mimeType, ['image']);
+
+        if (!$isMimeAccepted) {
+            exit;
+        }
+
+        try {
+            $fileUpload['size'] = DocumentManager::autoResizeImageIfNeeded(
+                $fileUpload['size'],
+                $fileUpload['tmp_name']
+            );
+        } catch (Exception $e) {
+            echo json_encode([
+                'uploaded' => 0,
+                'error' => [
+                    'message' => $e->getMessage(),
+                ],
+            ]);
+
+            exit;
+        }
+
         $isAllowedToEdit = api_is_allowed_to_edit(null, true);
         if ($isAllowedToEdit) {
             $globalFile = ['files' => $fileUpload];
@@ -224,14 +270,17 @@ switch ($action) {
                 false,
                 'files'
             );
-            if ($result) {
-                $relativeUrl = str_replace(api_get_path(WEB_PATH), '/', $result['direct_url']);
-                $data = [
-                    'uploaded' => 1,
-                    'fileName' => $fileUpload['name'],
-                    'url' => $relativeUrl,
-                ];
+
+            if (!$result) {
+                exit;
             }
+
+            $relativeUrl = str_replace(api_get_path(WEB_PATH), '/', $result['direct_url']);
+            $data = [
+                'uploaded' => 1,
+                'fileName' => $fileUpload['name'],
+                'url' => $relativeUrl,
+            ];
         } else {
             $userId = api_get_user_id();
             $syspath = UserManager::getUserPathById($userId, 'system').'my_files';
@@ -239,22 +288,28 @@ switch ($action) {
                 mkdir($syspath, api_get_permissions_for_new_directories(), true);
             }
             $webpath = UserManager::getUserPathById($userId, 'web').'my_files';
-            $fileUploadName = $fileUpload['name'];
+            $fileUploadName = disable_dangerous_file(api_replace_dangerous_char($fileUpload['name']));
             if (file_exists($syspath.$fileUploadName)) {
                 $extension = pathinfo($fileUploadName, PATHINFO_EXTENSION);
                 $fileName = pathinfo($fileUploadName, PATHINFO_FILENAME);
                 $suffix = '_'.uniqid();
                 $fileUploadName = $fileName.$suffix.'.'.$extension;
             }
-            if (move_uploaded_file($fileUpload['tmp_name'], $syspath.$fileUploadName)) {
-                $url = $webpath.$fileUploadName;
-                $relativeUrl = str_replace(api_get_path(WEB_PATH), '/', $url);
-                $data = [
-                    'uploaded' => 1,
-                    'fileName' => $fileUploadName,
-                    'url' => $relativeUrl,
-                ];
+
+            $personalDriver = new PersonalDriver();
+            $uploadResult = $personalDriver->mimeAccepted(mime_content_type($fileUpload['tmp_name']), ['image']);
+
+            if (!$uploadResult || !move_uploaded_file($fileUpload['tmp_name'], $syspath.$fileUploadName)) {
+                exit;
             }
+
+            $url = $webpath.$fileUploadName;
+            $relativeUrl = str_replace(api_get_path(WEB_PATH), '/', $url);
+            $data = [
+                'uploaded' => 1,
+                'fileName' => $fileUploadName,
+                'url' => $relativeUrl,
+            ];
         }
         echo json_encode($data);
         exit;

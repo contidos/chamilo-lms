@@ -942,6 +942,7 @@ foreach ($categories as $item) {
             );
 
             $listData[] = [
+                'lp_id' => $id,
                 'learnpath_icon' => $icon_learnpath,
                 'url_start' => $url_start_lp,
                 'title' => $my_title,
@@ -1031,7 +1032,8 @@ if ($ending && $allLpTimeValid && api_get_configuration_value('download_files_af
     }
 }
 
-$template = new Template($nameTools);
+$reduced = (isset($reduced) && $reduced);
+$template = new Template($nameTools, !$reduced);
 $template->assign('first_session_category', $firstSessionCategoryId);
 $template->assign('session_star_icon', Display::return_icon('star.png', get_lang('Session')));
 $template->assign('subscription_settings', $subscriptionSettings);
@@ -1048,6 +1050,7 @@ $template->assign('lp_is_shown', $lpIsShown);
 $template->assign('filtered_category', $filteredCategoryId);
 $template->assign('allow_min_time', $allowMinTime);
 $template->assign('allow_dates_for_student', $allowDatesForStudent);
+$template->assign('sec_token', $token);
 
 $templateName = $template->get_template('learnpath/list.tpl');
 $content = $template->fetch($templateName);

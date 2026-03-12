@@ -964,9 +964,6 @@ class ExtraFieldValue extends Model
 
     /**
      * Return extra fields details for an item if the extra field is marked as filter.
-     * @param int $itemId
-     *
-     * @return array
      */
     public function getAllValuesByItem(int $itemId): array
     {
@@ -1223,5 +1220,26 @@ class ExtraFieldValue extends Model
         }
 
         return true;
+    }
+
+    /**
+     * @return array<int, array<string, string>>
+     */
+    public static function formatValues(array $extraInfo): array
+    {
+        $formatted = [];
+
+        foreach ($extraInfo as $extra) {
+            /** @var ExtraFieldValues $extraValue */
+            $extraValue = $extra['value'];
+
+            $formatted[] = [
+                'variable' => $extraValue->getField()->getVariable(),
+                'display_text' => $extraValue->getField()->getDisplayText(),
+                'value' => $extraValue->getValue(),
+            ];
+        }
+
+        return $formatted;
     }
 }

@@ -647,6 +647,7 @@ $NoArchive = "Non è stato selezionato alcun archivio";
 $ArchiveNotFound = "L'archivio non è stato trovato";
 $ArchiveUncompressed = "L'archivio è stato scompattato e installato.";
 $CsvPutIntoDocTool = "Il file \"users.csv\" è stato inserito nella sezione Documenti.";
+$WebServices = "Servizi Web";
 $OtherCategory = "Altre Categorie";
 $AllowedToUnsubscribe = "Gli utenti possono cancellarsi dal corso";
 $NotAllowedToUnsubscribe = "Gli utenti non possono cancellarsi dal corso";
@@ -5976,7 +5977,7 @@ $SessionListIn = "Elenco delle sessioni in";
 $GoToStudentDetails = "Vai alle informazioni sui corsisti";
 $DisplayAboutNextAdvanceNotDoneAndLastDoneAdvance = "Mostra l'ultimo passo compiuto e il primo ancora da compiere";
 $FillUsers = "Riempi con utenti";
-$ThisSectionIsOnlyVisibleOnSourceInstalls = "La sezione è visibile solo in fase di installazione e permette di popolare la piattaforma di dati ai fini di effettuare test. 
+$ThisSectionIsOnlyVisibleOnSourceInstalls = "La sezione è visibile solo in fase di installazione e permette di popolare la piattaforma di dati ai fini di effettuare test.
 NON USARE in una piatta forma di erogazione, in quanto i dati sono effettivamente inseriti come reali.
 Usarla SOLO in fase di sviluppo o test.";
 $UsersFillingReport = "Report sul riempimento di dati";
@@ -6145,7 +6146,7 @@ $AverageScore = "Punteggio medio";
 $LastConnexionDate = "Data dell'ultimo accesso";
 $ToolVideoconference = "Videoconferenza";
 $BigBlueButtonEnableTitle = "Videoconferenza BigBlueButton";
-$BigBlueButtonEnableComment = "Scegli se vuoi abilitare le videoconferenze BigBlueButton. 
+$BigBlueButtonEnableComment = "Scegli se vuoi abilitare le videoconferenze BigBlueButton.
 L'abilitazione rende visibile una scelta ulteriore tra gli strumenti della pagina principale di ogni corso. I docenti potranno in ogni momento iniziare una videoconferenza, mentre i corsisti potranno accedervi solamente.
 Se non è presente un server BigBlueButton, <a href=\"http://bigbluebutton.org/\">installane uno</a> o richiedi le condizioni di accesso ai <a href=\"http://www.chamilo.org/en/providers\">provider ufficiali</a> di Chamilo.
 
@@ -6167,7 +6168,7 @@ Le cartelle individuali contengono cartelle separate per ogni corsista entrato n
 
 Le cartelle individuali possono essere rese invisibili agli altri corsisti, esclusi i propreitari; tuttavia - conoscendone l'URL - i singoli file saranno accessibili agli altri.
 
-Se le cartelle individuali sono rese visibili tutti i corsisti potranno vedere il contenuto ma solo il proprietario potrà creare, modificare, eliminare ed effettuare il back.up di documenti, immagini (SVG o PNG) e sotto-cartelle; potrà anche convertire documenti in modelli personali, 
+Se le cartelle individuali sono rese visibili tutti i corsisti potranno vedere il contenuto ma solo il proprietario potrà creare, modificare, eliminare ed effettuare il back.up di documenti, immagini (SVG o PNG) e sotto-cartelle; potrà anche convertire documenti in modelli personali,
 
 Le cartelli individuali non sono quindi solo un deposito di materiali.
 
@@ -6576,7 +6577,7 @@ $ExtensionSessionsNotAvailable = "Estensione delle Sessioni non disponibile";
 $ExtensionZlibNotAvailable = "Estensione Zlib non disponibile";
 $ExtensionPCRENotAvailable = "Estensione PCRE non disponibile";
 $ToGroup = "Al gruppo social";
-$XWroteY = "%s ha scritto: 
+$XWroteY = "%s ha scritto:
 %s";
 $BackToGroup = "Torna al gruppo";
 $GoAttendance = "Vai alle presenze";
@@ -7725,7 +7726,7 @@ $LoadTermConditionsSectionTitle = "Carica la sezione termini legali e condizioni
 $LoadTermConditionsSectionDescription = "I termini legali appariranno nel corso dell'accesso al corso";
 $SendTermsSubject = "Il contratto di apprendimento è pronto per essere firmato";
 $SendTermsDescriptionToUrlX = "Buongiorno,
-il Tutor Ti ha inviato il contratto di apprendimento. 
+il Tutor Ti ha inviato il contratto di apprendimento.
 Puoi firmarlo cliccando sul seguente collegamento %s";
 $UserXSignedTheAgreement = "L'utente %s ha firmato l'accordo";
 $UserXSignedTheAgreementTheY = "L'utente %s ha firmato l'accordo %s";
@@ -7821,6 +7822,118 @@ $CalendarStartDate = "Data di inizio";
 $DownloadTasksPackage = "Scarica il pacchetto dei compiti";
 $UploadCorrectionsPackage = "Carica il pacchetto delle correzioni";
 $IconsModeSVGTitle = "Icone SVG";
+$IconsModeSVGComment = "Abilitando questa opzione, tutte le icone che hanno una versione SVG preferiranno il formato SVG a PNG. Questo darà una qualità delle icone molto migliore, ma alcune icone potrebbero ancora avere qualche problema di dimensione di rendering e alcuni browser potrebbero non supporta";
+$FilterByTags = "Filtra per tag";
+$ImportFromMoodle = "Importa da Moodle";
+$ImportFromMoodleInfo = "Importa un file di backup del corso Moodle (.mbz) in questo corso Chamilo";
+$ImportFromMoodleInstructions = "La funzione di importazione di Moodle potrebbe non supportare tutti i tipi di contenuto di Moodle, dato che non tutte le funzionalità sono uguali e che Moodle e Chamilo si evolvono entrambi continuamente e rapidamente. Questa funzione di importazione deve essere considerata un work in progress. Si prega di controllare https://github.com/chamilo/chamilo-lms/wiki/Import-from-Moodle per ulteriori informazioni.";
+$MoodleFile = "Archivio Corsi Moodle";
+$FailedToImportThisIsNotAMoodleFile = "Impossibile importare: questo non sembra essere un file di backup del corso Moodle (.mbz)";
+$ThisQuestionIsNotSupportedYet = "Questo tipo di domanda non è ancora supportato";
+$ProcessingImportPleaseDontCloseThisWindowThisActionMayTakeLongTimePlaseWait = "Elaborazione dell'importazione... Si prega di non chiudere questa finestra. Questo processo può richiedere una notevole quantità di tempo. Si prega di avere pazienza.";
+$Contact = "Contatto";
+$WarningForDeprecatedDirectoriesForUpgrade = "Poiché le directory newscorm e exercice sono state rinominate rispettivamente in lp e exercise, è necessario eliminare o rinominare in newscorm_old e exercice_old.";
+$ExtensionNotAvailable = "Estensione non disponibile";
+$EnableRecordAudioComment = "Attiva il registratore audio WebRTC (senza flash) in diversi punti all'interno di Chamilo";
+$EnableRecordAudioTitle = "Abilita il registratore audio";
+$ShowOfficialCodeInWhoIsOnlinePageComment = "Visualizza il codice ufficiale nella pagina \"Utenti online\", sotto il nome dell'utente";
+$ShowOfficialCodeInWhoIsOnlinePage = "Codice ufficiale in 'Utenti online'";
+$JobPublic = "Pubblico impiego";
+$ApplyJob = "Candidati per un lavoro";
+$PublicCompany = "Pubblica impresa";
+$PrivateCompany = "Impresa privata";
+$NonForProfitCompany = "Impresa Non profit";
+$Government = "Governo";
+$Template = "Template";
+$Palette = "Palette";
+$Colors = "Colori";
+$Mask = "Maschera";
+$Icon = "Icona";
+$DesignWithBadgeStudio = "Progetta con Badge Studio";
+$UseThisBadge = "Usa questo Badge";
+$Palettes = "Palette";
+$DesignWithBadgeStudioComment = "Usa Badge Studio per creare il tuo badge dall'interno della tua piattaforma";
+$YouAlreadySentThisFile = "Hai già inviato questo file o un altro file con lo stesso nome. Assicurati di caricare ogni file una sola volta.";
+$DocumentsDefaultVisibility = "Visibilità predefinita dei nuovi documenti";
+$TicketAllowStudentAddTitle = "Consenti agli utenti di aggiungere ticket";
+$TicketAllowStudentAddComment = "Consente a tutti gli utenti di aggiungere ticket, non solo agli amministratori.";
+$TicketSendWarningToAllAdminsTitle = "Invia avvisi sui ticket agli amministratori";
+$TicketSendWarningToAllAdminsComment = "Invia un avviso a tutti gli amministratori se è stato creato un ticket senza una categoria o se alla categoria scelta non è assegnato un amministratore.";
+$TicketWarnAdminNoUserInCategoryTitle = "Messaggi agli amministratori per le categorie senza un responsabile";
+$TicketWarnAdminNoUserInCategoryComment = "Invia un avviso (via e-mail e messaggio interno da Chamilo) a tutti gli amministratori se c'è una categoria di ticket senza una persona responsabile.";
+$TicketAllowCategoryEditionTitle = "Consenti la modifica della categoria del ticket";
+$TicketAllowCategoryEditionComment = "Consenti la modifica delle categorie di ticket da parte degli amministratori.";
+$TicketSystem = "Ticket";
+$MoodleFileImportedSuccessfully = "Il file del corso Moodle è stato importato con successo.";
+$ExtensionInstalledButNotEnabled = "Estensione installata ma non attivata";
+$MailingTestSent = "L'e-mail di prova è stata inviata. Si comporta in tutto e per tutto come le altre email di Chamilo, ma permette di effettuare test con email e contenuti diversi.";
+$EMailTester = "Tester di posta elettronica";
+$TicketMsgWelcome = "Benvenuto nella sezione TUOI ticket. Qui potrai controllare lo stato di tutti i ticket che hai creato nella sezione principale dei ticket.";
+$TicketNoHistory = "Nessuno storico";
+$RecalculateResults = "Ricalcola i risultati";
+$XParenthesisDeleted = "% (eliminazione)";
+$AvailableAlsoInMainPortal = "Disponobile anche dalla pagina principale";
+$EditCourseCategoryToURL = "Modificare le categorie dei corsi per uno specifico URL";
+$VisibleToSelf = "Visibile per te";
+$VisibleToOthers = "Visibile per gli altri";
+$UpgradeVersion = "Aggiorna la versione di Chamilo LMS";
+$CRSTablesIntro = "Lo script di installazione ha rilevato tabelle di versioni precedenti che potrebbero causare problemi durante il processo di aggiornamento. Fare clic sul pulsante in basso per rimuoverle. Si consiglia vivamente di eseguire un backup completo prima di confermare l'ultimo passaggio dell'installazione.";
+$Removing = "Rimozione";
+$CheckForCRSTables = "Verificare la presenza di tabelle di versioni precedenti";
+$YourPasswordCannotBeTheSameAsYourEmail = "La tua password non può essere uguale alla tua email";
+$YourPasswordCannotContainYourUsername = "La tua password non può contenere il tuo nome utente";
+$WordTwoCharacterClasses = "Usa diverse classi di caratteri";
+$TooManyRepetitions = "Troppe ripetizioni";
+$YourPasswordContainsSequences = "La password contiene sequenze";
+$PasswordVeryWeak = "Molto debole";
+$UserXHasBeenAssignedToBoss = "Ti è stato assegnato l'Utente %s";
+$UserXHasBeenAssignedToBossWithUrlX = "Sei stato assegnato come tutor dell'utente. Puoi accedere al suo profilo qui: %s";
+$ShortName = "Nome breve";
+$Portal = "Portale";
+$CourseUserDocument = "Documenti dell'utente del corso";
+$Destination = "Destinatario";
+$UserTestingEMailConf = "Test di configurazione della posta elettronica";
+$CMS = "CMS";
+$SendLegalSubject = "Condizioni legali";
+$SendLegalDescriptionToUrlX = "Si prega di accettare i nostri termini legali qui: %";
+$ExerciseInvisibleInSession = "Esercizio invisibile nelle sessioni";
+$YouNeedToConfirmYourAgreementCheckYourEmail = "Devi prima confermare il tuo accordo con i nostri termini legali. Si prega di controllare la posta elettronica";
+$ErrorImportingFile = "Errore durante l'importazione del file";
+$Hidden = "Nascosto";
+$Imported = "Importato";
+$ImportAsCSV = "Importa da un CSV";
+$EditThread = "Modifica il thread";
+$AddFiles = "Aggiungi file";
+$GroupForums = "Forum di gruppo";
+$Generate = "Genera";
+$Ticket = "Ticket";
+$InvalidApiKey = "Chiave API non valida";
+$NoAnnouncement = "Non ci sono annunci";
+$NoForum = "Non ci sono forum";
+$GoToExercise = "Vai all'esercizio";
+$ForumDissociate = "Dissociare il forum";
+$NoLPFound = "Non ci sono pacchetti formativi";
+$ReportTypeLink = "Collegamento al rapporto attivo";
+$InviteesCantBeTutors = "Gli ospiti non possono essere tutor";
+$InvalidAction = "Azione non valida";
+$TicketWasThisAnswerSatisfying = "La risposta è stata soddisfacente?";
+$IfYouAreSureTheTicketWillBeClosed = "Se sei certo, il ticket verrà chiuso.";
+$Priorities = "Priorità";
+$Tickets = "Ticket";
+$ThisTextShouldBeAtLeastXCharsLong = "Questo testo deve essere lungo almeno %s caratteri";
+$TicketXAssignedToUserX = "Ticket #%s assegnato all'utente %s";
+$ThisItemIsRelatedToOtherTickets = "Questo elemento è correlato ad altri ticket";
+$WarningCategoryXDoesntHaveUsers = "Attenzione: La categoria %s non ha responsabili assegnati";
+$TicketXCreatedWithNoCategory = "Il ticket %s è stato creato senza una categoria";
+$TicketInformation = "Informazioni sul ticket";
+$CategoryWithNoUserNotificationSentToAdmins = "È stata inviata una notifica agli amministratori per segnalare che a questa categoria non è stato assegnato alcun utente";
+$VirtualSupport = "Assistente virtuale";
+$IncidentResentToVirtualSupport = "Il problema è stato segnalato nuovamente al team di supporto virtuale";
+$YourQuestionWasSentToTheResponableAreaX = "La tua domanda è stata inviata all'area %s responsabile";
+$YourAnswerToTheQuestionWillBeSentToX = "La tua risposta a questa domanda verrà inviata a %s";
+$MessageResent = "Messaggio re-inviato";
+$TicketAssignedToXCheckZAtLinkY = "Ticket assegnato a %s. Puoi tenerne traccia in #%s.";
+$TicketXAssigned = "Ticket %s assegnato";
 $SocialData = "Dati Social";
 $ExportToChamiloFormat = "Esporta un Modulo didattico";
 ?>

@@ -697,7 +697,7 @@ if ($nbStudents > 0 || isset($parameters['user_active'])) {
     $userIdList = Session::read('user_id_list');
     if (isset($userIdList[0])) {
         $lpList = new LearnpathList(
-            $studentId,
+            $userIdList[0],
             $courseInfo,
             $sessionId,
             null,
@@ -710,7 +710,7 @@ if ($nbStudents > 0 || isset($parameters['user_active'])) {
         );
         $lpList = $lpList->get_flat_list();
         $NbVisibleLps = count($lpList);
-        $courseProgressHeadTitle .= '. ' . sprintf(get_lang('progressBasedOnXVisiblesLPs'), $NbVisibleLps);
+        $courseProgressHeadTitle .= '. '.sprintf(get_lang('progressBasedOnXVisiblesLPs'), $NbVisibleLps);
     }
     $table->set_header(
         $headerCounter++,
