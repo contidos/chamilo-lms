@@ -1911,17 +1911,18 @@ class learnpath
         $previousText = get_lang('ScormPrevious');
         $nextText = get_lang('ScormNext');
         $fullScreenText = get_lang('ScormExitFullScreen');
+        $lessonsText = get_lang('LearningPathList');
 
         $settings = api_get_configuration_value('lp_view_settings');
         $display = isset($settings['display']) ? $settings['display'] : false;
         $reportingIcon = '
-            <a class="icon-toolbar"
-                id="stats_link"
-                href="lp_controller.php?action=stats&'.api_get_cidreq(true).'&lp_id='.$lpId.'"
-                onclick="window.parent.API.save_asset(); return true;"
-                target="content_name" title="'.$reportingText.'">
-                <span class="fa fa-info"></span><span class="sr-only">'.$reportingText.'</span>
-            </a>';
+        <a class="icon-toolbar"
+            id="stats_link"
+            href="lp_controller.php?action=stats&'.api_get_cidreq(true).'&lp_id='.$lpId.'"
+            onclick="window.parent.API.save_asset(); return true;"
+            target="content_name" title="'.$reportingText.'">
+            <span class="fa fa-info"></span><span class="sr-only">'.$reportingText.'</span>
+        </a>';
 
         if (!empty($display)) {
             $showReporting = isset($display['show_reporting_icon']) ? $display['show_reporting_icon'] : true;
@@ -1939,36 +1940,45 @@ class learnpath
         $nextIcon = '';
         if ($hideArrows === false) {
             $previousIcon = '
-                <a class="icon-toolbar" id="scorm-previous" href="#"
-                    onclick="switch_item('.$mycurrentitemid.',\'previous\');return false;" title="'.$previousText.'">
-                    <span class="fa fa-chevron-left"></span><span class="sr-only">'.$previousText.'</span>
-                </a>';
+            <a class="icon-toolbar" id="scorm-previous" href="#"
+                onclick="switch_item('.$mycurrentitemid.',\'previous\');return false;" title="'.$previousText.'">
+                <span class="fa fa-chevron-left"></span><span class="sr-only">'.$previousText.'</span>
+            </a>';
 
             $nextIcon = '
-                <a class="icon-toolbar" id="scorm-next" href="#"
-                    onclick="switch_item('.$mycurrentitemid.',\'next\');return false;" title="'.$nextText.'">
-                    <span class="fa fa-chevron-right"></span><span class="sr-only">'.$nextText.'</span>
-                </a>';
+            <a class="icon-toolbar" id="scorm-next" href="#"
+                onclick="switch_item('.$mycurrentitemid.',\'next\');return false;" title="'.$nextText.'">
+                <span class="fa fa-chevron-right"></span><span class="sr-only">'.$nextText.'</span>
+            </a>';
         }
+
+        $lessonsIcon = '
+        <a class="icon-toolbar" id="lessons-link" href="lp_controller.php?'.api_get_cidreq(true).'&reduced=true&isStudentView=true&hide_course_breadcrumb=true"
+            onclick="window.parent.API.save_asset(); return true;"
+            target="content_name" title="'.$lessonsText.'">
+            <span class="fa fa-star"></span><span class="sr-only">'.$lessonsText.'</span>
+        </a>';
 
         if ($this->mode === 'fullscreen') {
             $navbar = '
-                  <span id="'.$barId.'" class="buttons">
-                    '.$reportingIcon.'
-                    '.$previousIcon.'
-                    '.$nextIcon.'
-                    <a class="icon-toolbar" id="view-embedded"
-                        href="lp_controller.php?action=mode&mode=embedded" target="_top" title="'.$fullScreenText.'">
-                        <span class="fa fa-columns"></span><span class="sr-only">'.$fullScreenText.'</span>
-                    </a>
-                  </span>';
+              <span id="'.$barId.'" class="buttons">
+                '.$reportingIcon.'
+                '.$previousIcon.'
+                '.$nextIcon.'
+                '.$lessonsIcon.'
+                <a class="icon-toolbar" id="view-embedded"
+                    href="lp_controller.php?action=mode&mode=embedded" target="_top" title="'.$fullScreenText.'">
+                    <span class="fa fa-columns"></span><span class="sr-only">'.$fullScreenText.'</span>
+                </a>
+              </span>';
         } else {
             $navbar = '
-                 <span id="'.$barId.'" class="buttons text-right">
-                    '.$reportingIcon.'
-                    '.$previousIcon.'
-                    '.$nextIcon.'
-                </span>';
+             <span id="'.$barId.'" class="buttons text-right">
+                '.$reportingIcon.'
+                '.$previousIcon.'
+                '.$nextIcon.'
+                '.$lessonsIcon.'
+            </span>';
         }
 
         return $navbar;
@@ -2368,6 +2378,15 @@ class learnpath
             $lp_id,
             $sessionId
         );
+        // If there is no registry for the session verify the registry in the base course
+        if (empty($itemInfo)) {
+            $itemInfo = api_get_item_property_info(
+                $courseId,
+                TOOL_LEARNPATH,
+                $lp_id,
+                0
+            );
+        }
 
         // If the item was deleted or is invisible.
         if (isset($itemInfo['visibility']) && ($itemInfo['visibility'] == 2 || $itemInfo['visibility'] == 0)) {
@@ -3710,18 +3729,43 @@ class learnpath
                                         'zip',
                                         'ppt',
                                         'pptx',
-                                        'ods',
-                                        'xlsx',
+                                        'odp',
                                         'xls',
+                                        'xlsx',
+                                        'ods',
                                         'csv',
                                         'doc',
                                         'docx',
+                                        'odt',
                                         'dot',
                                     ];
 
-                                    if (in_array($extension, $extensionsToDownload)) {
-                                        $file = api_get_path(WEB_CODE_PATH).
-                                            'lp/embed.php?type=download&source=file&lp_item_id='.$item_id.'&'.api_get_cidreq();
+                                    $onlyofficeEditable = false;
+
+                                    if (OnlyofficePlugin::create()->isEnabled()) {
+                                        $lpItem = $this->getItem($item_id);
+
+                                        if ($lpItem->get_type() == 'document'
+                                            && OnlyofficePlugin::isExtensionAllowed($extension)
+                                        ) {
+                                            $docId = $lpItem->get_path();
+
+                                            if (method_exists('OnlyofficeTools', 'getPathToView')) {
+                                                $pathToView = OnlyofficeTools::getPathToView($docId, false);
+                                                // getPathView returns empty on error, so if this is the case,
+                                                // fallback to normal viewer/downloader
+                                                if (!empty($pathToView)) {
+                                                    $file = $pathToView;
+                                                    $onlyofficeEditable = true;
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    if (in_array($extension, $extensionsToDownload) && false === $onlyofficeEditable) {
+                                        $file = api_get_path(WEB_CODE_PATH)
+                                            .'lp/embed.php?type=download&source=file&lp_item_id='.$item_id.'&'
+                                            .api_get_cidreq();
                                     }
                                 }
                             }
@@ -4391,7 +4435,7 @@ class learnpath
             if (api_is_allowed_to_edit() ||
                 api_is_platform_admin(true) ||
                 api_is_drh() ||
-                api_is_coach(api_get_session_id(), api_get_course_int_id())
+                api_is_coach(api_get_session_id(), api_get_course_int_id(), false)
             ) {
                 return true;
             }
@@ -4835,17 +4879,15 @@ class learnpath
     /**
      * Check if the learnpath category is visible for a user.
      *
-     * @param int
-     * @param int
-     *
-     * @return bool
+     * @param int $courseId
+     * @param int $sessionId
      */
     public static function categoryIsVisibleForStudent(
-        CLpCategory $category,
+        ?CLpCategory $category,
         User $user,
         $courseId = 0,
         $sessionId = 0
-    ) {
+    ): bool {
         if (empty($category)) {
             return false;
         }
@@ -4874,7 +4916,7 @@ class learnpath
 
         $subscriptionSettings = self::getSubscriptionSettings();
 
-        if ($subscriptionSettings['allow_add_users_to_lp_category'] == false) {
+        if (!$subscriptionSettings['allow_add_users_to_lp_category']) {
             return true;
         }
 
@@ -4926,9 +4968,8 @@ class learnpath
                 }
             }
         }
-        $response = $noGroupSubscribed && $noUserSubscribed;
 
-        return $response;
+        return $noGroupSubscribed && $noUserSubscribed;
     }
 
     /**
@@ -6899,7 +6940,8 @@ class learnpath
         $isConfigPage = false,
         $allowExpand = true,
         $action = '',
-        $extraField = []
+        $extraField = [],
+        $noEdition = false
     ) {
         $actionsRight = '';
         $lpId = $this->lp_id;
@@ -6940,23 +6982,25 @@ class learnpath
             ])
         );
 
-        $actionsLeft .= Display::url(
-            Display::return_icon(
-                'upload_audio.png',
-                get_lang('UpdateAllAudioFragments'),
-                '',
-                ICON_SIZE_MEDIUM
-            ),
-            'lp_controller.php?'.api_get_cidreq().'&'.http_build_query([
-                'action' => 'admin_view',
-                'lp_id' => $lpId,
-                'updateaudio' => 'true',
-            ])
-        );
+        if (!$noEdition) {
+            $actionsLeft .= Display::url(
+                Display::return_icon(
+                    'upload_audio.png',
+                    get_lang('UpdateAllAudioFragments'),
+                    '',
+                    ICON_SIZE_MEDIUM
+                ),
+                'lp_controller.php?'.api_get_cidreq().'&'.http_build_query([
+                    'action' => 'admin_view',
+                    'lp_id' => $lpId,
+                    'updateaudio' => 'true',
+                ])
+            );
+        }
 
         $subscriptionSettings = self::getSubscriptionSettings();
         $request = api_request_uri();
-        if (strpos($request, 'edit') === false) {
+        if ((strpos($request, 'edit') === false) && !$noEdition) {
             $actionsLeft .= Display::url(
                 Display::return_icon(
                     'settings.png',
@@ -6971,7 +7015,7 @@ class learnpath
             );
         }
 
-        if ((strpos($request, 'build') === false &&
+        if ((strpos($request, 'build') === false && !$noEdition &&
             strpos($request, 'add_item') === false) ||
             in_array($action, ['add_audio'])
         ) {
@@ -9054,7 +9098,7 @@ class learnpath
                 'BaseHref' => api_get_path(WEB_COURSE_PATH).api_get_course_path().$item_path_fck,
             ];
 
-            $form->addElement('html_editor', 'content_lp', '', null, $editor_config);
+            $form->addHtmlEditor('content_lp', '', true, true, $editor_config);
             $content_path = api_get_path(SYS_COURSE_PATH).api_get_course_path().$item_path_fck;
             $defaults['content_lp'] = file_get_contents($content_path);
         }
@@ -12634,7 +12678,7 @@ EOD;
         //Setting elements that will be copied
         $cb->set_tools_specific_id_list(['learnpaths' => [$this->lp_id]]);
 
-        $course = $cb->build();
+        $course = $cb->build($this->lp_session_id);
 
         //Course restorer
         $course_restorer = new CourseRestorer($course);
@@ -12934,10 +12978,8 @@ EOD;
 
     /**
      * @param int $id
-     *
-     * @return CLpCategory
      */
-    public static function getCategory($id)
+    public static function getCategory($id): ?CLpCategory
     {
         $id = (int) $id;
         $em = Database::getManager();
@@ -13290,7 +13332,7 @@ EOD;
     /**
      * Get the item of exercise type (evaluation type).
      *
-     * @return array The final evaluation. Otherwise return false
+     * @return learnpathItem The final evaluation. Otherwise return false
      */
     public function getFinalEvaluationItem()
     {
@@ -13303,7 +13345,7 @@ EOD;
             $exercises[] = $item;
         }
 
-        return array_pop($exercises);
+        return end($exercises);
     }
 
     /**

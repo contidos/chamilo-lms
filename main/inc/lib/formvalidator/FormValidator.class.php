@@ -2,6 +2,7 @@
 
 /* For licensing terms, see /license.txt */
 
+use Chamilo\CoreBundle\Component\HTMLPurifier\Filter\RemoveOnAttributes;
 use Chamilo\UserBundle\Entity\User;
 
 /**
@@ -217,6 +218,8 @@ EOT;
 
         $this->applyFilter($name, 'trim');
         $this->applyFilter($name, 'html_filter');
+        $this->applyFilter($name, 'attr_on_filter');
+
         if ($required) {
             $this->addRule($name, get_lang('ThisFieldIsRequired'), 'required');
         }
@@ -384,6 +387,7 @@ EOT;
         if ($required) {
             $this->addRule($name, get_lang('ThisFieldIsRequired'), 'required');
         }
+        $this->applyFilter($name, 'attr_on_filter');
 
         return $element;
     }
@@ -1106,6 +1110,7 @@ EOT;
 
         $this->addElement('html_editor', $name, $label, $attributes, $config);
         $this->applyFilter($name, 'trim');
+        $this->applyFilter($name, 'attr_on_filter');
         if ($required) {
             $this->addRule($name, get_lang('ThisFieldIsRequired'), 'required');
         }
@@ -2096,4 +2101,12 @@ function plain_url_filter($html, $mode = NO_HTML)
     $allowed_html_fixed = kses_array_lc($allowed_tags);
 
     return kses_split($html, $allowed_html_fixed, ['http', 'https']);
+}
+
+/**
+ * Prevent execution of event handlers in HTML elements.
+ */
+function attr_on_filter(string $html): string
+{
+    return RemoveOnAttributes::filter($html);
 }

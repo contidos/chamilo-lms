@@ -120,8 +120,7 @@ class ScheduledAnnouncement extends Model
                 $id,
                 'use_base_progress'
             );
-
-            $form->addNumeric ('progress',
+            $form->addNumeric('progress',
                 get_lang('Progress'),
                 [
                     'step' => 1,
@@ -207,8 +206,8 @@ class ScheduledAnnouncement extends Model
         }
 
         $useBaseProgress = api_get_configuration_value('scheduled_announcements_use_base_progress');
-        if ($useBaseProgress && $useBaseDate) {
-            $typeOptions['base_progress'] = get_lang('BaseProgress');
+        if ($useBaseProgress) {
+            $typeOptions['base_progress'] = get_lang('Progress');
         }
 
         $form->addSelect(
@@ -238,7 +237,7 @@ class ScheduledAnnouncement extends Model
         $form->addHtml('</div>');
 
         $form->addHtml('<div id="base_progress" style="display:none">');
-        $form->addNumeric ('progress',
+        $form->addNumeric('progress',
             get_lang('Progress'),
             [
                 'step' => 1,
@@ -396,7 +395,6 @@ class ScheduledAnnouncement extends Model
                                 $result['id'],
                                 'use_base_progress'
                             );
-
                             if (empty($baseProgress) || empty($baseProgress['value']) || $baseProgress['value'] < 1) {
                                 $this->update(['id' => $result['id'], 'sent' => 1]);
                             }
@@ -435,7 +433,6 @@ class ScheduledAnnouncement extends Model
                                     $result['id'],
                                     'use_base_progress'
                                 );
-
                                 if (!empty($baseProgress) && !empty($baseProgress['value']) && $baseProgress['value'] >= 1) {
                                     if ((is_numeric($progress) && $progress > $baseProgress['value']) || !is_numeric($progress)) {
                                         continue;

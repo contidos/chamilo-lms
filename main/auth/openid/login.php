@@ -14,7 +14,7 @@
 require_once 'openid.lib.php';
 require_once 'xrds.lib.php';
 
-function openid_form()
+function openid_form(): FormValidator
 {
     $form = new FormValidator(
         'openid_login',
@@ -25,8 +25,10 @@ function openid_form()
     );
     $form -> addElement('text', 'openid_url', array(get_lang('OpenIDURL'), Display::url(get_lang('OpenIDWhatIs'), 'main/auth/openid/whatis.php')), array('class' => 'openid_input'));
     $form -> addElement('button', 'submit', get_lang('Login'));
+    $form->applyFilter('openid_url', 'trim');
+    $form->protect();
 
-    return $form->returnForm();
+    return $form;
 }
 
 /**
@@ -296,10 +298,17 @@ function openid_verify_assertion($op_endpoint, $response) {
 
     //TODO
     $openid_association = Database::get_main_table(TABLE_MAIN_OPENID_ASSOCIATION);
-    $sql = sprintf("SELECT * FROM $openid_association WHERE assoc_handle = '%s'", $response['openid.assoc_handle']);
-    $res = Database::query($sql);
-    $association = Database::fetch_object($res);
-    if ($association && isset($association->session_type)) {
+    $association = Database::select(
+        '*',
+        $openid_association,
+        [
+            'where' => [
+                'assoc_handle = ?' => [$response['openid.assoc_handle']],
+            ]
+        ],
+        'first'
+    );
+    if ($association && isset($association['session_type'])) {
         $keys_to_sign = explode(',', $response['openid.signed']);
         $self_sig = _openid_signature($association, $response, $keys_to_sign);
         if ($self_sig == $response['openid.sig']) {
@@ -458,4 +467,31 @@ function openid_http_request($url, $headers = array(), $method = 'GET', $data = 
 
     $result->code = $code;
     return $result;
+}
+
+function openid_is_allowed_provider($identityUrl): bool
+{
+    $allowedProviders = api_get_configuration_value('auth_openid_allowed_providers');
+
+    if (false === $allowedProviders) {
+        return true;
+    }
+
+    $host = parse_url($identityUrl, PHP_URL_HOST) ?: $identityUrl;
+
+    foreach ($allowedProviders as $provider) {
+        if (strpos($provider, '*') !== false) {
+            $regex = '/^' . str_replace('\*', '.*', preg_quote($provider, '/')) . '$/';
+
+            if (preg_match($regex, $host)) {
+                return true;
+            }
+        } else {
+            if ($host === $provider) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
