@@ -243,8 +243,8 @@ if (!empty($_SESSION['_user']['user_id']) && !($login || $logout)) {
     if (api_get_setting('allow_terms_conditions') === 'true' &&
         api_get_setting('load_term_conditions_section') === 'login'
     ) {
-        if (isset($_POST['login']) && isset($_POST['password']) &&
-            isset($termsAndCondition['user_id'])
+        if (isset($termsAndCondition['user_id']) &&
+            (isset($_POST['legal_accept_type']) || (isset($_POST['login']) && isset($_POST['password'])))
         ) {
             // user id
             $user_id = $termsAndCondition['user_id'];

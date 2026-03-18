@@ -12,7 +12,9 @@ use ChamiloSession as Session;
 if (!empty($_POST['language'])) {
     $_GET['language'] = $_POST['language'];
 }
+$GLOBALS['noredirection'] = true;
 require_once __DIR__.'/../inc/global.inc.php';
+unset($_SESSION['request_uri']);
 $hideHeaders = isset($_GET['hide_headers']);
 
 $allowedFields = [
