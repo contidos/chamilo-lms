@@ -908,6 +908,7 @@ if ($form->validate()) {
             }
         }
         $values = api_get_user_info($user_id);
+        Session::erase('term_and_condition');
     }
 
     /* SESSION REGISTERING */
@@ -964,6 +965,11 @@ if ($form->validate()) {
                 $form_data['action'] = api_get_path(WEB_PATH).'user_portal.php';
             }
         }
+        $form_data['button'] = Display::button(
+            'next',
+            get_lang('Next'),
+            ['class' => 'btn btn-primary btn-large']
+        );
     } else {
         if (!empty($values['email'])) {
             $text_after_registration .= '<p>'.get_lang('MailHasBeenSent').'.</p>';
