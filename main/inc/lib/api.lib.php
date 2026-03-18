@@ -7168,6 +7168,22 @@ function api_is_xml_http_request()
  */
 function api_getimagesize($path)
 {
+    $path = str_replace(
+        [
+            api_get_path(WEB_COURSE_PATH),
+            api_get_path(WEB_UPLOAD_PATH),
+            api_get_path(WEB_CODE_PATH),
+            api_get_path(WEB_PATH),
+        ],
+        [
+            api_get_path(SYS_COURSE_PATH),
+            api_get_path(SYS_UPLOAD_PATH),
+            api_get_path(SYS_CODE_PATH),
+            api_get_path(SYS_PATH),
+        ],
+        $path
+    );
+
     $image = new Image($path);
 
     return $image->get_image_size();
@@ -10255,11 +10271,11 @@ function api_unserialize_content($type, $serialized, $ignoreErrors = false)
             $allowedClasses = [
                 learnpath::class,
                 learnpathItem::class,
-                aicc::class,
-                aiccBlock::class,
-                aiccItem::class,
-                aiccObjective::class,
-                aiccResource::class,
+                //aicc::class,
+                //aiccBlock::class,
+                //aiccItem::class,
+                //aiccObjective::class,
+                //aiccResource::class,
                 scorm::class,
                 scormItem::class,
                 scormMetadata::class,
