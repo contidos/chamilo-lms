@@ -249,7 +249,7 @@ $htmlHeadXtra[] = '<script>
 var sv_user = \''.api_get_user_id().'\';
 var sv_course = chamilo_courseCode;
 var sv_sco = \''.$lp_id.'\';
-</script>'; // FIXME fetch sco and userid from a more reliable source directly in sotrageapi.js
+</script>'; // FIXME fetch sco and userid from a more reliable source directly in storageapi.js
 $htmlHeadXtra[] = '<script type="text/javascript" src="js/storageapi.js"></script>';
 
 /**
@@ -334,6 +334,7 @@ if (!isset($src)) {
             break;
         case 3:
             // aicc
+            /*
             $lp->stop_previous_item(); // save status manually if asset
             $htmlHeadXtra[] = '<script src="'.$lp->get_js_lib().'" type="text/javascript" language="javascript"></script>';
             $preReqCheck = $lp->prerequisites_match($lp_item_id);
@@ -347,6 +348,7 @@ if (!isset($src)) {
             } else {
                 $src = 'blank.php';
             }
+            */
             break;
         case 4:
             break;

@@ -32,7 +32,7 @@ class FileExport
      */
     public function exportFiles(array $filesData, string $exportDir): void
     {
-        $filesDir = $exportDir . '/files';
+        $filesDir = $exportDir.'/files';
 
         if (!is_dir($filesDir)) {
             mkdir($filesDir, api_get_permissions_for_new_directories(), true);
@@ -48,88 +48,6 @@ class FileExport
 
         // Create files.xml in the export directory
         $this->createFilesXml($filesData, $exportDir);
-    }
-
-    /**
-     * Create a placeholder index.html file to prevent an empty directory.
-     */
-    private function createPlaceholderFile(string $filesDir): void
-    {
-        $placeholderFile = $filesDir . '/index.html';
-        file_put_contents($placeholderFile, "<!-- Placeholder file to ensure the directory is not empty -->");
-    }
-
-    /**
-     * Copy a file to the export directory using its contenthash.
-     */
-    private function copyFileToExportDir(array $file, string $filesDir): void
-    {
-        if ($file['filepath'] === '.') {
-            return;
-        }
-
-        $contenthash = $file['contenthash'];
-        $subDir = substr($contenthash, 0, 2);
-        $filePath = $this->course->path . $file['documentpath'];
-        $exportSubDir = $filesDir . '/' . $subDir;
-
-        // Ensure the subdirectory exists
-        if (!is_dir($exportSubDir)) {
-            mkdir($exportSubDir, api_get_permissions_for_new_directories(), true);
-        }
-
-        // Copy the file to the export directory
-        $destinationFile = $exportSubDir . '/' . $contenthash;
-        if (file_exists($filePath)) {
-            copy($filePath, $destinationFile);
-        } else {
-            throw new Exception("File {$filePath} not found.");
-        }
-    }
-
-    /**
-     * Create the files.xml with the provided file data.
-     */
-    private function createFilesXml(array $filesData, string $destinationDir): void
-    {
-        $xmlContent = '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL;
-        $xmlContent .= '<files>' . PHP_EOL;
-
-        foreach ($filesData['files'] as $file) {
-            $xmlContent .= $this->createFileXmlEntry($file);
-        }
-
-        $xmlContent .= '</files>' . PHP_EOL;
-        file_put_contents($destinationDir . '/files.xml', $xmlContent);
-    }
-
-    /**
-     * Create an XML entry for a file.
-     */
-    private function createFileXmlEntry(array $file): string
-    {
-        return '  <file id="' . $file['id'] . '">' . PHP_EOL .
-            '    <contenthash>' . htmlspecialchars($file['contenthash']) . '</contenthash>' . PHP_EOL .
-            '    <contextid>' . $file['contextid'] . '</contextid>' . PHP_EOL .
-            '    <component>' . htmlspecialchars($file['component']) . '</component>' . PHP_EOL .
-            '    <filearea>' . htmlspecialchars($file['filearea']) . '</filearea>' . PHP_EOL .
-            '    <itemid>0</itemid>' . PHP_EOL .
-            '    <filepath>' . htmlspecialchars($file['filepath']) . '</filepath>' . PHP_EOL .
-            '    <filename>' . htmlspecialchars($file['filename']) . '</filename>' . PHP_EOL .
-            '    <userid>' . $file['userid'] . '</userid>' . PHP_EOL .
-            '    <filesize>' . $file['filesize'] . '</filesize>' . PHP_EOL .
-            '    <mimetype>' . htmlspecialchars($file['mimetype']) . '</mimetype>' . PHP_EOL .
-            '    <status>' . $file['status'] . '</status>' . PHP_EOL .
-            '    <timecreated>' . $file['timecreated'] . '</timecreated>' . PHP_EOL .
-            '    <timemodified>' . $file['timemodified'] . '</timemodified>' . PHP_EOL .
-            '    <source>' . htmlspecialchars($file['source']) . '</source>' . PHP_EOL .
-            '    <author>' . htmlspecialchars($file['author']) . '</author>' . PHP_EOL .
-            '    <license>' . htmlspecialchars($file['license']) . '</license>' . PHP_EOL .
-            '    <sortorder>0</sortorder>' . PHP_EOL .
-            '    <repositorytype>$@NULL@$</repositorytype>' . PHP_EOL .
-            '    <repositoryid>$@NULL@$</repositoryid>' . PHP_EOL .
-            '    <reference>$@NULL@$</reference>' . PHP_EOL .
-            '  </file>' . PHP_EOL;
     }
 
     /**
@@ -160,8 +78,8 @@ class FileExport
                             'component' => 'mod_assign',
                             'filearea' => 'introattachment',
                             'itemid' => (int) $work->params['id'],
-                            'filepath' => '/',
-                            'documentpath' =>  'document/'.$docData['path'],
+                            'filepath' => '/Documents/',
+                            'documentpath' => 'document/'.$docData['path'],
                             'filename' => basename($docData['path']),
                             'userid' => $adminId,
                             'filesize' => $docData['size'],
@@ -182,19 +100,185 @@ class FileExport
     }
 
     /**
+     * Get MIME type based on the file extension.
+     */
+    public function getMimeType($filePath): string
+    {
+        $extension = pathinfo($filePath, PATHINFO_EXTENSION);
+        $mimeTypes = $this->getMimeTypes();
+
+        return $mimeTypes[$extension] ?? 'application/octet-stream';
+    }
+
+    /**
+     * Create a placeholder index.html file to prevent an empty directory.
+     */
+    private function createPlaceholderFile(string $filesDir): void
+    {
+        $placeholderFile = $filesDir.'/index.html';
+        file_put_contents($placeholderFile, "<!-- Placeholder file to ensure the directory is not empty -->");
+    }
+
+    /**
+     * Copy a file to the export directory using its contenthash.
+     */
+    private function copyFileToExportDir(array $file, string $filesDir): void
+    {
+        if ($file['filepath'] === '.') {
+            return;
+        }
+
+        $contenthash = $file['contenthash'];
+        $subDir = substr($contenthash, 0, 2);
+        $filePath = $this->course->path.$file['documentpath'];
+        $exportSubDir = $filesDir.'/'.$subDir;
+
+        // Ensure the subdirectory exists
+        if (!is_dir($exportSubDir)) {
+            mkdir($exportSubDir, api_get_permissions_for_new_directories(), true);
+        }
+
+        // Copy the file to the export directory
+        $destinationFile = $exportSubDir.'/'.$contenthash;
+        if (file_exists($filePath)) {
+            copy($filePath, $destinationFile);
+        } else {
+            throw new Exception("File {$filePath} not found.");
+        }
+    }
+
+    /**
+     * Create the files.xml with the provided file data.
+     */
+    private function createFilesXml(array $filesData, string $destinationDir): void
+    {
+        $xmlContent = '<?xml version="1.0" encoding="UTF-8"?>'.PHP_EOL;
+        $xmlContent .= '<files>'.PHP_EOL;
+
+        foreach ($filesData['files'] as $file) {
+            $xmlContent .= $this->createFileXmlEntry($file);
+        }
+
+        $xmlContent .= '</files>'.PHP_EOL;
+        file_put_contents($destinationDir.'/files.xml', $xmlContent);
+    }
+
+    /**
+     * Ensure mandatory file fields exist for Moodle restore.
+     * This avoids notices like "Undefined property: stdClass::$itemid/$userid".
+     */
+    private function normalizeFileEntry(array $file): array
+    {
+        $adminData = MoodleExport::getAdminUserData();
+        $adminId = (int) ($adminData['id'] ?? 1);
+
+        if (!isset($file['itemid']) || $file['itemid'] === null || (is_string($file['itemid']) && trim($file['itemid']) === '')) {
+            $file['itemid'] = 0;
+        } else {
+            $file['itemid'] = (int) $file['itemid'];
+        }
+
+        if (!isset($file['userid']) || $file['userid'] === null || (is_string($file['userid']) && trim($file['userid']) === '')) {
+            $file['userid'] = $adminId;
+        } else {
+            $file['userid'] = (int) $file['userid'];
+        }
+
+        return $file;
+    }
+
+    /**
+     * Create an XML entry for a file.
+     */
+    private function createFileXmlEntry(array $file): string
+    {
+        $file = $this->normalizeFileEntry($file);
+
+        $itemId = (int) $file['itemid'];
+        $userId = (int) $file['userid'];
+
+        return '  <file id="'.$file['id'].'">'.PHP_EOL.
+            '    <contenthash>'.htmlspecialchars((string) $file['contenthash']).'</contenthash>'.PHP_EOL.
+            '    <contextid>'.$file['contextid'].'</contextid>'.PHP_EOL.
+            '    <component>'.htmlspecialchars((string) $file['component']).'</component>'.PHP_EOL.
+            '    <filearea>'.htmlspecialchars((string) $file['filearea']).'</filearea>'.PHP_EOL.
+            // IMPORTANT: only ONE <itemid> tag per file
+            '    <itemid>'.$itemId.'</itemid>'.PHP_EOL.
+            '    <filepath>'.htmlspecialchars((string) $file['filepath']).'</filepath>'.PHP_EOL.
+            '    <filename>'.htmlspecialchars((string) $file['filename']).'</filename>'.PHP_EOL.
+            '    <userid>'.$userId.'</userid>'.PHP_EOL.
+            '    <filesize>'.$file['filesize'].'</filesize>'.PHP_EOL.
+            '    <mimetype>'.htmlspecialchars((string) $file['mimetype']).'</mimetype>'.PHP_EOL.
+            '    <status>'.$file['status'].'</status>'.PHP_EOL.
+            '    <timecreated>'.$file['timecreated'].'</timecreated>'.PHP_EOL.
+            '    <timemodified>'.$file['timemodified'].'</timemodified>'.PHP_EOL.
+            '    <source>'.htmlspecialchars((string) $file['source']).'</source>'.PHP_EOL.
+            '    <author>'.htmlspecialchars((string) $file['author']).'</author>'.PHP_EOL.
+            '    <license>'.htmlspecialchars((string) $file['license']).'</license>'.PHP_EOL.
+            '    <sortorder>0</sortorder>'.PHP_EOL.
+            '    <repositorytype>$@NULL@$</repositorytype>'.PHP_EOL.
+            '    <repositoryid>$@NULL@$</repositoryid>'.PHP_EOL.
+            '    <reference>$@NULL@$</reference>'.PHP_EOL.
+            '  </file>'.PHP_EOL;
+    }
+
+    /**
      * Process a document or folder and add its data to the files array.
      */
     private function processDocument(array $filesData, object $document): array
     {
-        if ($document->file_type === 'file') {
-            $filesData['files'][] = $this->getFileData($document);
-        } elseif ($document->file_type === 'folder') {
-            $folderFiles = \DocumentManager::getAllDocumentsByParentId($this->course->info, $document->source_id);
-            foreach ($folderFiles as $file) {
-                $filesData['files'][] = $this->getFolderFileData($file, (int) $document->source_id);
-            }
+        // Only real files are exported; folders are represented implicitly by "filepath"
+        if ($document->file_type !== 'file') {
+            return $filesData;
         }
+
+        // Base file data (contenthash, size, title, etc.)
+        $fileData = $this->getFileData($document);
+
+        // Rebuild the relative filepath so Moodle can recreate the Documents tree
+        // without the internal Chamilo "document" prefix.
+        $filepath = $this->buildMoodleFilepathFromChamiloPath((string) $document->path);
+
+        // Attach this file to the global "Documents" folder activity
+        $fileData['filepath'] = $filepath;
+        $fileData['contextid'] = ActivityExport::DOCS_MODULE_ID;
+        $fileData['component'] = 'mod_folder';
+        $fileData['filearea'] = 'content';
+        $fileData['itemid'] = ActivityExport::DOCS_MODULE_ID;
+
+        $filesData['files'][] = $fileData;
+
         return $filesData;
+    }
+
+    /**
+     * Build a Moodle filepath from a Chamilo document path.
+     * Example:
+     *   document/repertoire1/file.pdf   -> /repertoire1/
+     *   /document/repertoire1/file.pdf  -> /repertoire1/
+     *   /file.pdf                       -> /
+     */
+    private function buildMoodleFilepathFromChamiloPath(string $documentPath): string
+    {
+        $normalizedPath = $this->stripChamiloDocumentPrefix($documentPath);
+        $normalizedPath = ltrim(str_replace('\\', '/', $normalizedPath), '/');
+
+        $relDir = dirname($normalizedPath);
+
+        return $this->ensureTrailingSlash($relDir === '.' ? '/' : '/'.$relDir.'/');
+    }
+
+    /**
+     * Remove the internal Chamilo document prefix from a path.
+     */
+    private function stripChamiloDocumentPrefix(string $path): string
+    {
+        $path = str_replace('\\', '/', trim($path));
+
+        // Remove leading "/document/" or "document/" only once
+        $path = preg_replace('#^/?document/#', '', $path);
+
+        return $path;
     }
 
     /**
@@ -232,22 +316,22 @@ class FileExport
     /**
      * Get file data for files inside a folder.
      */
-    private function getFolderFileData(array $file, int $sourceId): array
+    private function getFolderFileData(array $file, int $sourceId, string $parentPath = '/'): array
     {
         $adminData = MoodleExport::getAdminUserData();
         $adminId = $adminData['id'];
         $contenthash = hash('sha1', basename($file['path']));
         $mimetype = $this->getMimeType($file['path']);
         $filename = basename($file['path']);
-        $filepath = $this->ensureTrailingSlash(dirname($file['path']));
+        $filepath = $this->buildMoodleFilepathFromChamiloPath((string) $file['path']);
 
         return [
             'id' => $file['id'],
             'contenthash' => $contenthash,
-            'contextid' => $sourceId,
+            'contextid' => ActivityExport::DOCS_MODULE_ID,
             'component' => 'mod_folder',
             'filearea' => 'content',
-            'itemid' => (int) $file['id'],
+            'itemid' => ActivityExport::DOCS_MODULE_ID,
             'filepath' => $filepath,
             'documentpath' => 'document/'.$file['path'],
             'filename' => $filename,
@@ -266,20 +350,15 @@ class FileExport
     /**
      * Ensure the directory path has a trailing slash.
      */
-    private function ensureTrailingSlash($path): string
+    private function ensureTrailingSlash(string $path): string
     {
-        return empty($path) || $path === '.' || $path === '/' ? '/' : rtrim($path, '/') . '/';
-    }
+        if (empty($path) || $path === '.' || $path === '/') {
+            return '/';
+        }
 
-    /**
-     * Get MIME type based on the file extension.
-     */
-    private function getMimeType($filePath): string
-    {
-        $extension = pathinfo($filePath, PATHINFO_EXTENSION);
-        $mimeTypes = $this->getMimeTypes();
+        $path = preg_replace('/\/+/', '/', $path);
 
-        return $mimeTypes[$extension] ?? 'application/octet-stream';
+        return rtrim($path, '/').'/';
     }
 
     /**

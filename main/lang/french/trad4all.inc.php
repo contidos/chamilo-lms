@@ -342,7 +342,7 @@ ANSWER_EXPLANATION: C'est un commentaire facultatif de retour qui apparaîtra à
 SCORE: 20";
 $ImportAikenQuizExplanation = "Le format Aiken est un fichier (.txt) avec un texte simple, avec plusieurs blocs de questions, chacune séparée par une ligne blanche. La première ligne est la question, les lignes de réponse sont préfixés par une lettre et un point, et la bonne réponse vient avec le préfixe 'ANSWER'.
 Voir l'exemple ci-dessous.";
-$ExerciseAikenErrorNoAnswerOptionGiven = "Le fichier importé comporte au moins une question sans réponse (ou les réponses ne comprennent pas la lettre de préfixe requis). Assurez-vous que chaque question a au moins une réponse et qu'elle est précédée par une lettre et un point ou une parenthèse, comme ceci: 
+$ExerciseAikenErrorNoAnswerOptionGiven = "Le fichier importé comporte au moins une question sans réponse (ou les réponses ne comprennent pas la lettre de préfixe requis). Assurez-vous que chaque question a au moins une réponse et qu'elle est précédée par une lettre et un point ou une parenthèse, comme ceci:
 A. Réponse 1";
 $ExerciseAikenErrorNoCorrectAnswerDefined = "Le fichier importé comporte au moins une question sans réponse correcte définie. Assurez-vous que toutes les questions comprennent la réponse: [Lettre] ligne.";
 $SearchCourseBySession = "Recherche de cours par session";
@@ -2637,7 +2637,7 @@ $MailCronCourseExpirationReminderBody = "Cher/Chère %s,
 
 Nous avons remarqué que vous n'avez pas terminé le cours %s alors que sa date de fin a été établie au %s, vous laissant %s jour(s) pour le terminer. Nous vous rappelons que vous ne disposez de la possibilité de suivre ce cours qu'une fois par an. Nous vous invitons donc avec insistance à le compléter dans le délai qu'il vous reste. Vous pouvez retrouver le cours en vous connectant à la plate-forme à cette adresse: %s
 
--- 
+--
 
 Cordialement,
 
@@ -6308,7 +6308,7 @@ $MySocialGroups = "Mes groupes sociaux";
 $SocialGroups = "Groupes sociaux";
 $CreateASocialGroup = "Créer un groupe social";
 $StatsUsersDidNotLoginInLastPeriods = "Non connecté depuis...";
-$LastXMonths = "Derniers %i mois";
+$LastXMonths = "Derniers %d mois";
 $NeverConnected = "Jamais connecté";
 $EnableAccessibilityFontResizeTitle = "Redimensionnement des caractères";
 $EnableAccessibilityFontResizeComment = "Activer cette option montrera une série d'options de redimensionnement des caractères dans le coin supérieur droit de votre campus. Celles-ci permettront aux personnes à déficience visuelle de lire leurs contenus de cours plus facilement.";
@@ -6606,7 +6606,7 @@ $DateExpiredNotBeLessDeadLine = "La date de blocage effectif de l'envoi du trava
 $NotRevised = "Non coté";
 $DirExists = "Opération impossible, un répertoire du même nom existe déjà (peut-être dans une autre session).";
 $DocMv = "Document déplacé.";
-$ThereIsNoClassScheduledTodayTryPickingAnotherDay = "Aucune classe n'a été programmée aujourd'hui. Choisissez un autre you ou ajoutez votre classe vous-même en utilisant les icônes d'action.";
+$ThereIsNoClassScheduledTodayTryPickingAnotherDay = "Aucune classe n'a été programmée aujourd'hui. Choisissez un autre jour ou ajoutez votre classe vous-même en utilisant les icônes d'action.";
 $AddToCalendar = "Ajouter au calendrier";
 $TotalWeight = "Poids total";
 $RandomPick = "Sélection aléatoire";
@@ -7757,7 +7757,7 @@ $IconsModeSVGComment = "Cette option, lorsqu'elle est activée, préférera les 
 $FilterByTags = "Filtrer par tag";
 $ImportFromMoodle = "Importer depuis Moodle";
 $ImportFromMoodleInfo = "Importer un fichier de sauvegarde de cours de Moodle (.mbz) dans ce cours de Chamilo";
-$ImportFromMoodleInstructions = "La fonctionnalité d'importation peut ne pas supporter tous les types de contenus de Moodle, étant donné le fait que les fonctionnalités ne sont pas toutes identiques, et que Moodle et Chamilo continuent d'évoluer continuellement et rapidement. Cette fonctionnalité d'import devrait être considérée comme un travail en cours. Merci de réviser la page suivante pour plus d'information: <a href='https://support.chamilo.org/projects/chamilo-18/wiki/Moodle_import'>https://support.chamilo.org/projects/chamilo-18/wiki/Moodle_import</a>";
+$ImportFromMoodleInstructions = "La fonctionnalité d'importation peut ne pas supporter tous les types de contenus de Moodle, étant donné le fait que les fonctionnalités ne sont pas toutes identiques, et que Moodle et Chamilo continuent d'évoluer continuellement et rapidement. Cette fonctionnalité d'import devrait être considérée comme un travail en cours. Merci de réviser la page suivante pour plus d'information: <a href='https://github.com/chamilo/chamilo-lms/wiki/Import-from-Moodle'>https://github.com/chamilo/chamilo-lms/wiki/Import-from-Moodle</a>";
 $MoodleFile = "Fichier de cours de Moodle";
 $FailedToImportThisIsNotAMoodleFile = "Problème rencontré lors de l'import: le fichier soumis ne semble pas être un fichier de sauvegarde de cours de Moodle (.mbz)";
 $ThisQuestionIsNotSupportedYet = "Ce type de question n'est pas encore supporté";
@@ -9007,5 +9007,55 @@ $MoodleVersion = "Version de Moodle";
 $CreateExport = "Créer un export";
 $MoodleExportAdminIDComment = "Moodle requiert une identification de l'utilisateur pour la stocker au sein de fichiers XML qui font partie du format .mbz.
 Merci de bien vouloir fournir un numéro interne (nombre entier) de l'utilisateur qui exporte le cours, ou d'un utilisateur de notre système, qui sera désigné (s'il y a correspondance) comme le propriétaire des ressources importées sur l'autre système. Si vous avez encore des doutes, indiquez simplement '1' et donnez des données fictives.";
+$DropboxVulnerabilityWarning = "Ne téléchargez que des fichiers envoyés par des personnes en qui vous avez confiance. Dans le doute, merci d'utiliser un programme anti-virus sur votre ordinateur pour réduire les risques pour vos données.";
+$SessionExpiredAt = "Session expirée à";
+$DueToInactivityTheSessionIsGoingToClose = "Dû à votre inactivité, la session se fermera dans";
+$KeepGoing = "Rester connecté";
+$SessionIsClosing = "Votre session est en cours de fermeture";
+$CannotChangeVisibilityOfBaseCourseResourceX = "La visibilité de %s du cours de base ne peut être changée depuis une session.";
+$UsingAIProviderX = "Utilisation du fournisseur d'IA %s";
+$AIProvider = "Fournisseur d'IA";
+$AdvancedUserEdition = "Édition d'utilisateurs avancée";
+$FieldsToEdit = "Champs à modifier";
+$SaveAll = "Tout enregistrer";
+$SaveOne = "Enregistrer cet élément";
+$TextAppearingAtTheEndOfTheTestWhenTheUserHasFailed = "Texte apparaissant à la fin de l'exercice lorsque l'utilisateur a échoué.";
+$SubscribeSessionWhenFinishedFailure = "S'abonner à la session à la fin de l'exercice lorsque l'utilisateur a échoué";
+$progressBasedOnVisiblesLPsInEachCourse = "Les progrès sont calculés en fonction des leçons visibles dans chaque cours";
+$progressBasedOnXVisiblesLPs = "Les progrès sont calculés en fonction de %s leçons visibles dans le contexte actuel.";
+$AtLeastOneCorrectAnswerRequired = "Au moins une réponse doit être marquée comme correcte";
+$AtLeastOneCorrectAnswerMustHaveAPositiveScore = "Au moins une réponse correcte doit avoir un score positif";
+$NoAnswerCanBeEmpty = "Aucune réponse ne peut être vide";
+$ScoreMustBeNumeric = "Le score doit être numérique";
+$TheCorrectAnswerMustHaveAPositiveScore = "La réponse correcte doit avoir un score positif";
+$ACorrectAnswerIsRequired = "Une réponse doit être marquée comme correcte";
+$NoAdditionalComments = "Aucun commentaire additionnel";
+$TeacherFeedback = "Rétroalimentation du professeur";
+$Learners = "Apprenants";
+$BackToDateOrder = "Retour à l'ordre chronologique";
+$SeeAlphabeticalOrder = "Voir par ordre alphabétique";
+$HideComment = "Cacher les commentaires";
+$AreYouSureYouWantToDeleteThisTicket = "Êtes vous sûr de vouloir supprimer ce ticket ?";
+$TicketDeleted = "Ticket supprimé";
+$SubmittedDocument = "Document soumis";
+$AnswerInOfficeDoc = "Réponse comme document bureautique";
+$UploadOfficeDoc = "Envoyer un document bureautique";
+$AllowedFormats = "Formats supportés";
+$TheoreticalTime = "Temps théorique";
+$AverageProgressInSessions = "Progression moyenne dans les sessions";
+$TimeSpentInCoursesLastWeek = "Temps passé dans les cours la semaine dernière";
+$ProgressionInSessions = "Progression dans les sessions";
+$synthesis = "Synthèse";
+$WeeklyTimeSummary = "Synthèse des temps passés par semaine";
 $ExistingUserWithSameExtraFieldValue = "Un utilisateur existant avec le même %s a été trouvé (ID %d), inscription au lieu de créer.";
+$SelectExtraField = "Sélectionnez le champ extra sur lequel effectuer la recherche";
+$WhatToDoWithUnifiedUsers = "Que faire avec les utilisateurs unifiés";
+$ExtraFieldNotFound = "Champ extra non trouvé";
+$NoDuplicatesFound = "Aucun doublon trouvé";
+$UnifyToThisUser = "Unifier sur cet utilisateur";
+$Unify = "Unifier";
+$AreYouSureToUnify = "Êtes-vous sûr d'unifier";
+$FinalUser = "Utilisateur final";
+$WillMergeNUsers = "Fusionnera {n} utilisateurs";
+$UserUnsubscribedFromOldSessionAsThereWasOnlyOneCourse = "Note: L'utilisateur a été désinscrit de la session d'origine étant donné qu'elle ne contenait que ce cours-là.";
 ?>

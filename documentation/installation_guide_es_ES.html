@@ -196,7 +196,7 @@ Una vez configurada esta parte (que quizás ya esté configurada por su proveedo
 </p>
 Para instalar, sigue estos sencillos 6 pasos:
 <ol>
-  <li><a href="https://chamilo.org/es/chamilo-lms/">Descargar Chamilo LMS</a></li>
+  <li><a href="https://chamilo.org/download/">Descargar Chamilo LMS</a></li>
   <li>Descomprimirlo.</li>
   <li>
     Copiar el directorio de Chamilo en su directorio web de Apache. Este puede ser
@@ -419,7 +419,7 @@ date.timezone = 'America/New_York'
     </li>
     <li>
       Descargar el paquete de instalación de Chamilo 1.11 desde la
-      <a href="https://chamilo.org/es/chamilo-lms/">página de descarga de Chamilo</a>
+      <a href="https://chamilo.org/download/">página de descarga de Chamilo</a>
     </li>
     <li>
       Descomprimir los nuevos archivos de Chamilo 1.11 sobre los archivos de la versión anterior
@@ -444,7 +444,7 @@ date.timezone = 'America/New_York'
   </li>
   <li>
     Descargue el paquete de instalación de Chamilo 1.11 desde la
-    <a href="https://chamilo.org/es/chamilo-lms/">página de descarga de Chamilo</a>
+    <a href="https://chamilo.org/download/">página de descarga de Chamilo</a>
   </li>
   <li>
     Descomprima los nuevos ficheros de Chamilo 1.11 sobre los ficheros de la antigua versión
@@ -503,7 +503,7 @@ Este script se proporciona sin garantía. Por favor * siempre * realice una copi
   </li>
   <li>
     Descargue el paquete de instalación de Chamilo 1.11 desde la
-    <a href="https://chamilo.org/es/chamilo-lms/">página de descarga de Chamilo</a>
+    <a href="https://chamilo.org/download/">página de descarga de Chamilo</a>
   </li>
   <li>
     Descomprima los nuevos ficheros de Chamilo 1.11 sobre los ficheros de la antigua versión ( o descomprima en una
@@ -525,7 +525,7 @@ Este script se proporciona sin garantía. Por favor * siempre * realice una copi
   </li>
 </ul>
 <span class="text-muted">
-  * Los estilos e imágenes están ubicados en el directorio main/css o main/img. Usted puede recuperarlos desde la
+  * Los estilos e imágenes están ubicados en el directorio main/img o app/Resources/public/css/themes. Usted puede recuperarlos desde la
   copia de seguridad en el caso de que usted hya tenido la precaución de realizarla. Cualquier estilo o imagen
   modificada que use el nombre predeterminado style/image será sobrescrita en el siguiente paso. Para evitar
   perder cualquier personalización, siempre asegúrese de copiar styles/images bajo un nuevo nombre y use y
@@ -796,6 +796,23 @@ específica de configuración para ser agregado a configuration.php:
 <pre>$_configuration['enable_x_sendfile_headers'] = true;</pre>
 Si tiene problemas con los archivos que tardan mucho tiempo en descargarse, asegúrese de reconfigurar su
 servidor web y agregar esta línea. Debería ver una diferencia notable en el tiempo de descarga.
+
+El servidor web tiene que ser configurado para soportar X-Sendfile, por activar el módulo y por configurar opciones en su configuración.<br>
+Si tiene Apache 2.4 en Ubuntu, por ejemplo, tendría que ser algo así:
+  <pre>
+    sudo apt install libapache2-mod-xsendfile
+    sudo a2enmod xsendfile
+</pre>
+De ahí, en su vhost para Chamilo, tendría que añadir las líneas siguientes, donde el path es el mismo que su DocumentRoot (usamos /var/www/chamilo en este ejemplo):
+<pre>
+    XSendFile On
+    XSendFilePath /var/www/chamilo
+</pre>
+Luego reiniciar Apache:
+<pre>
+    sudo systemctl restart apache2
+</pre>
+
 <hr style="width: 100%; height: 2px;" />
 
 <h2><a id="15._Videoconference"></a>13. Videoconferencia</h2>
@@ -867,11 +884,11 @@ servidor web y agregar esta línea. Debería ver una diferencia notable en el ti
   RewriteRule ^certificates/$ certificates/index.php?id=%1 [L]
   RewriteRule ^courses/([^/]+)/?$ main/course_home/course_home.php?cDir=$1 [QSA,L]
   RewriteRule ^courses/([^/]+)/index.php$ main/course_home/course_home.php?cDir=$1 [QSA,L]
-  RewriteRule ^courses/([^/]+)/scorm/(.*([\.js|\.css|\.png|\.jpg|\.jpeg|\.gif]))$ app/courses/$1/scorm/$2 [QSA,L]
+  RewriteRule ^courses/([^/]+)/scorm/(.*\.(js|css|png|jpg|jpeg|gif))$ app/courses/$1/scorm/$2 [QSA,L]
   RewriteRule ^courses/([^/]+)/scorm/(.*)$ main/document/download_scorm.php?doc_url=/$2&cDir=$1 [QSA,L]
   RewriteRule ^courses/([^/]+)/document/certificates/(.*)$ app/courses/$1/document/certificates/$2 [QSA,L]
   RewriteRule ^courses/([^/]+)/document/(.*)$ main/document/download.php?doc_url=/$2&cDir=$1 [QSA,L]
-  RewriteRule ^courses/([^/]+)/upload/course_home_icons/(.*([\.js|\.css|\.png|\.jpg|\.jpeg|\.gif]))$ app/courses/$1/upload/course_home_icons/$2 [QSA,L]
+  RewriteRule ^courses/([^/]+)/upload/course_home_icons/(.*\.(js|css|png|jpg|jpeg|gif))$ app/courses/$1/upload/course_home_icons/$2 [QSA,L]
   RewriteRule ^courses/([^/]+)/upload/([^/]+)/(.*)$ main/document/download_uploaded_files.php?code=$1&type=$2&file=$3 [QSA,L]
   RewriteRule ^courses/([^/]+)/work/(.*)$ main/work/download.php?file=work/$2&cDir=$1 [QSA,L]
   RewriteRule ^courses/([^/]+)/course-pic85x85.png$ main/inc/ajax/course.ajax.php?a=get_course_image&code=$1&image=course_image_source [QSA,L]
@@ -927,7 +944,7 @@ que se colocarán dentro de un bloque de servidor {}, ya que otras configuracion
     rewrite ^certificates/$ certificates/index.php last;
     rewrite ^/courses/([^/]+)/$ /main/course_home/course_home.php?cDir=$1 last;
     rewrite ^/courses/([^/]+)/index.php$ /main/course_home/course_home.php?cDir=$1 last;
-    rewrite ^/courses/([^/]+)/scorm/(.*([\.js|\.css|\.png|\.jpg|\.jpeg|\.gif]))$ app/courses/$1/scorm/$2 last;
+    rewrite ^/courses/([^/]+)/scorm/(.*\.(js|css|png|jpg|jpeg|gif))$ app/courses/$1/scorm/$2 last;
     rewrite ^/courses/([^/]+)/scorm/(.*)$ /main/document/download_scorm.php?doc_url=/$2&cDir=$1 last;
     # Alternatively, you can choose to give direct access to all SCORM files, which is much faster but less secure
     # rewrite "^/courses/([^/]+)/scorm/(.*)$" /app/courses/$1/scorm/$2 break;
@@ -936,7 +953,7 @@ que se colocarán dentro de un bloque de servidor {}, ya que otras configuracion
     rewrite ^/courses/([^/]+)/document/(.*)$ /main/document/download.php?doc_url=/$2&cDir=$1 last;
     rewrite ^/courses/([^/]+)/upload/([^/]+)/(.*)$ /main/document/download_uploaded_files.php?code=$1&type=$2&file=$3 last;
     rewrite ^/courses/([^/]+)/work/(.*)$ /main/work/download.php?file=work/$2&cDir=$1 last;
-    rewrite ^/courses/([^/]+)/upload/course_home_icons/(.*([\.png|\.jpg|\.jpeg|\.gif]))$ app/courses/$1/upload/course_home_icons/$2 last;
+    rewrite ^/courses/([^/]+)/upload/course_home_icons/(.*\.(png|jpg|jpeg|gif))$ app/courses/$1/upload/course_home_icons/$2 last;
     rewrite ^/courses/([^/]+)/(.*)$ /app/courses/$1/$2 last;
     rewrite ^/session/([^/]+)/about/?$ /main/session/about.php?session_id=$1 last;
     rewrite ^/course/([^/]+)/about/?$ /main/course_info/about.php?course_id=$1 last;
@@ -1034,7 +1051,7 @@ que se colocarán dentro de un bloque de servidor {}, ya que otras configuracion
                     &lt;action type="Rewrite" url="main/course_home/course_home.php?cDir={R:1}" /&gt;
                 &lt;/rule&gt;
                 &lt;rule name="rule 4v" stopProcessing="true"&gt;
-                    &lt;match url="^courses/([^/]+)/scorm/(.*([\.js|\.css|\.png|\.jpg|\.jpeg|\.gif]))$" /&gt;
+                    &lt;match url="^courses/([^/]+)/scorm/(.*\.(js|css|png|jpg|jpeg|gif))$" /&gt;
                     &lt;action type="Rewrite" url="app/courses/{R:1}/scorm/{R:2}" /&gt;
                 &lt;/rule&gt;
                 &lt;rule name="rule 5v" stopProcessing="true"&gt;
@@ -1050,7 +1067,7 @@ que se colocarán dentro de un bloque de servidor {}, ya que otras configuracion
                     &lt;action type="Rewrite" url="main/document/download.php?doc_url=/{R:2}&amp;cDir={R:1}" /&gt;
                 &lt;/rule&gt;
                 &lt;rule name="rule v8" stopProcessing="true"&gt;
-                    &lt;match url="^courses/([^/]+)/upload/course_home_icons/(.*([\.js|\.css|\.png|\.jpg|\.jpeg|\.gif]))$" /&gt;
+                    &lt;match url="^courses/([^/]+)/upload/course_home_icons/(.*\.(js|css|png|jpg|jpeg|gif))$" /&gt;
                     &lt;action type="Rewrite" url="app/courses/{R:1}/upload/course_home_icons/{R:2}" /&gt;
                 &lt;/rule&gt;
                 &lt;rule name="rule v9" stopProcessing="true"&gt;

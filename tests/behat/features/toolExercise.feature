@@ -91,6 +91,7 @@ Feature: Exercise tool
       | questionName | Fill blanks |
     Then I fill in ckeditor field "answer" with "Romeo and [Juliet] [Hätten||Haetten] [möchte||moechte] [wäre||waere] [können||koennen] [Könnten||Koennten] [Ärger] [voilà] [müssen] [l'été] [cherchent à] [Übung]  [Ärger|Möglichkeit]"
     And I press "submitQuestion"
+    And wait for the page to be loaded
     Then I should see "Item added"
 
   Scenario: Add question "Matching" to exercise created "Exercise 1"
@@ -106,6 +107,7 @@ Feature: Exercise tool
     And I fill in ckeditor field "option[2]" with "Option B"
     And I fill in select bootstrap static input "#matches_2" select "2"
     And I press "submitQuestion"
+    And wait for the page to be loaded
     Then I should see "Item added"
 
     Scenario: Add question "Open" to exercise created "Exercise 1"
@@ -128,6 +130,7 @@ Feature: Exercise tool
       | questionName | Oral expression question |
       | weighting | 10 |
     And I press "submitQuestion"
+    And wait for the page to be loaded
     Then I should see "Item added"
 
   Scenario: Add question "Exact answers combination" to exercise created "Exercise 1"
@@ -206,6 +209,7 @@ Feature: Exercise tool
     Then I fill in ckeditor field "comment[1]" with "Comment true"
     Then I fill in ckeditor field "comment[2]" with "Comment false"
     And I press "submitQuestion"
+    And wait for the page to be loaded
     Then I should see "Item added"
 
   Scenario: Add question "Global multiple answer" to exercise created "Exercise 1"
@@ -353,7 +357,8 @@ Feature: Exercise tool
     And I press "next"
     Then I should see "Update successful"
     Then I follow "Multiple registration"
-    Then I select "Costea Andrea (acostea)" from "nosessionUsersList[]"
+    Then wait for the page to be loaded
+    Then I select "Andrea Costea (acostea)" from "nosessionUsersList[]"
     And I press "add_user"
     And I press "next"
     Then I should see "Update successful"

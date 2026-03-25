@@ -5,6 +5,8 @@
  * @package chamilo.admin
  */
 // resetting the course id
+use Chamilo\CoreBundle\Component\Utils\ChamiloApi;
+
 $cidReset = true;
 
 require_once __DIR__.'/../inc/global.inc.php';
@@ -14,8 +16,8 @@ $xajax->registerFunction('search_users');
 // setting the section (for the tabs)
 $this_section = SECTION_PLATFORM_ADMIN;
 
-$id_session = isset($_GET['id_session']) ? (int) $_GET['id_session'] : 0;
-$addProcess = isset($_GET['add']) && 'true' === $_GET['add'] ? 'true' : null;
+$id_session = isset($_REQUEST['id_session']) ? (int) $_REQUEST['id_session'] : 0;
+$addProcess = isset($_REQUEST['add']) && 'true' === $_REQUEST['add'] ? 'true' : null;
 
 SessionManager::protectSession($id_session);
 
@@ -35,8 +37,6 @@ $add_type = 'unique';
 if (isset($_REQUEST['add_type']) && $_REQUEST['add_type'] != '') {
     $add_type = Security::remove_XSS($_REQUEST['add_type']);
 }
-
-$page = isset($_GET['page']) ? Security::remove_XSS($_GET['page']) : null;
 
 // Checking for extra field with filter on
 $extra_field_list = UserManager::get_extra_fields();
@@ -63,6 +63,58 @@ if (is_array($extra_field_list)) {
             ];
         }
     }
+}
+
+if (ChamiloApi::isAjaxRequest() && isset($_POST['action'])) {
+    $id_session = isset($_POST['id_session']) ? (int) $_POST['id_session'] : 0;
+    $excludedUsers = isset($_POST['excludedUsers']) ? $_POST['excludedUsers'] : [];
+
+    $excludedUsersList = count($excludedUsers) > 0 ? implode(",", array_map('intval', $excludedUsers)) : '0';
+    $accessUrlId = api_get_current_access_url_id();
+
+    if ($_POST['action'] == 'get_last_ten_users') {
+        $sql = "SELECT u.id, u.username, u.firstname, u.lastname
+                FROM $tbl_user u
+                LEFT JOIN $tbl_session_rel_user sru ON (u.id = sru.user_id AND sru.session_id = $id_session)
+                WHERE sru.user_id IS NULL
+                AND u.id NOT IN ($excludedUsersList)
+                AND u.id IN (
+                    SELECT user_id
+                    FROM access_url_rel_user
+                    WHERE access_url_id ='$accessUrlId')
+                ORDER BY u.id DESC
+                LIMIT 10";
+    } elseif ($_POST['action'] == 'get_all_users') {
+        $sql = "SELECT u.id, u.username, u.firstname, u.lastname
+                FROM $tbl_user u
+                LEFT JOIN $tbl_session_rel_user sru ON (u.id = sru.user_id AND sru.session_id = $id_session)
+                WHERE sru.user_id IS NULL
+                AND u.id NOT IN ($excludedUsersList)
+                AND u.id IN (
+                    SELECT user_id
+                    FROM access_url_rel_user
+                    WHERE access_url_id ='$accessUrlId')
+                ORDER BY u.lastname ASC, u.firstname ASC";
+    }
+
+    $result = Database::query($sql);
+    $users = [];
+    while ($row = Database::fetch_assoc($result)) {
+        $row['complete_name_with_username'] = api_get_person_name(
+            $row['firstname'],
+            $row['lastname'],
+            null,
+            null,
+            null,
+            $row['username']
+        );
+        $row['complete_name_with_username'] .= ' ('.$row['username'].')';
+        $users[] = $row;
+    }
+
+    header('Content-Type: application/json');
+    echo json_encode($users);
+    exit();
 }
 
 function search_users($needle, $type)
@@ -304,6 +356,77 @@ function change_select(val) {
     xajax_search_users(val,"multiple");
 }
 </script>';
+$htmlHeadXtra[] = '
+<script>
+    function showLastTenUsers() {
+        var selectedUsers = [];
+        $("#destination_users option").each(function() {
+            selectedUsers.push($(this).val());
+        });
+
+        if (selectedUsers.length === 0) {
+            selectedUsers.push(0);
+        }
+
+        var idSession = "'.(int) $id_session.'";
+        $.post("'.api_get_self().'",
+        {
+            action: "get_last_ten_users",
+            excludedUsers: selectedUsers,
+            id_session: idSession,
+            add: "",
+            add_type: "multiple"
+        }, function(data) {
+            console.log(data);
+            var select = document.getElementById("origin_users");
+            select.innerHTML = "";
+            $.each(data, function(index, user) {
+                select.append(new Option(user.complete_name_with_username, user.id));
+            });
+        }, "json").fail(function(xhr, status, error) {
+            console.error("Error en la solicitud AJAX: " + error);
+            console.log(xhr.responseText);
+        });
+    }
+
+    function loadAllUsers() {
+        var selectedUsers = [];
+
+        $("#destination_users option").each(function() {
+            selectedUsers.push($(this).val());
+        });
+
+        if (selectedUsers.length === 0) {
+            selectedUsers.push(0);
+        }
+
+        var idSession = "'.(int) $id_session.'";
+        $.post("'.api_get_self().'",
+        {
+            action: "get_all_users",
+            excludedUsers: selectedUsers,
+            id_session: idSession,
+            add: "",
+            add_type: "multiple"
+        }, function(data) {
+            var select = document.getElementById("origin_users");
+            select.innerHTML = "";
+
+            $.each(data, function(index, user) {
+                select.append(new Option(user.complete_name_with_username, user.id));
+            });
+        }, "json").fail(function(xhr, status, error) {
+            console.error("Error en la solicitud AJAX: " + error);
+        });
+    }
+
+    $(document).ready(function() {
+        loadAllUsers();
+        $("#show_last_ten_users_button").on("click", showLastTenUsers);
+        $("#reset_users_button").on("click", loadAllUsers);
+    });
+</script>
+';
 
 $form_sent = 0;
 $errorMsg = $firstLetterUser = $firstLetterSession = '';
@@ -576,7 +699,7 @@ $newLinks .= Display::url(
         ?>
     </div>
     <form name="formulaire" method="post"
-          action="<?php echo api_get_self(); ?>?page=<?php echo $page; ?>&id_session=<?php echo $id_session; ?><?php if (!empty($addProcess)) {
+          action="<?php echo api_get_self(); ?>?id_session=<?php echo $id_session; ?><?php if (!empty($addProcess)) {
             echo '&add=true';
         } ?>" <?php if ($ajax_search) {
             echo ' onsubmit="valide();"';
@@ -691,6 +814,14 @@ $newLinks .= Display::url(
                         <?php
                         echo Display::get_alphabet_options(); ?>
                     </select>
+                    <span class="input-group-btn">
+                        <button class="btn btn-default" type="button" id="show_last_ten_users_button" title="<?php echo get_lang('ShowLastTenUsers'); ?>">
+                            <i class="fa fa-clock-o"></i>
+                        </button>
+                        <button class="btn btn-default" type="button" id="reset_users_button" title="<?php echo get_lang('Reset'); ?>">
+                            <i class="fa fa-refresh"></i>
+                        </button>
+                    </span>
                     <br/>
                     <br/>
                 <?php

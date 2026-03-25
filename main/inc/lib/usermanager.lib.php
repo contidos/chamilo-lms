@@ -457,15 +457,11 @@ class UserManager
         if (empty($expirationDate) || $expirationDate == '0000-00-00 00:00:00') {
             // Default expiration date
             // if there is a default duration of a valid account then
-            // we have to change the expiration_date accordingly
+            // the expiration_date has to be set taking it into account before calling create_user()
             // Accept 0000-00-00 00:00:00 as a null value to avoid issues with
             // third party code using this method with the previous (pre-1.10)
             // value of 0000...
-            if (api_get_setting('account_valid_duration') != '') {
-                $expirationDate = new DateTime($currentDate);
-                $days = (int) api_get_setting('account_valid_duration');
-                $expirationDate->modify('+'.$days.' day');
-            }
+            $expirationDate = null;
         } else {
             $expirationDate = api_get_utc_datetime($expirationDate);
             $expirationDate = new \DateTime($expirationDate, new DateTimeZone('UTC'));
@@ -2347,7 +2343,13 @@ class UserManager
             }
         }
 
-        $sql .= str_replace("\'", "'", Database::escape_string($extraConditions));
+        // $extraConditions is a caller-constructed SQL fragment, not a scalar
+        // value — escaping it as a string then immediately un-escaping the
+        // result (str_replace("\'", "'", ...)) produced a net-zero effect while
+        // giving a false sense of safety. Callers are responsible for ensuring
+        // any values embedded in $extraConditions are individually escaped or
+        // validated before being passed here.
+        $sql .= $extraConditions;
 
         if (!empty($order_by) && count($order_by) > 0) {
             $sql .= ' ORDER BY '.Database::escape_string(implode(',', $order_by));
@@ -6992,7 +6994,7 @@ SQL;
 
     public static function blockIfMaxLoginAttempts(array $userInfo)
     {
-        if (false === (bool) $userInfo['active'] || null === $userInfo['last_login']) {
+        if (!isset($userInfo['active']) || false === (bool) $userInfo['active'] || null === $userInfo['last_login']) {
             return;
         }
 
@@ -8317,6 +8319,54 @@ SQL;
     }
 
     /**
+     * Check or fetch a user by extra‑field on this portal.
+     *
+     * @param string $value    The extra‑field value to test (e.g. DNI).
+     * @param bool   $returnId If true, return the existing user ID or null; otherwise return true/false for uniqueness.
+     *
+     * @return bool|int|null When $returnId===false: true if unique, false if already exists.
+     *                       When $returnId===true: existing user ID or null if none.
+     */
+    public static function isExtraFieldValueUniquePerUrl(string $value, bool $returnId = false)
+    {
+        $field = api_get_configuration_value('extra_field_to_validate_on_user_registration');
+        if (empty($field) || $value === '') {
+            // If there's nothing to check, treat as “unique” or “no ID”
+            return $returnId ? null : true;
+        }
+
+        $accessUrlId = api_get_current_access_url_id();
+
+        $tUser = Database::get_main_table(TABLE_MAIN_USER);
+        $tField = Database::get_main_table(TABLE_EXTRA_FIELD);
+        $tValue = Database::get_main_table(TABLE_EXTRA_FIELD_VALUES);
+        $tRelUrl = Database::get_main_table(TABLE_MAIN_ACCESS_URL_REL_USER);
+
+        $sql = "
+        SELECT u.id
+        FROM   {$tUser} u
+        JOIN   {$tValue} v   ON v.item_id    = u.id
+        JOIN   {$tField} f   ON f.id         = v.field_id
+        JOIN   {$tRelUrl} url ON url.user_id = u.id
+        WHERE  f.variable        = '".Database::escape_string($field)."'
+          AND  v.value           = '".Database::escape_string($value)."'
+          AND  url.access_url_id = {$accessUrlId}
+        LIMIT  1
+    ";
+
+        $result = Database::query($sql);
+        $row = Database::fetch_array($result, 'ASSOC');
+
+        if ($returnId) {
+            // return the existing user ID, or null if none
+            return $row['id'] ?? null;
+        }
+
+        // return true if no match was found (i.e. unique), false otherwise
+        return empty($row);
+    }
+
+    /**
      * @return EncoderFactory
      */
     private static function getEncoderFactory()
@@ -8408,53 +8458,5 @@ SQL;
         }
 
         return $url;
-    }
-
-    /**
-     * Check or fetch a user by extra‑field on this portal.
-     *
-     * @param string $value      The extra‑field value to test (e.g. DNI).
-     * @param bool   $returnId   If true, return the existing user ID or null; otherwise return true/false for uniqueness.
-     * @return bool|int|null     When $returnId===false: true if unique, false if already exists.
-     *                           When $returnId===true: existing user ID or null if none.
-     */
-    public static function isExtraFieldValueUniquePerUrl(string $value, bool $returnId = false)
-    {
-        $field = api_get_configuration_value('extra_field_to_validate_on_user_registration');
-        if (empty($field) || $value === '') {
-            // If there's nothing to check, treat as “unique” or “no ID”
-            return $returnId ? null : true;
-        }
-
-        $accessUrlId = api_get_current_access_url_id();
-
-        $tUser   = Database::get_main_table(TABLE_MAIN_USER);
-        $tField  = Database::get_main_table(TABLE_EXTRA_FIELD);
-        $tValue  = Database::get_main_table(TABLE_EXTRA_FIELD_VALUES);
-        $tRelUrl = Database::get_main_table(TABLE_MAIN_ACCESS_URL_REL_USER);
-
-        $sql = "
-        SELECT u.id
-        FROM   {$tUser} u
-        JOIN   {$tValue} v   ON v.item_id    = u.id
-        JOIN   {$tField} f   ON f.id         = v.field_id
-        JOIN   {$tRelUrl} url ON url.user_id = u.id
-        WHERE  f.variable        = '" . Database::escape_string($field) . "'
-          AND  v.value           = '" . Database::escape_string($value) . "'
-          AND  url.access_url_id = {$accessUrlId}
-          ORDER BY u.id DESC
-        LIMIT  1
-    ";
-
-        $result = Database::query($sql);
-        $row    = Database::fetch_array($result, 'ASSOC');
-
-        if ($returnId) {
-            // return the existing user ID, or null if none
-            return $row['id'] ?? null;
-        }
-
-        // return true if no match was found (i.e. unique), false otherwise
-        return empty($row);
     }
 }
