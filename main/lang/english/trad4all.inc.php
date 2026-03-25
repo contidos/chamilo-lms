@@ -9072,4 +9072,5 @@ $AdminID = "Admin ID";
 $MoodleVersion = "Moodle version";
 $CreateExport = "Create export file";
 $MoodleExportAdminIDComment = "Moodle requires a user identification to be stored inside some XML files of the .mbz format. Please provide an internal (integer) ID of the user exporting this course or Moodle's internal user ID of the user that will be the owner of the imported resources. If you're in doubt, just write '1' and some fake data ton continue.";
+$ExistingUserWithSameExtraFieldValue = "An existing user with the same %s was found (ID %d), enrolling instead of creating.";
 ?>

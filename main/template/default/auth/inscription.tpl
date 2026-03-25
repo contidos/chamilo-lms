@@ -6,9 +6,16 @@
 
 {% block content %}
 
+<style>
+.help-registration .alert {
+    margin-bottom: 0 !important;
+}
+</style>
+
 {{ inscription_header }}
 {{ inscription_content }}
 {{ form }}
 {{ text_after_registration }}
 
 {% endblock %}
+    

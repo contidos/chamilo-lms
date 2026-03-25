@@ -1,6 +1,6 @@
 :root {
-    --primary-color: #486F88;
-    --success-color: #16D090;
+    --primary-color: #DA2A1D;
+    --success-color: #000000;
 }
 
 body {
@@ -74,4 +74,8 @@ body {
     display: inline-block;
     width: 100%;
     font-size: 12px;
+}
+
+.custompage .lostpasword {
+    text-align: center;
 }

@@ -9097,4 +9097,7 @@ $AdminID = "ID de administrador";
 $MoodleVersion = "Versión de Moodle";
 $CreateExport = "Crear archivo de exporte";
 $MoodleExportAdminIDComment = "Moodle requiere la indentificación de algún usuario para almacenarla dentro de los archivos XML del formato .mbz. Por favor indique un número de ID interno (entero) del usuario quien está exportando este curso, o el ID interno del usuario en Moodle para el usuario quien será propietario de los recursos importados. Si tiene duda, puede simplemente marcar '1' y algunos datos falsos para seguir.";
+$TheValueEntered  = "El valor introducido en el campo %s ya existe";
+$DuplicatedFieldAt = "Valor duplicado en %s";
+$ExistingUserWithSameExtraFieldValue = "Se encontró el mismo %s con un usuario existente (ID %d), se procederá a matricularlo en lugar de crear uno nuevo.";
 ?>

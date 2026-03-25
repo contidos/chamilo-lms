@@ -2429,4 +2429,6 @@ $InvitationReceived = "Invitación recibida";
 $InvitationSent = "Invitación envida";
 $YouAlreadySentAnInvitation = "Ud. ya ha enviado una invitación";
 $LowerCaseUser = "usuario";
+$TheValueEntered  = "El valor introducido en el campo %s ya existe";
+$AlreadyExists = "Ya existe";
 ?>

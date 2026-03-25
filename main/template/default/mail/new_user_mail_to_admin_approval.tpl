@@ -11,4 +11,5 @@
     <li>{{ 'Email'|get_lang }}: {{ user.getEmail() }}</li>
     <li>{{ 'Status'|get_lang }}: {{ user.getStatus() }}</li>
 </ul>
-<p>{{ 'ManageUser'|get_lang }}: <a href="{{ manageUrl }}">{{ manageUrl }}</a></p>
+<p>{{ 'ManageUser'|get_lang }}: <a href="{{ manageUrl }}">{{ 'ClickHere'|get_lang }}</a></p>
+

@@ -6,7 +6,7 @@
     {% endif %}
     <section class="sub-footer">
         <div class="row">
-            <div class="col-xs-12 col-md-4">
+            <div class="col-xs-12 col-md-2">
                 {% if session_teachers is not null %}
                 <div class="session-teachers">
                     {{ session_teachers }}
@@ -23,14 +23,14 @@
                 </div>
                 {% endif %}
             </div>
-            <div class="col-xs-12 col-md-4">
+            <div class="col-xs-12 col-md-2">
                 {% if plugin_footer_center is not null %}
                     <div id="plugin_footer_center">
                         {{ plugin_footer_center }}
                     </div>
                 {% endif %}
             </div>
-            <div class="col-xs-12 col-md-4 text-right">
+            <div class="col-xs-12 col-md-8 text-right">
                 {% if administrator_name is not null %}
                     <div class="administrator-name">
                         {{ administrator_name }}

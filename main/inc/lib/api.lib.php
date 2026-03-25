@@ -2528,6 +2528,7 @@ function api_format_course_array($course_data)
 
     // Course large image
     $_course['course_image_large_source'] = '';
+	
     if (file_exists($courseSys.'/course-pic.png')) {
         $url_image = $webCourseHome.'/course-pic.png';
         $_course['course_image_large_source'] = $courseSys.'/course-pic.png';
@@ -9442,11 +9443,11 @@ function api_site_use_cookie_warning_cookie_exist()
  * Given a number of seconds, format the time to show hours, minutes and seconds.
  *
  * @param int    $time         The time in seconds
- * @param string $originFormat Optional.
- *                             PHP (used for scorm)
- *                             JS (used in most cases and understood by excel)
- *                             LANG (used to present unit in the user language)
- *
+ * @param string $originFormat Optional. 
+ * PHP (used for scorm)
+ * JS (used in most cases and understood by excel)
+ * LANG (used to present unit in the user language)
+ * 
  * @return string (00h00'00")
  */
 function api_format_time($time, $originFormat = 'php')
@@ -10641,11 +10642,11 @@ function api_decrypt_ldap_password(string $encryptedText): string
         return false;
     }
 
-    return api_decrypt_hash($encryptedText, $secret);
+    return api_decrypt_hash($encryptedText,$secret);
 }
 
 /**
- * Decrypt sent hash encoded with secret.
+ * Decrypt sent hash encoded with secret
  *
  * @param $encryptedText The hash text to be decrypted
  * @param $secret        The secret used to encoded the hash
@@ -10674,7 +10675,7 @@ function api_decrypt_hash(string $encryptedHash, string $secret): string
 }
 
 /**
- * Encrypt sent data with secret.
+ * Encrypt sent data with secret
  *
  * @param $data   The text to be encrypted
  * @param $secret The secret to use encode data
@@ -10683,10 +10684,10 @@ function api_decrypt_hash(string $encryptedHash, string $secret): string
  */
 function api_encrypt_hash($data, $secret)
 {
-    $iv = random_bytes(12);
-    $tag = '';
+  $iv = random_bytes(12);
+  $tag = '';
 
-    $encrypted = openssl_encrypt(
+  $encrypted = openssl_encrypt(
     $data,
     'aes-256-gcm',
     $secret,
@@ -10697,5 +10698,91 @@ function api_encrypt_hash($data, $secret)
     16
   );
 
-    return base64_encode($iv).base64_encode($encrypted.$tag);
+  return base64_encode($iv) . base64_encode($encrypted . $tag);
+}
+
+/**
+ * Check existence of a user extra field with a specific value
+
+ *
+ * @param string $extraField       The name of the extra field to check.
+ * @param string $extraFieldValue  The value of the extra field to validate against.
+ *
+ * @return bool True if the extra field with the specified value exists, false otherwise.
+ */
+function api_user_extra_field_validation_old($extraField, $extraFieldValue) {
+    $fieldValue = new ExtraFieldValue('user');
+    $data = $fieldValue->get_item_id_from_field_variable_and_field_value($extraField, $extraFieldValue, false, true);
+
+    if ($data) {
+        return true;
+    }
+    return false;
+}
+
+function api_user_extra_field_validation($extraField, $extraFieldValue, $userId = null) {
+    $fieldValue = new ExtraFieldValue('user');
+    $result = $fieldValue->get_item_id_from_field_variable_and_field_value($extraField, $extraFieldValue, false, false, true);
+
+    $accessUrlId = api_get_current_access_url_id();
+
+    if ($userId) {
+        foreach ($result as $data) {
+            if ($data['item_id'] === $userId) {
+                return false;
+            }
+        }
+    }
+
+    foreach ($result as $data) {
+        $userFoundId = $data['item_id'];
+        $userInSite = UrlManager::relation_url_user_exist($userFoundId, $accessUrlId);
+
+        if ($userInSite) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Searches user by extraFieldValue
+ *
+ * @param string $dni extraField name
+ * @param string $dni extraField value
+ * @param int $siteId access_url id
+ *
+ * @return array|bool User info|false
+ */
+function api_find_user_by_extra_field($extraField, $extraFieldValue, $siteId = null) {
+    if (empty($extraField)) {
+        return false;
+    }
+
+    if (empty($siteId)) {
+        $siteId = api_get_current_access_url_id();
+    }
+
+    $fieldValue = new ExtraFieldValue('user');
+    $result = $fieldValue->get_item_id_from_field_variable_and_field_value($extraField, $extraFieldValue, false, false, true);
+
+    if (empty($result)) {
+        return false;
+    }
+
+    foreach ($result as $data) {
+        $userId = $data['item_id'];
+
+        $userInSite = UrlManager::relation_url_user_exist($userId, $siteId);
+
+        if ($userInSite) {
+            $userInfo = api_get_user_info($userId);
+            if (!empty($userInfo)) {
+                return $userInfo;
+            }
+        }
+    }
+
+    return false;
 }
