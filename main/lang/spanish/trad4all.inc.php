@@ -9097,4 +9097,8 @@ $AdminID = "ID de administrador";
 $MoodleVersion = "Versión de Moodle";
 $CreateExport = "Crear archivo de exporte";
 $MoodleExportAdminIDComment = "Moodle requiere la indentificación de algún usuario para almacenarla dentro de los archivos XML del formato .mbz. Por favor indique un número de ID interno (entero) del usuario quien está exportando este curso, o el ID interno del usuario en Moodle para el usuario quien será propietario de los recursos importados. Si tiene duda, puede simplemente marcar '1' y algunos datos falsos para seguir.";
+$DueToInactivityTheSessionIsGoingToCloseJS = "Debido a la inactividad, la sesión se cerrará en";
+$KeepGoingJS = "Continuar";
+$SessionExpiredAtJS = "Sesión caducada el";
+$SessionIsClosingJS = "La sesión se está cerrando por inactividad...";
 ?>

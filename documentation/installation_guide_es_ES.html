@@ -876,6 +876,7 @@ servidor web y agregar esta línea. Debería ver una diferencia notable en el ti
   RewriteRule ^courses/([^/]+)/work/(.*)$ main/work/download.php?file=work/$2&cDir=$1 [QSA,L]
   RewriteRule ^courses/([^/]+)/course-pic85x85.png$ main/inc/ajax/course.ajax.php?a=get_course_image&code=$1&image=course_image_source [QSA,L]
   RewriteRule ^courses/([^/]+)/course-pic.png$ main/inc/ajax/course.ajax.php?a=get_course_image&code=$1&image=course_image_large_source [QSA,L]
+  RewriteRule ^courses/([^/]+)/upload/course_home_icons/(.*([\.png|\.jpg|\.jpeg|\.gif]))$ app/courses/$1/upload/course_home_icons/$2 [QSA,L]
   RewriteRule ^courses/([^/]+)/(.*)$ app/courses/$1/$2 [QSA,L]
   RewriteRule ^session/(\d{1,})/about/?$ main/session/about.php?session_id=$1 [L]
   RewriteRule ^course/(\d{1,})/about/?$ main/course_info/about.php?course_id=$1 [L]
