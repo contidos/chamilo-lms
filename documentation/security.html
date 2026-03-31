@@ -29,6 +29,7 @@
   <li><a href="#9.Change-password-first-login">Change password on first login</a></li>
   <li><a href="#10.Hide-breadcrumb">Hide breadcrumb on unauthorized page load</a></li>
   <li><a href="#11.SVG-and-XSS">SVG and XSS</a></li>
+  <li><a href="#12.Template-files-access">Restricting access to template files</a></li>
 </ol>
 
 <h2><a id="1.Disclosing-server-info"></a>1. Disclosing server info</h2>
@@ -174,6 +175,21 @@ This will prevent direct access to your settings and make it seem totally the sa
         we highly recommend the <a href="https://securityheaders.io/">securityheaders.io</a>
         website. If you want to read more about CSP and all related headers
         security techniques, check <a href="https://scotthelme.co.uk/">Scott Helme's blog</a>.
+    </p>
+    <p>As per reported vulnerabilities #175 and #176 on
+        <a href="https://github.com/chamilo/chamilo-lms/wiki/security-issues">our Security Issues page</a>,
+        we highly recommend setting <em>$_configuration['security_content_policy']</em>, in particular for
+        elements like 'script-src', 'style-src' and 'form-action' to 'self' or to a limited number of trusted URLs.<br>
+        In particular, the social wall and the course chat spaces could be abused by some users to trick others
+        into filling forms that will send personal data to external sites. Letting users edit HTML is useful
+        but dangerous if you cannot trust people using these features. These features cannot be used by anonymous
+        users, but portals allowing for open registration could be particularly vulnerable.
+    </p>
+    <p>The inline editor in Chamilo 1.11 requires
+    the Content Security Policy (CSP) headers to include 'unsafe-inline' and 'unsafe-eval'. This is because the
+    editor includes a number of complex features that require those accesses. This means that your Chamilo install
+    will probably not validate as an "A+" score in standard CSP tests. We have no solution for this except to
+    prevent users from using the inline editor, which would remove a considerable level of usability from Chamilo.</p>
     <br />
 <hr />
 <h2><a id="7.Direct-web-access">Direct web access to files</a></h2>
@@ -264,6 +280,38 @@ This will prevent direct access to your settings and make it seem totally the sa
     <li>Define some XSS Protection clause ('security_xss_protection') in your configuration.php file</li>
     </ul>
     </p>
+
+<h2><a id="12.Template-files-access"></a>12. Restricting access to template files</h2>
+    <p>
+        Twig template files (<code>.tpl</code>) under <code>main/template/</code> are
+        not meant to be served directly over HTTP. They are loaded by PHP from the
+        filesystem. If left accessible, they expose internal application logic,
+        AJAX endpoint URLs, admin panel structure, and variable names to
+        unauthenticated users.
+    </p>
+    <p>
+        Chamilo ships a <code>.htaccess</code> file in <code>main/template/</code>
+        that blocks direct access. If your Apache configuration does not support
+        <code>.htaccess</code> overrides, add the following to your VirtualHost
+        definition (replace <code>/var/www/URL</code> with your Chamilo root):
+    </p>
+    <pre>
+  &lt;Directory /var/www/URL/main/template&gt;
+    &lt;FilesMatch "\.tpl$"&gt;
+      Require all denied
+    &lt;/FilesMatch&gt;
+  &lt;/Directory&gt;
+    </pre>
+    <p>
+        For Nginx, add this rule near the top of your location blocks (before
+        any generic location rules) so it takes priority:
+    </p>
+    <pre>
+  location ~* \.tpl$ {
+    deny all;
+    return 403;
+  }
+    </pre>
 
     <h2>Authors</h2>
 <ul>

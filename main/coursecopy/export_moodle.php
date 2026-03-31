@@ -8,7 +8,6 @@ use moodleexport\MoodleExport;
 
 /**
  * Create a Moodle export.
- *
  */
 require_once __DIR__.'/../inc/global.inc.php';
 require_once api_get_path(SYS_PATH).'main/work/work.lib.php';
@@ -52,10 +51,11 @@ if ($action === 'course_select_form' && Security::check_token('post')) {
         // Rebuild the course object based on selected resources
         $cb = new CourseBuilder('partial');
         $course = $cb->build(0, null, false, array_keys($selectedResources), $selectedResources);
+        $course = CourseSelectForm::get_posted_course(null, 0, '', $course);
 
         // Get admin details
         $adminId = (int) $_POST['admin_id'];
-        $adminUsername = filter_var($_POST['admin_username'], FILTER_SANITIZE_STRING);
+        $adminUsername = strip_tags((string) $_POST['admin_username']);
         if (!preg_match('/^[a-zA-Z0-9_]+$/', $adminUsername)) {
             echo Display::return_message(get_lang('PleaseEnterValidLogin'), 'error');
             exit();
@@ -72,7 +72,7 @@ if ($action === 'course_select_form' && Security::check_token('post')) {
 
         // Perform export
         $courseId = api_get_course_id();
-        $exportDir = 'moodle_export_' . $courseId;
+        $exportDir = 'moodle_export_'.$courseId;
         try {
             $moodleVersion = isset($_POST['moodle_version']) ? (int) $_POST['moodle_version'] : 3;
             $mbzFile = $exporter->export($courseId, $exportDir, $moodleVersion);
@@ -135,10 +135,10 @@ if ($action === 'course_select_form' && Security::check_token('post')) {
             $exporter->setAdminUserData($adminId, $adminUsername, $adminEmail);
 
             $courseId = api_get_course_id();  // Get course ID
-            $exportDir = 'moodle_export_' . $courseId;
+            $exportDir = 'moodle_export_'.$courseId;
 
             try {
-                $moodleVersion = isset($values['moodle_version']) ? $values['moodle_version'] : '3';
+                $moodleVersion = $values['moodle_version'] ?? '3';
                 $mbzFile = $exporter->export($courseId, $exportDir, $moodleVersion);
                 echo Display::return_message(get_lang('MoodleExportCreated'), 'confirm');
                 echo '<br />';

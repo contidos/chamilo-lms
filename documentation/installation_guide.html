@@ -157,7 +157,7 @@ This guide only covers these 2 last methods. For other methods, you can always a
 <br /><br />
     To install, follow these 6 simple steps:
 <ol>
-  <li><a href="https://chamilo.org/chamilo-lms/">Download Chamilo LMS</a></li>
+  <li><a href="https://chamilo.org/download/">Download Chamilo LMS</a></li>
   <li>Unzip it</li>
   <li>Copy the Chamilo directory in your web server's root directory. This can be
     <span style="font-weight: bold;">C:\xampp\htdocs\</span> on a Windows server or <span style="font-weight: bold;">/var/www/html/chamilo</span> (or /var/www/chamilo/) on a Linux server (You need to create the folder "chamilo")</li>
@@ -395,7 +395,7 @@ some manual work, but the upgrade procedure will not touch sublanguages directly
 
 <br />
 
-<span class="text-muted">* Styles and images are located in the main/css or main/img
+<span class="text-muted">* Styles and images are located in the main/img/ or app/Resources/public/css/themes/
 directories. You can still recover them from your backup if you have made it.
  Any modified style or image that uses the default style/image name will be
  overwritten by the next step. To avoid loosing your customisations, always
@@ -674,7 +674,23 @@ Chamilo LMS 1.9.8 (and following versions) supports the X-Sendfile headers, but 
 <pre>
 $_configuration['enable_x_sendfile_headers'] = true;
 </pre>
-If you have issues with files taking a long time to download, make sure you reconfigure your webserver and add this line. You should see a notable difference in download time.
+If you have issues with files taking a long time to download, make sure you reconfigure your webserver and add this line. You should see a notable difference in download time.<br>
+
+Your webserver must be configured to support X-Sendfile, both by enabling the module and setting options in your web server's configuration.<br>
+If you are running Apache 2.4 on Ubuntu, for example, this would mean installing and enabling the module:
+<pre>
+    sudo apt install libapache2-mod-xsendfile
+    sudo a2enmod xsendfile
+</pre>
+Then in your active vhost for Chamilo, you would have to add the following lines, where the path is the same as your DocumentRoot (we use /var/www/chamilo in this example):
+<pre>
+    XSendFile On
+    XSendFilePath /var/www/chamilo
+</pre>
+Then restart Apache:
+<pre>
+    sudo systemctl restart apache2
+</pre>
 <hr style="width: 100%; height: 2px;" />
 <h2><a id="15._Videoconference"></a>13. Videoconference</h2>
 <p>
@@ -732,37 +748,50 @@ If you have issues with files taking a long time to download, make sure you reco
   &lt;Directory "/var/www/chamilo"&gt;
 	RewriteEngine On
 	RewriteCond %{QUERY_STRING} ^id=(.*)$
-	RewriteRule ^certificates/$ certificates/index.php?id=%1 [L]
-	RewriteRule ^courses/([^/]+)/?$ main/course_home/course_home.php?cDir=$1 [QSA,L]
-	RewriteRule ^courses/([^/]+)/index.php$ main/course_home/course_home.php?cDir=$1 [QSA,L]
-	RewriteRule ^courses/([^/]+)/scorm/(.*([\.js|\.css|\.png|\.jpg|\.jpeg|\.gif]))$ app/courses/$1/scorm/$2 [QSA,L] 
-	RewriteRule ^courses/([^/]+)/scorm/(.*)$ main/document/download_scorm.php?doc_url=/$2&cDir=$1 [QSA,L]
-	RewriteRule ^courses/([^/]+)/document/certificates/(.*)$ app/courses/$1/document/certificates/$2 [QSA,L]
-	RewriteRule ^courses/([^/]+)/document/(.*)$ main/document/download.php?doc_url=/$2&cDir=$1 [QSA,L]
-	RewriteRule ^courses/([^/]+)/upload/([^/]+)/(.*)$ main/document/download_uploaded_files.php?code=$1&type=$2&file=$3 [QSA,L]
-	RewriteRule ^courses/([^/]+)/work/(.*)$ main/work/download.php?file=work/$2&cDir=$1 [QSA,L]
-	RewriteRule ^courses/([^/]+)/course-pic85x85.png$ main/inc/ajax/course.ajax.php?a=get_course_image&code=$1&image=course_image_source [QSA,L]
-	RewriteRule ^courses/([^/]+)/course-pic.png$ main/inc/ajax/course.ajax.php?a=get_course_image&code=$1&image=course_image_large_source [QSA,L]
-	RewriteRule ^courses/([^/]+)/upload/course_home_icons/(.*([\.png|\.jpg|\.jpeg|\.gif]))$ app/courses/$1/upload/course_home_icons/$2 [QSA,L] 
-	RewriteRule ^courses/([^/]+)/(.*)$ app/courses/$1/$2 [QSA,L]
-	RewriteRule ^session/(\d{1,})/about/?$ main/session/about.php?session_id=$1 [L]
+    RewriteRule ^certificates/$ certificates/index.php?id=%1 [L]
+    RewriteRule ^courses/([^/]+)/?$ main/course_home/course_home.php?cDir=$1 [QSA,L]
+    RewriteRule ^courses/([^/]+)/index.php$ main/course_home/course_home.php?cDir=$1 [QSA,L]
+    RewriteRule ^courses/([^/]+)/scorm/(.*\.(js|css|png|jpg|jpeg|gif))$ app/courses/$1/scorm/$2 [QSA,L]
+    RewriteRule ^courses/([^/]+)/scorm/(.*)$ main/document/download_scorm.php?doc_url=/$2&cDir=$1 [QSA,L]
+    RewriteRule ^courses/([^/]+)/document/certificates/(.*)$ app/courses/$1/document/certificates/$2 [QSA,L]
+    RewriteRule ^courses/([^/]+)/document/(.*)$ main/document/download.php?doc_url=/$2&cDir=$1 [QSA,L]
+    RewriteRule ^courses/([^/]+)/upload/course_home_icons/(.*\.(js|css|png|jpg|jpeg|gif))$ app/courses/$1/upload/course_home_icons/$2 [QSA,L]
+    RewriteRule ^courses/([^/]+)/upload/([^/]+)/(.*)$ main/document/download_uploaded_files.php?code=$1&type=$2&file=$3 [QSA,L]
+    RewriteRule ^courses/([^/]+)/work/(.*)$ main/work/download.php?file=work/$2&cDir=$1 [QSA,L]
+    RewriteRule ^courses/([^/]+)/course-pic85x85.png$ main/inc/ajax/course.ajax.php?a=get_course_image&code=$1&image=course_image_source [QSA,L]
+    RewriteRule ^courses/([^/]+)/course-pic.png$ main/inc/ajax/course.ajax.php?a=get_course_image&code=$1&image=course_image_large_source [QSA,L]
+    RewriteRule ^courses/([^/]+)/(.*)$ app/courses/$1/$2 [QSA,L]
+    RewriteRule ^session/(\d{1,})/about/?$ main/session/about.php?session_id=$1 [L]
+    RewriteRule ^course/(\d{1,})/about/?$ main/course_info/about.php?course_id=$1 [L]
     RewriteRule ^badge/(\d{1,}) main/badge/issued.php?issue=$1 [L]
-    RewriteRule ^skill/(\d{1,})/user/(\d{1,}) main/badge/issued.php?skill=$1&user=$2 [L]
-    RewriteRule ^badge/(\d{1,})/user/(\d{1,}) main/badge/issued.php?skill=$1&user=$2 [L]
+    RewriteRule ^skill/(\d{1,})/user/(\d{1,}) main/badge/issued_all.php?skill=$1&user=$2 [L]
+    RewriteRule ^badge/(\d{1,})/user/(\d{1,}) main/badge/issued_all.php?skill=$1&user=$2 [L]
     RewriteRule ^main/exercice/(.*)$ main/exercise/$1 [QSA,L]
     RewriteRule ^main/newscorm/(.*)$ main/lp/$1 [QSA,L]
-	RewriteRule ^main/upload/users/(.*)/(.*)/my_files/(.*)$ app/upload/users/$1/$2/my_files/$3 [QSA,L]
-	RewriteRule ^main/admin/$ main/admin/index.php [QSA,L]
-    RewriteRule ^service/(\d+)$ plugin/buycourses/src/service_information.php?service_id=$1 [L]
-	RewriteRule ^([^/.]+)/?$ user.php?$1 [L]
+    RewriteRule ^service/(\d{1,})$ plugin/buycourses/src/service_information.php?service_id=$1 [L]
+    RewriteRule ^lti/os$ plugin/ims_lti/outcome_service.php [L]
     RewriteRule ^(tests|.git) - [F,L,NC]
   &lt;/Directory&gt;
 
-    AddType application/font-woff .woff .woff2
-    &lt;IfModule mod_expires.c&gt;
-      ExpiresActive On
-      ExpiresByType application/font-woff "access plus 1 month"
-    &lt;/IfModule&gt;
+  AddType application/font-woff .woff .woff2
+  &lt;IfModule mod_expires.c&gt;
+    ExpiresActive On
+    ExpiresByType application/font-woff "access plus 1 month"
+  &lt;/IfModule&gt;
+  # Disallow direct access to /main/inc/lib/javascript/bigupload/files
+  RedirectMatch 403 ^/main/inc/lib/javascript/bigupload/files
+
+  # Disallow MIME sniffing to prevent XSS from unknown/incorrect file extensions
+  <IfModule mod_headers.c>
+    Header always set X-Content-Type-Options nosniff
+  </IfModule>
+
+  <Files "web.config">
+    Require all denied
+  </Files>
+  <IfModule mod_autoindex.c>
+    Options -Indexes
+  </IfModule>
     </pre>
 
     <h4>Special note on sharing questions between courses</h4>
@@ -793,7 +822,7 @@ If you have issues with files taking a long time to download, make sure you reco
     rewrite ^certificates/$ certificates/index.php last;
     rewrite ^/courses/([^/]+)/$ /main/course_home/course_home.php?cDir=$1 last;
     rewrite ^/courses/([^/]+)/index.php$ /main/course_home/course_home.php?cDir=$1 last;
-    rewrite ^/courses/([^/]+)/scorm/(.*([\.js|\.css|\.png|\.jpg|\.jpeg|\.gif]))$ app/courses/$1/scorm/$2 last;
+    rewrite ^/courses/([^/]+)/scorm/(.*\.(js|css|png|jpg|jpeg|gif))$ app/courses/$1/scorm/$2 last;
     rewrite ^/courses/([^/]+)/scorm/(.*)$ /main/document/download_scorm.php?doc_url=/$2&cDir=$1 last;
     # Alternatively, you can choose to give direct access to all SCORM files, which is much faster but less secure
     # rewrite "^/courses/([^/]+)/scorm/(.*)$" /app/courses/$1/scorm/$2 break;
@@ -802,9 +831,10 @@ If you have issues with files taking a long time to download, make sure you reco
     rewrite ^/courses/([^/]+)/document/(.*)$ /main/document/download.php?doc_url=/$2&cDir=$1 last;
     rewrite ^/courses/([^/]+)/upload/([^/]+)/(.*)$ /main/document/download_uploaded_files.php?code=$1&type=$2&file=$3 last;
     rewrite ^/courses/([^/]+)/work/(.*)$ /main/work/download.php?file=work/$2&cDir=$1 last;
-    rewrite ^/courses/([^/]+)/upload/course_home_icons/(.*([\.png|\.jpg|\.jpeg|\.gif]))$ app/courses/$1/upload/course_home_icons/$2 last;
+    rewrite ^/courses/([^/]+)/upload/course_home_icons/(.*\.(png|jpg|jpeg|gif))$ app/courses/$1/upload/course_home_icons/$2 last;
     rewrite ^/courses/([^/]+)/(.*)$ /app/courses/$1/$2 last;
     rewrite ^/session/([^/]+)/about/?$ /main/session/about.php?session_id=$1 last;
+    rewrite ^/course/([^/]+)/about/?$ /main/course_info/about.php?course_id=$1 last;
     rewrite ^/badge/(\d+) /main/badge/issued.php?issue=$1 last;
     rewrite ^/skill/(\d+)/user/(\d+)$ /main/badge/issued_all.php?skill=$1&user=$2 last;
     rewrite ^/badge/(\d+)/user/(\d+)$ /main/badge/issued_all.php?skill=$1&user=$2 last;
@@ -838,18 +868,30 @@ If you have issues with files taking a long time to download, make sure you reco
 
   # Serve static files directly
   location ~* \.(png|jpe?g|gif|ico|js|css|mp3|swf|flv|mp4|ogg|woff|woff2)$ {
-    expires 30d;
-    access_log off;
     rewrite ^/courses/([^/]+)/course-pic85x85.png$ /app/courses/$1/course-pic85x85.png last;
     rewrite ^/courses/([^/]+)/course-pic.png$ /app/courses/$1/course-pic.png last;
+    rewrite ^/courses/([^/]+)/scorm/(.*)$ /main/document/download_scorm.php?doc_url=/$2&cDir=$1 last;
+    rewrite ^/courses/([^/]+)/document/(.*)$ /main/document/download.php?doc_url=/$2&cDir=$1 last;
+    rewrite ^/courses/([^/]+)/work/(.*)$ /main/work/download.php?file=work/$2&cDir=$1 last;
+    rewrite ^/courses/([^/]+)/upload/(.*)$ /app/courses/$1/upload/$2 last;
+    # For all these media resources not treated by previous rewrites, give direct access (no permission check)
+    rewrite ^/courses/(.*)$ /app/courses/$1 break;
+    expires 30d;
+    access_log off;
     try_files $uri @rewrite;
   }
+
   location ~ ~\.(ht|git){
     deny all;
   }
   location ^~ /tests/ {
     deny all;
   }
+  location ~* /web.config$ {
+    deny all;
+    return 403;
+  }
+  autoindex off;
     </pre>
 
     <h3>Apple on OS X servers</h3>
@@ -889,7 +931,7 @@ If you have issues with files taking a long time to download, make sure you reco
                     &lt;action type="Rewrite" url="main/course_home/course_home.php?cDir={R:1}" /&gt;
                 &lt;/rule&gt;
                 &lt;rule name="rule 4v" stopProcessing="true"&gt;
-                    &lt;match url="^courses/([^/]+)/scorm/(.*([\.js|\.css|\.png|\.jpg|\.jpeg|\.gif]))$" /&gt;
+                    &lt;match url="^courses/([^/]+)/scorm/(.*\.(js|css|png|jpg|jpeg|gif))$" /&gt;
                     &lt;action type="Rewrite" url="app/courses/{R:1}/scorm/{R:2}" /&gt;
                 &lt;/rule&gt;
                 &lt;rule name="rule 5v" stopProcessing="true"&gt;
@@ -905,7 +947,7 @@ If you have issues with files taking a long time to download, make sure you reco
                     &lt;action type="Rewrite" url="main/document/download.php?doc_url=/{R:2}&amp;cDir={R:1}" /&gt;
                 &lt;/rule&gt;
                 &lt;rule name="rule v8" stopProcessing="true"&gt;
-                    &lt;match url="^courses/([^/]+)/upload/course_home_icons/(.*([\.js|\.css|\.png|\.jpg|\.jpeg|\.gif]))$" /&gt;
+                    &lt;match url="^courses/([^/]+)/upload/course_home_icons/(.*\.(js|css|png|jpg|jpeg|gif))$" /&gt;
                     &lt;action type="Rewrite" url="app/courses/{R:1}/upload/course_home_icons/{R:2}" /&gt;
                 &lt;/rule&gt;
                 &lt;rule name="rule v9" stopProcessing="true"&gt;

@@ -537,7 +537,8 @@ class MessageManager
         $status = 0,
         array $extraParams = [],
         $checkUrls = false,
-        $courseId = null
+        $courseId = null,
+        $only_local = false
     ) {
         $group_id = (int) $group_id;
         $receiverUserId = (int) $receiverUserId;
@@ -546,7 +547,7 @@ class MessageManager
         $topic_id = (int) $topic_id;
         $status = empty($status) ? MESSAGE_STATUS_UNREAD : (int) $status;
 
-        $sendEmail = true;
+        $sendEmail = !$only_local;
         if (!empty($receiverUserId)) {
             $receiverUserInfo = api_get_user_info($receiverUserId);
             if (empty($receiverUserInfo)) {
@@ -558,7 +559,7 @@ class MessageManager
                 'true' === api_get_plugin_setting('pausetraining', 'tool_enable') &&
                 'true' === api_get_plugin_setting('pausetraining', 'allow_users_to_edit_pause_formation');
 
-            if ($allowPauseFormation) {
+            if ($allowPauseFormation && $sendEmail) {
                 $extraFieldValue = new ExtraFieldValue('user');
                 $disableEmails = $extraFieldValue->get_values_by_handler_and_field_variable(
                     $receiverUserId,
@@ -1095,6 +1096,10 @@ class MessageManager
                         @copy($file_attach['tmp_name'], $new_path);
                         $fileCopied = true;
                     }
+                }
+
+                if ('image/svg+xml' === $type) {
+                    sanitizeSvgFile($new_path);
                 }
             }
 
@@ -3037,6 +3042,57 @@ class MessageManager
         $userList = [];
         foreach ($users as $userData) {
             $userId = $userData['user_sender_id'];
+            if (empty($userId)) {
+                continue;
+            }
+            $userInfo = api_get_user_info($userId);
+            if ($userInfo) {
+                $userList[$userId] = $userInfo;
+            }
+        }
+
+        return $userList;
+    }
+
+    /**
+     * Retrieves a list of users with whom the specified user has exchanged messages within an optional date range.
+     *
+     * @param int         $userId    The user ID for whom to retrieve message exchange.
+     * @param string|null $startDate Start date to filter the messages (optional).
+     * @param string|null $endDate   End date to filter the messages (optional).
+     *
+     * @return array Array of user information for each user with whom the specified user has exchanged messages.
+     */
+    public static function getMessageExchangeWithUser($userId, $startDate = null, $endDate = null)
+    {
+        $messagesTable = Database::get_main_table(TABLE_MESSAGE);
+        $userId = (int) $userId;
+
+        if ($startDate !== null) {
+            $startDate = Database::escape_string($startDate);
+        }
+        if ($endDate !== null) {
+            $endDate = Database::escape_string($endDate);
+        }
+
+        $sql = "SELECT DISTINCT user_sender_id AS user_id
+                 FROM $messagesTable
+                 WHERE user_receiver_id = $userId".
+                 ($startDate ? " AND send_date >= '$startDate'" : "").
+                 ($endDate ? " AND send_date <= '$endDate'" : "").
+               " UNION
+               SELECT DISTINCT user_receiver_id
+                 FROM $messagesTable
+                 WHERE user_sender_id = $userId".
+                 ($startDate ? " AND send_date >= '$startDate'" : "").
+                 ($endDate ? " AND send_date <= '$endDate'" : "");
+
+        $result = Database::query($sql);
+        $users = Database::store_result($result);
+
+        $userList = [];
+        foreach ($users as $userData) {
+            $userId = $userData['user_id'];
             if (empty($userId)) {
                 continue;
             }
