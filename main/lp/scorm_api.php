@@ -353,7 +353,7 @@ function LMSInitialize() {
             xajax_start_timer();
         }
 
-        if (olms.lms_item_type == 'quiz' || olms.lms_item_type == 'h5p') {
+        if (olms.lms_item_type == 'quiz') {
             update_toc(olms.lesson_status, olms.lms_item_id);
         }
 
@@ -987,6 +987,7 @@ function LMSFinish(val) {
     }
 
     logit_scorm('LMSFinish() called on item ' + olms.lms_item_id, 0);
+
     savedata(olms.lms_item_id);
 
     //reinit the commit detector flag
@@ -1208,7 +1209,7 @@ function lms_save_asset() {
        olms.execute_stats = false;
     }
 
-    if (olms.lms_item_type == 'quiz' || olms.lms_item_type == 'h5p') {
+    if (olms.lms_item_type == 'quiz') {
         olms.execute_stats = true;
     }
 

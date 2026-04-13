@@ -477,17 +477,20 @@ class Notification extends Model
             $content = $newMessageText.'<br /><hr><br />'.$content;
         }
 
-        // See message with link text
-        if (!empty($linkToNewMessage) && api_get_setting('allow_message_tool') == 'true') {
-            $content = $content.'<br /><br />'.$linkToNewMessage;
-        }
+        if (api_get_configuration_value('notifications_message_hide_footer') !== true) {
+            // See message with link text
+            if (!empty($linkToNewMessage) && api_get_setting('allow_message_tool') == 'true') {
+                $content = $content.'<br /><br />'.$linkToNewMessage;
+            }
 
-        // You have received this message because you are subscribed text
-        $content = $content.'<br /><hr><i>'.
-            sprintf(
-                get_lang('YouHaveReceivedThisNotificationBecauseYouAreSubscribedOrInvolvedInItToChangeYourNotificationPreferencesPleaseClickHereX'),
-                Display::url($preferenceUrl, $preferenceUrl)
-            ).'</i>';
+
+            // You have received this message because you are subscribed text
+            $content = $content.'<br /><hr><i>'.
+                sprintf(
+                    get_lang('YouHaveReceivedThisNotificationBecauseYouAreSubscribedOrInvolvedInItToChangeYourNotificationPreferencesPleaseClickHereX'),
+                    Display::url($preferenceUrl, $preferenceUrl)
+                ).'</i>';
+        }
 
         if (!empty($hook)) {
             $hook->setEventData(['content' => $content]);

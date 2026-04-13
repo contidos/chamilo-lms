@@ -1693,28 +1693,30 @@ class SessionManager
                 if (!empty($sessionAdminId)) {
                     $values['session_admin_id'] = $sessionAdminId;
                 }
+                
+                if (empty($duration)) {
+                    if (!empty($startDate)) {
+                        $values['access_start_date'] = api_get_utc_datetime($startDate);
+                    }
 
-                if (!empty($startDate)) {
-                    $values['access_start_date'] = api_get_utc_datetime($startDate);
-                }
+                    if (!empty($endDate)) {
+                        $values['access_end_date'] = api_get_utc_datetime($endDate);
+                    }
 
-                if (!empty($endDate)) {
-                    $values['access_end_date'] = api_get_utc_datetime($endDate);
-                }
+                    if (!empty($displayStartDate)) {
+                        $values['display_start_date'] = api_get_utc_datetime($displayStartDate);
+                    }
 
-                if (!empty($displayStartDate)) {
-                    $values['display_start_date'] = api_get_utc_datetime($displayStartDate);
-                }
+                    if (!empty($displayEndDate)) {
+                        $values['display_end_date'] = api_get_utc_datetime($displayEndDate);
+                    }
 
-                if (!empty($displayEndDate)) {
-                    $values['display_end_date'] = api_get_utc_datetime($displayEndDate);
-                }
-
-                if (!empty($coachStartDate)) {
-                    $values['coach_access_start_date'] = api_get_utc_datetime($coachStartDate);
-                }
-                if (!empty($coachEndDate)) {
-                    $values['coach_access_end_date'] = api_get_utc_datetime($coachEndDate);
+                    if (!empty($coachStartDate)) {
+                        $values['coach_access_start_date'] = api_get_utc_datetime($coachStartDate);
+                    }
+                    if (!empty($coachEndDate)) {
+                        $values['coach_access_end_date'] = api_get_utc_datetime($coachEndDate);
+                    }
                 }
 
                 $values['session_category_id'] = null;

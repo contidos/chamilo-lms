@@ -174,6 +174,18 @@ class CatForm extends FormValidator
             ]
         );
 
+        $minTimeNeeded = api_get_configuration_value('certificate_generation_minimum_time') ? true : false;
+        if ($minTimeNeeded) {
+            $certificateMinTime = CourseManager::get_course_extra_field_value(
+                'certificate_minimum_time',
+                api_get_course_id()
+            );
+
+            if ($certificateMinTime != null) {
+                $this->setDefaults(['certif_min_time' => $certificateMinTime]);
+            }
+        }
+
         $this->addElement('hidden', 'hid_id', $this->category_object->get_id());
         $this->addElement(
             'hidden',
@@ -371,6 +383,31 @@ class CatForm extends FormValidator
                 }
             }
             $this->addElement('checkbox', 'visible', null, get_lang('Visible'));
+        }
+
+        $minTimeNeeded = api_get_configuration_value('certificate_generation_minimum_time') ? true : false;
+        if ($minTimeNeeded) {
+            $this->addText(
+                'certif_min_time',
+                get_lang('MinTime'),
+                false,
+                ['maxlength' => '5']
+            );
+            $this->addRule(
+                'certif_min_time',
+                get_lang('OnlyNumbers'),
+                'numeric'
+            );
+            $this->addRule(
+                'certif_min_time',
+                get_lang('NegativeValue'),
+                'compare',
+                '>=',
+                'server',
+                false,
+                false,
+                0
+            );
         }
 
         $this->addElement('hidden', 'hid_user_id');

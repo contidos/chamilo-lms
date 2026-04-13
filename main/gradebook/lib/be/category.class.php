@@ -882,12 +882,35 @@ class Category implements GradebookItem
      */
     public function is_certificate_available($user_id)
     {
+        $minTimeNeeded = api_get_configuration_value('certificate_generation_minimum_time') ? true : false;
+
+        if ($minTimeNeeded) {
+            $courseInfo = api_get_course_info($this->course_code);
+            $courseId = $courseInfo['real_id'];
+
+            $certificateMinTime = CourseManager::get_course_extra_field_value(
+                'certificate_minimum_time',
+                $this->course_code
+            );
+
+            if ($certificateMinTime != null) {
+                $timeSpentOnTheCourse = Tracking::get_time_spent_on_the_course(
+                    $user_id,
+                    $courseId,
+                    $this->session_id
+                );
+
+                if ($timeSpentOnTheCourse < ($certificateMinTime * 60)) {
+                    return false;
+                }
+            }
+        }
+
         $score = $this->calc_score(
             $user_id,
             null,
             $this->course_code,
-            $this->session_id,
-            null
+            $this->session_id
         );
 
         if (isset($score) && isset($score[0])) {
@@ -928,8 +951,7 @@ class Category implements GradebookItem
         $stud_id = null,
         $type = null,
         $course_code = '',
-        $session_id = null,
-        $forCertificate = 1
+        $session_id = null
     ) {
         $key = 'category:'.$this->id.'student:'.(int) $stud_id.'type:'.$type.'course:'.$course_code.'session:'.(int) $session_id;
         $useCache = api_get_configuration_value('gradebook_use_apcu_cache');
@@ -947,16 +969,14 @@ class Category implements GradebookItem
                 $cats = $this->get_subcategories(
                     $stud_id,
                     $course_code,
-                    $session_id,
-                    null,
-                    $forCertificate
+                    $session_id
                 );
-                $evals = $this->get_evaluations($stud_id, false, $course_code, $session_id, $forCertificate);
-                $links = $this->get_links($stud_id, false, $course_code, $session_id, $forCertificate);
+                $evals = $this->get_evaluations($stud_id, false, $course_code);
+                $links = $this->get_links($stud_id, false, $course_code);
             } else {
-                $cats = $this->get_subcategories($stud_id, '', $session_id, null, $forCertificate);
-                $evals = $this->get_evaluations($stud_id, false, '', $session_id, $forCertificate);
-                $links = $this->get_links($stud_id, false, '', $session_id, $forCertificate);
+                $cats = $this->get_subcategories($stud_id);
+                $evals = $this->get_evaluations($stud_id);
+                $links = $this->get_links($stud_id);
             }
 
             // Calculate score
@@ -1748,8 +1768,7 @@ class Category implements GradebookItem
         $studentId = null,
         $course_code = null,
         $session_id = null,
-        $order = null,
-        $forCertificate = 1
+        $order = null
     ) {
         // 1 student
         if (isset($studentId)) {
@@ -1762,7 +1781,7 @@ class Category implements GradebookItem
                     null,
                     $course_code,
                     $this->id,
-                    api_is_allowed_to_edit() ? null : $forCertificate,
+                    api_is_allowed_to_edit() ? null : 1,
                     $session_id,
                     $order
                 );
@@ -1842,8 +1861,7 @@ class Category implements GradebookItem
         $studentId = null,
         $recursive = false,
         $course_code = '',
-        $sessionId = 0,
-        $forCertificate = 1
+        $sessionId = 0
     ) {
         $evals = [];
         $course_code = empty($course_code) ? $this->get_course_code() : $course_code;
@@ -1863,7 +1881,7 @@ class Category implements GradebookItem
                     null,
                     $course_code,
                     $this->id,
-                    api_is_allowed_to_edit() ? null : $forCertificate
+                    api_is_allowed_to_edit() ? null : 1
                 );
             }
         } else {
@@ -1949,8 +1967,7 @@ class Category implements GradebookItem
         $studentId = null,
         $recursive = false,
         $course_code = '',
-        $sessionId = 0,
-        $forCertificate = 1
+        $sessionId = 0
     ) {
         $links = [];
         $course_code = empty($course_code) ? $this->get_course_code() : $course_code;
@@ -1967,7 +1984,7 @@ class Category implements GradebookItem
                 null,
                 $course_code,
                 $this->id,
-                api_is_allowed_to_edit() ? null : $forCertificate
+                api_is_allowed_to_edit() ? null : 1
             );
         } else {
             // All students -> only for course/platform admin
@@ -2202,6 +2219,27 @@ class Category implements GradebookItem
         // certificate is not generated if course is not finished
         if (!$userFinishedCourse) {
             return false;
+        }
+
+        $minTimeNeeded = api_get_configuration_value('certificate_generation_minimum_time') ? true : false;
+
+        if ($minTimeNeeded) {
+            $certificateMinTime = CourseManager::get_course_extra_field_value(
+                'certificate_minimum_time',
+                $courseCode
+            );
+
+            if ($certificateMinTime != null) {
+                $timeSpentOnTheCourse = Tracking::get_time_spent_on_the_course(
+                    $user_id,
+                    $courseId,
+                    $sessionId
+                );
+
+                if ($timeSpentOnTheCourse < ($certificateMinTime * 60)) {
+                    return false;
+                }
+            }
         }
 
         // Block certification links depending gradebook configuration (generate certifications)

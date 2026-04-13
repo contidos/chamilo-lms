@@ -152,33 +152,73 @@ echo '<a href="../admin/index.php">'.
     Display::return_icon('back.png', get_lang('BackTo').' '.get_lang('PlatformAdmin'), '', ICON_SIZE_MEDIUM).'</a>';
 echo '</div>';
 
+$keyword = '';
+if (isset($_GET['keyword'])) {
+    $keyword = trim((string) $_GET['keyword']);
+}
+
+echo '<form method="get" action="'.api_get_self().'" class="form-inline" style="margin-bottom: 15px;">';
+echo '<div class="form-group">';
+echo '<input type="text" name="keyword" class="form-control" value="'.Security::remove_XSS($keyword).'" placeholder="'.get_lang('Search').'" />';
+echo '</div>';
+echo '&nbsp;';
+echo '<button type="submit" class="btn btn-primary">'.get_lang('Search').'</button>';
+if (!empty($keyword)) {
+    echo '&nbsp;';
+    echo '<a class="btn btn-default" href="'.api_get_self().'">'.get_lang('Clear').'</a>';
+}
+echo '</form>';
+
 // Some pagination
 $page = 1;
 if (isset($_GET['page']) && !empty($_GET['page'])) {
     $page = intval($_GET['page']);
 }
 $default = 20;
-$count = UserManager::get_number_of_users(null, api_get_current_access_url_id());
+$count = UserManager::get_user_list(
+    [],
+    [],
+    false,
+    false,
+    api_get_current_access_url_id(),
+    $keyword,
+    null,
+    true
+);
 $nro_pages = round($count / $default) + 1;
 $begin = $default * ($page - 1);
 $end = $default * $page;
 $navigation = "$begin - $end  / $count<br />";
 
+$urlParams = [];
+if (!empty($keyword)) {
+    $urlParams['keyword'] = $keyword;
+}
+
 if ($page > 1) {
-    $navigation .= '<a href="'.api_get_self().'?page='.($page - 1).'">'.get_lang('Previous').'</a>';
+    $urlParams['page'] = ($page - 1);
+    $navigation .= '<a href="'.api_get_self().'?'.http_build_query($urlParams).'">'.get_lang('Previous').'</a>';
 } else {
     $navigation .= get_lang('Previous');
 }
 $navigation .= '&nbsp;';
 $page++;
 if ($page < $nro_pages) {
-    $navigation .= '<a href="'.api_get_self().'?page='.$page.'">'.get_lang('Next').'</a>';
+    $urlParams['page'] = $page;
+    $navigation .= '<a href="'.api_get_self().'?'.http_build_query($urlParams).'">'.get_lang('Next').'</a>';
 } else {
     $navigation .= get_lang('Next');
 }
 
 echo $navigation;
-$user_list = UserManager::get_user_list([], [], $begin, $default);
+$user_list = UserManager::get_user_list(
+    [],
+    [],
+    $begin,
+    $default,
+    api_get_current_access_url_id(),
+    $keyword
+);
 $session_list = SessionManager::get_sessions_list([], ['name']);
 $options = '';
 $options .= '<option value="0">--'.get_lang('SelectASession').'--</option>';

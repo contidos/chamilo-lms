@@ -12,7 +12,11 @@ if ($default === 1) {
 $course_plugin = 'customcertificate';
 require_once __DIR__.'/../config.php';
 
-api_block_anonymous_users();
+$publicCert = api_get_setting('allow_public_certificates');
+
+if ($publicCert == 'false') {
+    api_block_anonymous_users();
+}
 $plugin = CustomCertificatePlugin::create();
 $enable = $plugin->get('enable_plugin_customcertificate') == 'true';
 $tblProperty = Database::get_course_table(TABLE_ITEM_PROPERTY);
@@ -402,7 +406,7 @@ foreach ($userList as $userInfo) {
 
                 $list = new LearnpathList(
                     $studentId,
-                    $courseCode,
+                    $courseInfo,
                     $sessionId,
                     null,
                     false,

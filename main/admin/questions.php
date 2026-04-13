@@ -210,12 +210,16 @@ if ($formSent) {
             $question = &$pagination[$index];
             $courseId = $question->getCId();
             $courseInfo = api_get_course_info_by_id($courseId);
-            $courseCode = $courseInfo['code'];
+            $courseCode = isset($courseInfo['code']) ? $courseInfo['code'] : '';
             $question->courseCode = $courseCode;
             // Creating empty exercise
             $exercise = new Exercise($courseId);
             /* @var Question $questionObject */
-            $questionObject = Question::read($question->getIid(), $courseInfo);
+            $questionObject = null;
+            // Only try to read the question when course info is available; otherwise Question::read() returns false
+            if (!empty($courseInfo)) {
+                $questionObject = Question::read($question->getIid(), $courseInfo);
+            }
 
             ob_start();
             ExerciseLib::showQuestion(
@@ -248,7 +252,8 @@ if ($formSent) {
 
             $exerciseData = '';
             $exerciseId = 0;
-            if (!empty($questionObject->exerciseList)) {
+            $isOrphan = false;
+            if ($questionObject && !empty($questionObject->exerciseList)) {
                 // Question exists in a valid exercise
                 $exerciseData .= '<h4>'.get_lang('Exercises').'</h4>';
                 foreach ($questionObject->exerciseList as $exerciseId) {
@@ -274,7 +279,7 @@ if ($formSent) {
             } else {
                 // Question exists but it's orphan or it belongs to a deleted exercise
                 // This means the question is added in a deleted exercise
-                if ($questionObject->getCountExercise() > 0) {
+                if ($questionObject && method_exists($questionObject, 'getCountExercise') && $questionObject->getCountExercise() > 0) {
                     $exerciseList = $questionObject->getExerciseListWhereQuestionExists();
                     if (!empty($exerciseList)) {
                         $question->questionData .= '<br />'.get_lang('Exercises').'<br />';
@@ -289,22 +294,25 @@ if ($formSent) {
                     }
                 } else {
                     // This question is orphan :(
-                    $question->questionData .= '&nbsp;'.get_lang('OrphanQuestion');
+                    $question->questionData .= '&nbsp;'.'Esta pregunta no tiene curso asociado';
+                    $isOrphan = true;
                 }
 
-                $question->questionData .= Display::url(
-                    Display::return_icon('edit.png', get_lang('Edit')),
-                    $urlExercise.http_build_query(
-                        [
-                            'cidReq' => $courseCode,
-                            'id_session' => 0, //$exercise->sessionId,
-                            'exerciseId' => $exerciseId,
-                            'type' => $question->getType(),
-                            'editQuestion' => $question->getIid(),
-                        ]
-                    ),
-                    ['target' => '_blank']
-                );
+                if (!$isOrphan) {
+                    $question->questionData .= Display::url(
+                        Display::return_icon('edit.png', get_lang('Edit')),
+                        $urlExercise.http_build_query(
+                            [
+                                'cidReq' => $courseCode,
+                                'id_session' => 0, //$exercise->sessionId,
+                                'exerciseId' => $exerciseId,
+                                'type' => $question->getType(),
+                                'editQuestion' => $question->getIid(),
+                            ]
+                        ),
+                        ['target' => '_blank']
+                    );
+                }
             }
 
             $question->questionData .= '<div class="pull-right">'.Display::url(

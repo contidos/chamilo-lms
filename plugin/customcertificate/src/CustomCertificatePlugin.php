@@ -210,23 +210,33 @@ class CustomCertificatePlugin extends Plugin
      *
      * @return array
      */
-    public static function getCertificateData($id, $userId)
+    public static function getCertificateData($id, $userId = 0)
     {
         $id = (int) $id;
         $userId = (int) $userId;
-
-        if (empty($id) || empty($userId)) {
+        $publicCert = api_get_setting('allow_public_certificates');
+        if (empty($id)) {
             return [];
         }
-
+        
         $certificateTable = Database::get_main_table(TABLE_MAIN_GRADEBOOK_CERTIFICATE);
         $categoryTable = Database::get_main_table(TABLE_MAIN_GRADEBOOK_CATEGORY);
-        $sql = "SELECT cer.user_id AS user_id, cat.session_id AS session_id, cat.course_code AS course_code
+        if ($publicCert == 'true') {
+            $sql = "SELECT cer.user_id AS user_id, cat.session_id AS session_id, cat.course_code AS course_code
                 FROM $certificateTable cer
                 INNER JOIN $categoryTable cat
-                ON (cer.cat_id = cat.id AND cer.user_id = $userId)
+                ON cer.cat_id = cat.id
                 WHERE cer.id = $id";
-
+        } else {
+            $sql = "SELECT cer.user_id AS user_id, cat.session_id AS session_id, cat.course_code AS course_code
+                FROM $certificateTable cer
+                INNER JOIN $categoryTable cat
+                ON cer.cat_id = cat.id
+                WHERE cer.id = $id";
+            if (!empty($userId)) {
+                $sql .= " AND cer.user_id = $userId";
+            }
+        }
         $rs = Database::query($sql);
         if (Database::num_rows($rs) > 0) {
             $row = Database::fetch_assoc($rs);
@@ -252,15 +262,22 @@ class CustomCertificatePlugin extends Plugin
      * @param int         $certId
      * @param int         $userId
      */
-    public static function redirectCheck($certificate, $certId, $userId)
+    public static function redirectCheck($certificate, $certId, $userId, $action = 'export')
     {
+        $userActive = api_get_user_id();
         $certId = (int) $certId;
-        $userId = !empty($userId) ? $userId : api_get_user_id();
-
-        if (api_get_plugin_setting('customcertificate', 'enable_plugin_customcertificate') === 'true') {
-            $infoCertificate = self::getCertificateData($certId, $userId);
+        $userId = (int) $userId;
+        $publicCert = api_get_setting('allow_public_certificates');
+        if (empty($userActive) and $publicCert == 'false') {
+            $url = api_get_path(WEB_PATH).'index.php';
+            header('Location: '.$url);
+            exit;
+        }
+        if (api_get_plugin_setting('customcertificate', 'enable_plugin_customcertificate') == 'true') {
+            $infoCertificate = self::getCertificateData($certId);
+            error_log("Check: ".serialize($infoCertificate));
             if (!empty($infoCertificate)) {
-                if ($certificate->user_id == api_get_user_id() && !empty($certificate->certificate_data)) {
+                if (!empty($certificate->certificate_data)) {
                     $certificateId = $certificate->certificate_data['id'];
                     $extraFieldValue = new ExtraFieldValue('user_certificate');
                     $value = $extraFieldValue->get_values_by_handler_and_field_variable(
@@ -275,11 +292,17 @@ class CustomCertificatePlugin extends Plugin
                         $extraFieldValue->saveFieldValues($params);
                     }
                 }
-
-                $url = api_get_path(WEB_PLUGIN_PATH).'customcertificate/src/print_certificate.php'.
-                    '?student_id='.$infoCertificate['user_id'].
-                    '&course_code='.$infoCertificate['course_code'].
-                    '&session_id='.$infoCertificate['session_id'];
+                if ($action=='export') {
+                    $url = api_get_path(WEB_PLUGIN_PATH).'customcertificate/src/print_certificate.php'.
+                            '?student_id='.$infoCertificate['user_id'].
+                            '&course_code='.$infoCertificate['course_code'].
+                            '&session_id='.$infoCertificate['session_id'];
+                } else {
+                    $url = api_get_path(WEB_PLUGIN_PATH).'customcertificate/src/view_certificate.php'.
+                            '?student_id='.$infoCertificate['user_id'].
+                            '&course_code='.$infoCertificate['course_code'].
+                            '&session_id='.$infoCertificate['session_id'];
+                }
                 header('Location: '.$url);
                 exit;
             }

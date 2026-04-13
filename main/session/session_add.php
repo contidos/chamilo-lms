@@ -389,6 +389,11 @@ if ($form->validate()) {
     $id_session_category = $params['session_category'];
     $id_visibility = $params['session_visibility'];
     $duration = isset($params['duration']) ? $params['duration'] : null;
+    if (!empty($duration)) {
+        $endDate = null;
+        $displayEndDate = null;
+        $coachEndDate = null;
+    }
     $description = $params['description'];
     $showDescription = isset($params['show_description']) ? 1 : 0;
     $sendSubscriptionNotification = isset($params['send_subscription_notification']);

@@ -166,7 +166,7 @@ class ExtraFieldValue extends Model
             }
 
             $commentVariable = 'extra_'.$field_variable.'_comment';
-            $comment = isset($params[$commentVariable]) ? $params[$commentVariable] : null;
+            $comment = isset($params[$commentVariable]) ? $params[$commentVariable] : $extraFieldInfo['comment'];
             $dirPermissions = api_get_permissions_for_new_directories();
 
             switch ($extraFieldInfo['field_type']) {
@@ -334,13 +334,14 @@ class ExtraFieldValue extends Model
                             break;
                     }
 
+                    $cleanedName = api_replace_dangerous_char($value['name']);
+                    $fileName = ExtraField::FIELD_TYPE_FILE."_{$params['item_id']}_$cleanedName";
                     if (!file_exists($fileDir)) {
                         mkdir($fileDir, $dirPermissions, true);
                     }
 
                     if (!empty($value['tmp_name']) && isset($value['error']) && $value['error'] == 0) {
                         $cleanedName = api_replace_dangerous_char($value['name']);
-                        $cleanedName = disable_dangerous_file($cleanedName);
                         $fileName = ExtraField::FIELD_TYPE_FILE."_{$params['item_id']}_$cleanedName";
                         moveUploadedFile($value, $fileDir.$fileName);
 

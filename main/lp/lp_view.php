@@ -656,7 +656,6 @@ $template->assign(
     )
 );
 
-// Check if the 'Open in new window' button for IOs hosts must be hidden
 $iosHideOpenInNewWindow = false;
 if (api_get_configuration_value('lp_ios_hide_open_in_new_window_button') === true) {
     $iosHideOpenInNewWindow = api_get_configuration_value('lp_ios_hide_open_in_new_window_button');
@@ -667,7 +666,7 @@ $frameReady = Display::getFrameReadyBlock(
     '#content_id, #content_id_blank',
     $itemType,
     'function () {
-        var arr = ["link", "sco", "xapi", "quiz", "h5p"];
+        var arr = ["link", "sco", "xapi", "quiz"];
 
         return $.inArray(olms.lms_item_type, arr) !== -1;
     }'

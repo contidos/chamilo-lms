@@ -34,7 +34,7 @@ if (empty($certificateData)) {
     api_not_allowed(false, Display::return_message(get_lang('NoCertificateAvailable'), 'warning'));
 }
 
-CustomCertificatePlugin::redirectCheck($certificate, $certificateId, $userId);
+CustomCertificatePlugin::redirectCheck($certificate, $certificateId, $userId, $action);
 
 switch ($action) {
     case 'export':

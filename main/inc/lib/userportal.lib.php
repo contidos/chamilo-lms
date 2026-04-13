@@ -948,22 +948,6 @@ class IndexManager
             ];
         }
 
-        if (api_get_configuration_value('show_all_my_gradebooks_page')) {
-            $items[] = [
-                'icon' => Display::return_icon('gradebook.png', get_lang('GlobalGradebook')),
-                'link' => api_get_path(WEB_CODE_PATH).'gradebook/all_my_gradebooks.php',
-                'title' => get_lang('GlobalGradebook'),
-            ];
-        }
-
-        if (api_get_configuration_value('show_missing_signatures_page') && api_get_configuration_value('enable_sign_attendance_sheet')) {
-            $items[] = [
-                'icon' => Display::return_icon('attendance.png', get_lang('MyMissingSignatures')),
-                'link' => api_get_path(WEB_CODE_PATH).'attendance/my_missing_signatures.php',
-                'title' => get_lang('MyMissingSignatures'),
-            ];
-        }
-
         if (bbb::showGlobalConferenceLink($userInfo)) {
             $bbb = new bbb('', '', true, api_get_user_id());
             $url = $bbb->getListingUrl();
@@ -1151,7 +1135,7 @@ class IndexManager
             ];
         }
 
-        if (api_is_teacher() || api_is_session_admin()) {
+        if (api_is_teacher()) {
             if (api_get_configuration_value('my_courses_show_pending_work')) {
                 $items[] = [
                     'class' => 'list-pending-student-assignments',
@@ -1169,15 +1153,6 @@ class IndexManager
                     'title' => get_lang('PendingAttempts'),
                 ];
             }
-        }
-
-        if (!api_is_student()) {
-            $items[] = [
-                'class' => 'time-report',
-                'icon' => Display::return_icon('statistics.png', get_lang('TimeReport')),
-                'link' => api_get_path(WEB_CODE_PATH).'mySpace/time_report.php',
-                'title' => get_lang('TimeReport'),
-            ];
         }
 
         return $items;
@@ -2050,9 +2025,8 @@ class IndexManager
                                 $params['category_id'] = $session_box['category_id'];
                                 $params['title'] = $session_box['title'];
                                 $params['id_coach'] = $coachId;
-                                $userIdHash = UserManager::generateUserHash($coachId);
                                 $params['coach_url'] = api_get_path(WEB_AJAX_PATH).
-                                    'user_manager.ajax.php?a=get_user_popup&hash='.$userIdHash;
+                                    'user_manager.ajax.php?a=get_user_popup&user_id='.$coachId;
                                 $params['coach_name'] = !empty($session_box['coach']) ? $session_box['coach'] : null;
                                 $params['coach_avatar'] = UserManager::getUserPicture(
                                     $coachId,
@@ -2363,6 +2337,7 @@ class IndexManager
                             }
 
                             $this->tpl->assign('session_category', $categoryParams);
+                            error_log('hereaa');
                             $sessions_with_category .= $this->tpl->fetch(
                                 $this->tpl->get_template('user_portal/session_category.tpl')
                             );

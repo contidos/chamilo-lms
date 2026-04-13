@@ -2,8 +2,6 @@
 
 /* For licensing terms, see /license.txt */
 
-exit;
-
 /**
  * Adds gradebook certificates to gradebook_certificate table from users
  * who have achieved the requirements but have not reviewed them yet.
@@ -17,6 +15,9 @@ require_once __DIR__.'/../inc/global.inc.php';
  *
  * @return array Categories and users ids
  */
+
+error_log('Auto generate gradebook certificates');
+
 function getAllCategoriesAndUsers()
 {
     $table = Database::get_main_table(TABLE_MAIN_GRADEBOOK_RESULT);
@@ -40,7 +41,7 @@ if ($categoriesAndUsers = getAllCategoriesAndUsers()) {
     }
 }
 
-$urlList = [1];
+$urlList = [3];
 foreach ($urlList as $urlId) {
     $_configuration['access_url'] = $urlId;
     $sql = "SELECT gc.*

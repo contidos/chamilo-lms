@@ -903,6 +903,13 @@ try {
                 $restApi->getTestAverageResultsList($_POST['ids'], $fields)
             );
             break;
+        case Rest::GET_USER_COURSE_REGISTRATION:
+            $startDate = $_POST['start_date'];
+            $endDate = $_POST['end_date'];
+            Event::addEvent(LOG_WS.$action, 'success', 'true');
+            $restResponse->setData(
+                $restApi->GetUserCourseRegistration($startDate, $endDate)
+            );
         /* groups/classes */
         case Rest::GET_GROUPS:
             Event::addEvent(LOG_WS.$action, 'username', $username);

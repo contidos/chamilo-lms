@@ -2403,7 +2403,8 @@ if (!empty($sessionId)) {
 }
 
 $allow = api_get_configuration_value('allow_user_message_tracking');
-if ($allow && (api_is_drh() || api_is_platform_admin())) {
+$allowCoachs = api_get_configuration_value('allow_user_message_tracking_to_coachs');
+if ($allow && (api_is_drh() || api_is_platform_admin() || $allowCoachs ?? api_is_coach())) {
     if ($filterMessages) {
         $users = MessageManager::getUsersThatHadConversationWithUser($student_id, $coachAccessStartDate, $coachAccessEndDate);
     } else {
@@ -2425,6 +2426,9 @@ if ($allow && (api_is_drh() || api_is_platform_admin())) {
     $column = 0;
     $row++;
     foreach ($users as $userFollowed) {
+        if ((!api_is_drh() && !api_is_platform_admin()) && $userFollowed['user_id'] != api_get_user_id()) {
+            continue;
+        }        
         $followedUserId = $userFollowed['user_id'];
 
         if ($filterMessages) {

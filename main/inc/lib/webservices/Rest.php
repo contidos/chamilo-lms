@@ -138,6 +138,7 @@ class Rest extends WebService
     public const GET_TEST_UPDATES_LIST = 'get_test_updates_list';
     public const GET_TEST_AVERAGE_RESULTS_LIST = 'get_test_average_results_list';
 
+    public const GET_USER_COURSE_REGISTRATION = 'get_user_course_registration';
     public const GET_GROUPS = 'get_groups';
     public const GROUP_EXISTS = 'group_exists';
     public const ADD_GROUP = 'add_group';
@@ -4054,6 +4055,100 @@ class Rest extends WebService
         exit;
     }
 
+<<<<<<< HEAD
+    public function GetUserCourseRegistration(string $startDate, string $endDate)
+    {
+        $resultArray = [];
+
+        $username = $this->user->getUsername();
+        $users = api_get_configuration_value('webservice_user_registered_courses_stats');
+
+        if ($users) {
+            $coursesConfig = $users[$username];
+            $coursesIn = implode(',', $coursesConfig);
+
+            $startDate = Database::escape_string($startDate);
+            $endDate = Database::escape_string($endDate);
+
+            $tableTrackCourseAccess = Database::get_main_table(TABLE_STATISTIC_TRACK_E_COURSE_ACCESS);
+            $tableCourse = Database::get_main_table(TABLE_MAIN_COURSE);
+            $tableUser = Database::get_main_table(TABLE_MAIN_USER);
+            $tableSession = Database::get_main_table(TABLE_MAIN_SESSION);
+            $tableSessionUser = Database::get_main_table(TABLE_MAIN_SESSION_USER);
+            $tableSessionCourse = Database::get_main_table(TABLE_MAIN_SESSION_COURSE);
+
+            $query = "
+                SELECT 0 as session_id, '' as session_name, teca.c_id,
+                c.title AS course_name, c.code AS course_code,
+                teca.user_id, u.username, min(teca.login_course_date) as date
+                FROM $tableTrackCourseAccess teca
+                LEFT JOIN $tableCourse c on teca.c_id = c.id and teca.session_id = 0
+                LEFT JOIN $tableUser u on teca.user_id = u.id
+                WHERE c.id in ($coursesIn)
+                AND teca.login_course_date BETWEEN '$startDate 00:00:00' AND '$endDate 23:59:59'
+				AND u.status = 5
+                GROUP BY teca.user_id
+                ORDER BY teca.c_id, teca.user_id
+            ";
+
+            $querySessions = "
+                SELECT
+                sru.session_id, s.name AS session_name, src.c_id,
+                c.title AS course_name, c.code AS course_code,
+                sru.user_id, u.username, sru.registered_at AS date
+                FROM $tableSessionUser sru
+                LEFT JOIN $tableSession s on sru.session_id = s.id
+                LEFT JOIN $tableSessionCourse src on s.id = src.session_id
+                LEFT JOIN $tableCourse c on src.c_id = c.id
+                LEFT JOIN $tableUser u on sru.user_id = u.id
+                WHERE c.id in ($coursesIn)
+                AND sru.registered_at BETWEEN '$startDate 00:00:00' AND '$endDate 23:59:59'
+				AND u.status = 5
+                GROUP BY sru.user_id, sru.session_id
+                ORDER BY  sru.user_id, s.id;
+            ";
+
+            $result = Database::query($query);
+
+            if (Database::num_rows($result) > 0) {
+                while ($row = Database::fetch_assoc($result)) {
+                    $params = [
+                        'session_id' => $row['session_id'],
+                        'session_name' => $row['session_name'],
+                        'course_id' => $row['c_id'],
+                        'course_name' => $row['course_name'],
+                        'course_code' => $row['course_code'],
+                        'user_id' => $row['user_id'],
+                        'user_name' => $row['username'],
+                        'date' => $row['date']
+                    ];
+                    $resultArray[] = $params;
+                }
+            }
+
+            $result = Database::query($querySessions);
+
+            if (Database::num_rows($result) > 0) {
+                while ($row = Database::fetch_assoc($result)) {
+                    $params = [
+                        'session_id' => $row['session_id'],
+                        'session_name' => $row['session_name'],
+                        'course_id' => $row['c_id'],
+                        'course_name' => $row['course_name'],
+                        'course_code' => $row['course_code'],
+                        'user_id' => $row['user_id'],
+                        'user_name' => $row['username'],
+                        'date' => $row['date']
+                    ];
+                    $resultArray[] = $params;
+                }
+            }
+
+        }
+        return $resultArray;
+    }
+
+=======
     /**
      * Create a group/class.
      *
@@ -4268,6 +4363,7 @@ class Rest extends WebService
     /**
      * Generate an API key for webservices access for the given user ID.
      */
+>>>>>>> 578c78770ca2c8465413125c32705d586d4cc74b
     protected static function generateApiKeyForUser(int $userId): string
     {
         UserManager::add_api_key($userId, self::SERVICE_NAME);
