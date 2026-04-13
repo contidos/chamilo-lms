@@ -116,24 +116,20 @@ class ScheduledAnnouncement extends Model
         $useBaseProgress = api_get_configuration_value('scheduled_announcements_use_base_progress');
         if ($useBaseProgress) {
             $extraFieldValue = new ExtraFieldValue('scheduled_announcement');
-
             $baseProgress = $extraFieldValue->get_values_by_handler_and_field_variable(
                 $id,
                 'use_base_progress'
             );
-
-            if (!empty($baseProgress) && !empty($baseProgress['value']) && $baseProgress['value'] != 0) {
-                $form->addNumeric ('progress',
-                    get_lang('Progress'),
-                    [
-                        'step' => 1,
-                        'min' => 1,
-                        'max' => 100,
-                        'value' => $baseProgress['value'],
-                    ],
-                    true
-                );
-            }
+            $form->addNumeric('progress',
+                get_lang('Progress'),
+                [
+                    'step' => 1,
+                    'min' => 1,
+                    'max' => 100,
+                    'value' => $baseProgress['value'],
+                ],
+                true
+            );
         }
 
         $form->addText('subject', get_lang('Subject'));
@@ -210,8 +206,8 @@ class ScheduledAnnouncement extends Model
         }
 
         $useBaseProgress = api_get_configuration_value('scheduled_announcements_use_base_progress');
-        if ($useBaseProgress && $useBaseDate) {
-            $typeOptions['base_progress'] = get_lang('BaseProgress');
+        if ($useBaseProgress) {
+            $typeOptions['base_progress'] = get_lang('Progress');
         }
 
         $form->addSelect(
@@ -241,7 +237,7 @@ class ScheduledAnnouncement extends Model
         $form->addHtml('</div>');
 
         $form->addHtml('<div id="base_progress" style="display:none">');
-        $form->addNumeric ('progress',
+        $form->addNumeric('progress',
             get_lang('Progress'),
             [
                 'step' => 1,
@@ -399,7 +395,6 @@ class ScheduledAnnouncement extends Model
                                 $result['id'],
                                 'use_base_progress'
                             );
-
                             if (empty($baseProgress) || empty($baseProgress['value']) || $baseProgress['value'] < 1) {
                                 $this->update(['id' => $result['id'], 'sent' => 1]);
                             }
@@ -438,7 +433,6 @@ class ScheduledAnnouncement extends Model
                                     $result['id'],
                                     'use_base_progress'
                                 );
-
                                 if (!empty($baseProgress) && !empty($baseProgress['value']) && $baseProgress['value'] >= 1) {
                                     if ((is_numeric($progress) && $progress > $baseProgress['value']) || !is_numeric($progress)) {
                                         continue;
@@ -513,6 +507,7 @@ class ScheduledAnnouncement extends Model
                                 '((user_lastname))' => $userInfo['lastname'],
                                 '((user_first_name))' => $userInfo['firstname'],
                                 '((user_last_name))' => $userInfo['lastname'],
+                                '((user_official_code))' => $userInfo['official_code'],
                                 '((user_picture))' => $userPicture,
                                 '((lp_progress))' => $progress,
                             ];
@@ -578,6 +573,7 @@ class ScheduledAnnouncement extends Model
             '((user_last_name))',
             '((user_picture))',
             '((lp_progress))',
+            '((user_official_code))',
         ];
         // get user extra fields list (only visible to self and filter-able)
         $extraField = new ExtraField('user');

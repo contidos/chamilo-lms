@@ -5832,7 +5832,7 @@ $Item = "Item";
 $ConfigureDashboardPlugin = "Configure Dashboard Plugin";
 $EditBlocks = "Edit blocks";
 $Never = "Never";
-$YourAccountIsActiveYouCanLoginAndCheckYourCourses = "Dear user, 
+$YourAccountIsActiveYouCanLoginAndCheckYourCourses = "Dear user,
 
 Your account has now been activated on the platform. Please login and enjoy your courses.";
 $SessionFields = "Session fields";
@@ -6321,7 +6321,7 @@ $MySocialGroups = "My social groups";
 $SocialGroups = "Social groups";
 $CreateASocialGroup = "Create a social group";
 $StatsUsersDidNotLoginInLastPeriods = "Not logged in for some time";
-$LastXMonths = "Last %i months";
+$LastXMonths = "Last %d months";
 $NeverConnected = "Never connected";
 $EnableAccessibilityFontResizeTitle = "Font resize accessibility feature";
 $EnableAccessibilityFontResizeComment = "Enable this option to show a set of font resize options on the top-right side of your campus. This will allow visually impaired to read their course contents more easily.";
@@ -7807,7 +7807,7 @@ $IconsModeSVGComment = "By enabling this option, all icons that have an SVG vers
 $FilterByTags = "Filter by tags";
 $ImportFromMoodle = "Import from Moodle";
 $ImportFromMoodleInfo = "Import a Moodle course backup file (.mbz) into this Chamilo course";
-$ImportFromMoodleInstructions = "The Moodle import feature might not support all content types from Moodle, given the fact that not all features are the same, and that Moodle and Chamilo both evolve continuously and rapidly. This import feature should be considered a work in progress. Please check https://support.chamilo.org/projects/chamilo-18/wiki/Moodle_import for more information.";
+$ImportFromMoodleInstructions = "The Moodle import feature might not support all content types from Moodle, given the fact that not all features are the same, and that Moodle and Chamilo both evolve continuously and rapidly. This import feature should be considered a work in progress. Please check https://github.com/chamilo/chamilo-lms/wiki/Import-from-Moodle for more information.";
 $MoodleFile = "Moodle course file";
 $FailedToImportThisIsNotAMoodleFile = "Failed to import: this doesn't seem to be a Moodle course backup file (.mbz)";
 $ThisQuestionIsNotSupportedYet = "This question type is not supported yet";
@@ -8007,11 +8007,11 @@ $SpecificDate = "Specific dispatch date";
 $BaseDate = "Dispatch based on the session's start/end dates";
 $AfterOrBefore = "After or before";
 $Before = "Before";
-$ScheduleAnnouncementDescription = "This form allows scheduling announcements to be sent automatically to the students who are taking a course in a session. 
+$ScheduleAnnouncementDescription = "This form allows scheduling announcements to be sent automatically to the students who are taking a course in a session.
 
-There are two types of announcements that can be sent: 
+There are two types of announcements that can be sent:
 
-Specific date: In this case a specific day is selected to make the announcement. 
+Specific date: In this case a specific day is selected to make the announcement.
 
 Based on the start / end date of the session: in this case the number of days to pass before sending the announcement must be indicated. And those days can be associated to before or after the start / end date. For example: 3 days after the start date.";
 $MandatorySurveyNoAnswered = "A mandatory survey is waiting your answer. To enter the course, you must first complete the survey.";
@@ -9072,4 +9072,55 @@ $AdminID = "Admin ID";
 $MoodleVersion = "Moodle version";
 $CreateExport = "Create export file";
 $MoodleExportAdminIDComment = "Moodle requires a user identification to be stored inside some XML files of the .mbz format. Please provide an internal (integer) ID of the user exporting this course or Moodle's internal user ID of the user that will be the owner of the imported resources. If you're in doubt, just write '1' and some fake data ton continue.";
+$DropboxVulnerabilityWarning = "Remember to only download files sent by people you trust. If in doubt, please use a anti-virus tool on your computer to mitigate the risk of harm to your data.";
+$SessionExpiredAt = "Session expired at";
+$DueToInactivityTheSessionIsGoingToClose = "Due to your inactivity, this session is going to close in";
+$KeepGoing = "Keep going";
+$SessionIsClosing = "Your session is closing";
+$CannotChangeVisibilityOfBaseCourseResourceX = "The visibility of %s from the base course cannot be changed from the session.";
+$UsingAIProviderX = "Using AI provider %s";
+$AIProvider = "AI provider";
+$AdvancedUserEdition = "Advanced user edition";
+$FieldsToEdit = "Fields to edit";
+$SaveAll = "Save all";
+$SaveOne = "Save one";
+$TextAppearingAtTheEndOfTheTestWhenTheUserHasFailed = "Text appearing at the end of the test when the user has failed.";
+$SubscribeSessionWhenFinishedFailure = "Subscribe to session at the end of the test when the user has failed";
+$progressBasedOnVisiblesLPsInEachCourse = "Progress is calculated based on lessons visible in each course";
+$progressBasedOnXVisiblesLPs = "Progress is calculated based on %s lessons visible in the present context.";
+$AtLeastOneCorrectAnswerRequired = "At least one correct answer is required";
+$AtLeastOneCorrectAnswerMustHaveAPositiveScore = "At least one correct answer must have a positive score";
+$NoAnswerCanBeEmpty = "No answer can be empty";
+$ScoreMustBeNumeric = "The score must be numeric";
+$TheCorrectAnswerMustHaveAPositiveScore = "The correct answer must have a positive score";
+$ACorrectAnswerIsRequired = "An answer marked as correct is required";
+$NoAdditionalComments = "No additional comments";
+$TeacherFeedback = "Teacher feedback";
+$Learners = "Learners";
+$BackToDateOrder = "Return to the chronological order";
+$SeeAlphabeticalOrder = "View in alphabetical order";
+$HideComment = "Hide comments";
+$AreYouSureYouWantToDeleteThisTicket = "Are you sure you want to delete this ticket ?";
+$TicketDeleted = "Ticket deleted";
+$SubmittedDocument = "Submitted document";
+$AnswerInOfficeDoc = "Answer as office document";
+$UploadOfficeDoc = "Upload office document";
+$AllowedFormats = "Supported formats";
+$TheoreticalTime = "Theoretical time";
+$AverageProgressInSessions = "Average progress in sessions";
+$TimeSpentInCoursesLastWeek = "Time spent in courses last week";
+$ProgressionInSessions = "Session progress";
+$synthesis = "Synthesis";
+$WeeklyTimeSummary = "Weekly time spent summary";
+$ExistingUserWithSameExtraFieldValue = "An existing user with the same %s was found (ID %d), enrolling instead of creating.";
+$SelectExtraField = "Select the extra field to search on";
+$WhatToDoWithUnifiedUsers = "What to do with unified users";
+$ExtraFieldNotFound = "Extra Field not found";
+$NoDuplicatesFound = "No duplicates found";
+$UnifyToThisUser = "Unify on this user";
+$Unify = "Unify";
+$AreYouSureToUnify = "Are you sure to unify";
+$FinalUser = "Final user";
+$WillMergeNUsers = "Will merge {n} users";
+$UserUnsubscribedFromOldSessionAsThereWasOnlyOneCourse = "Note: User was unsubscribed from the previous session, as there was only this course there.";
 ?>

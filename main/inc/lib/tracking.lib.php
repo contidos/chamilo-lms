@@ -3761,6 +3761,9 @@ class Tracking
                     null,
                     false,
                     null,
+                    true,
+                    false,
+                    true,
                     true
                 );
                 $lpList = $lpList->get_flat_list();
@@ -5068,7 +5071,8 @@ class Tracking
                 FROM $tbl_session_course sc
                 INNER JOIN $courseTable c
                 ON sc.c_id = c.id
-                WHERE session_id= $session_id";
+                WHERE session_id= $session_id
+                ORDER BY position ASC";
 
         $result = Database::query($sql);
 
@@ -6532,10 +6536,7 @@ class Tracking
                         $user_id,
                         $course_code,
                         [],
-                        $session_id_from_get,
-                        false,
-                        false,
-                        $lpShowMaxProgress
+                        $session_id_from_get
                     );
 
                     $total_time_login = self::get_time_spent_on_the_course(
@@ -8658,7 +8659,7 @@ class Tracking
                 WHERE login_id = $iIdLastConnection";
             $qLogoutDate = Database::query($sql);
             $resLogoutDate = convert_sql_date(Database::result($qLogoutDate, 0, 'logout_date'));
-            $lifeTime = api_get_configuration_value('session_lifetime');
+            $lifeTime = (int) api_get_configuration_value('session_lifetime');
 
             if ($resLogoutDate < time() - $lifeTime) {
                 // it isn't, we should create a fresh entry
@@ -8759,10 +8760,10 @@ class Tracking
                 ];
                 $sql = "SELECT user_id, session_id, c_id, login_course_date, logout_course_date, (UNIX_TIMESTAMP(logout_course_date) - UNIX_TIMESTAMP(login_course_date)) AS time
                     FROM $tblTrackCourseAccess
-                    WHERE login_course_date >= '$startDate'
-                      AND login_course_date <= '$endDate'
-                      AND logout_course_date >= '$startDate'
-                      AND logout_course_date <= '$endDate'
+                    WHERE login_course_date >= '".api_get_utc_datetime($startDate.' 00:00:00')."'
+                      AND login_course_date <= '".api_get_utc_datetime($endDate.' 23:59:59')."'
+                      AND logout_course_date >= '".api_get_utc_datetime($startDate.' 00:00:00')."'
+                      AND logout_course_date <= '".api_get_utc_datetime($endDate.' 23:59:59')."'
                       AND user_id IN (".implode(',', $selectedUserList).")
                     ORDER BY user_id, login_course_date";
                 break;
@@ -8785,8 +8786,8 @@ class Tracking
                     INNER JOIN $tblLpItem li ON li.iid = liv.lp_item_id
                     INNER JOIN $tblLp l ON l.id = li.lp_id
                     WHERE lv.user_id IN (".implode(',', $selectedUserList).")
-                      AND liv.start_time >= UNIX_TIMESTAMP('$startDate')
-                      AND liv.start_time <= UNIX_TIMESTAMP('$endDate')
+                      AND liv.start_time >= UNIX_TIMESTAMP('".api_get_utc_datetime($startDate.' 00:00:00')."')
+                      AND liv.start_time <= UNIX_TIMESTAMP('".api_get_utc_datetime($endDate.' 23:59:59')."')
                       AND lv.progress = 100
                       AND li.item_type = '".TOOL_LP_FINAL_ITEM."'
                     ORDER BY lv.user_id, liv.start_time";
@@ -8804,12 +8805,15 @@ class Tracking
             $session = api_get_session_info($row['session_id']);
             $course = api_get_course_info_by_id($row['c_id']);
 
+            $sessionName = $session['name'] ?? '';
+            $courseTitle = $course['title'] ?? '';
+
             if ($reportType == 'time_report') {
                 $rows[] = [
                     $user['lastname'],
                     $user['firstname'],
-                    $session['name'],
-                    $course['title'],
+                    $sessionName,
+                    $courseTitle,
                     api_get_local_time($row['login_course_date']),
                     api_get_local_time($row['logout_course_date']),
                     gmdate('H:i:s', $row['time']),
@@ -8819,8 +8823,8 @@ class Tracking
                 $rows[] = [
                     $user['lastname'],
                     $user['firstname'],
-                    $session['name'],
-                    $course['title'],
+                    $sessionName,
+                    $courseTitle,
                     $row['lp_name'],
                     api_get_local_time(date('Y-m-d H:i:s', $row['start_time'])),
                     $extraFieldValue['value'] ?? '',
@@ -9079,7 +9083,7 @@ class Tracking
                 $user->getId(),
                 $courseInfo,
                 $sessionId,
-                'lp.publicatedOn ASC',
+                null,
                 true,
                 $category->getId(),
                 false,

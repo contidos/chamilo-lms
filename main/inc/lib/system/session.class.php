@@ -120,32 +120,35 @@ class Session implements \ArrayAccess
     }
 
     /*
-     * ArrayAccess
+     * ArrayAccess : bool
      */
-    public function offsetExists($offset)
+    public function offsetExists($offset): bool
     {
         return isset($_SESSION[$offset]);
     }
 
     /**
-     * It it exists returns the value stored at the specified offset.
-     * If offset does not exists returns null. Do not trigger a warning.
+     * If it exists, returns the value stored at the specified offset.
+     * If offset does not exist, returns null. Do not trigger a warning.
      *
      * @param string $offset
      *
-     * @return mixed
+     * @return mixed (write offsetGet($offset): mixed on PHP 8 and & > )
      */
+    //if PHP_VERSION_ID >= 80000
+    #[\ReturnTypeWillChange]
+    //endif
     public function offsetGet($offset)
     {
         return self::read($offset);
     }
 
-    public function offsetSet($offset, $value)
+    public function offsetSet($offset, $value): void
     {
         self::write($offset, $value);
     }
 
-    public function offsetUnset($offset)
+    public function offsetUnset($offset): void
     {
         unset($_SESSION[$offset]);
     }

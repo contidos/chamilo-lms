@@ -26,7 +26,7 @@ use enshrined\svgSanitize\Sanitizer;
  */
 function php2phps($file_name)
 {
-    return preg_replace('/\.(phar.?|php.?|phtml.?)(\.){0,1}.*$/i', '.phps', $file_name);
+    return preg_replace('/\.(phar.?|php.?|pht.?|phtml.?)(\.){0,1}.*$/i', '.phps', $file_name);
 }
 
 /**
@@ -2254,4 +2254,21 @@ function getFileUploadSizeLimitForTeacher()
     }
 
     return $size;
+}
+
+function processChunkedFile(array $file): array
+{
+    if (isset($_REQUEST['chunkAction']) && 'done' === $_REQUEST['chunkAction']) {
+        // to rename and move the finished file
+        $tmpFile = disable_dangerous_file(
+            api_replace_dangerous_char($file['name'])
+        );
+
+        $chunkedFile = api_get_path(SYS_ARCHIVE_PATH).$tmpFile;
+        $file['tmp_name'] = $chunkedFile;
+        $file['size'] = filesize($chunkedFile);
+        $file['copy_file'] = true;
+    }
+
+    return $file;
 }

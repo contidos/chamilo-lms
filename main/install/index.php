@@ -170,6 +170,7 @@ $is_valid_request = isset($_REQUEST['is_executable']) ? $_REQUEST['is_executable
 $badUpdatePath = false;
 $emptyUpdatePath = true;
 $proposedUpdatePath = '';
+$updateFromConfigFile = '';
 
 if (!empty($_POST['updatePath'])) {
     $proposedUpdatePath = $_POST['updatePath'];
@@ -198,11 +199,10 @@ if (@$_POST['step2_install'] || @$_POST['step2_update_8'] || @$_POST['step2_upda
 } elseif (@$_POST['step1']) {
     $_POST['updatePath'] = '';
     $installType = '';
-    $updateFromConfigFile = '';
     unset($_GET['running']);
 } else {
     $installType = isset($_GET['installType']) ? $_GET['installType'] : null;
-    $updateFromConfigFile = isset($_GET['updateFromConfigFile']) ? $_GET['updateFromConfigFile'] : false;
+    $updateFromConfigFile = isset($_GET['updateFromConfigFile']) ? $_GET['updateFromConfigFile'] : '';
 }
 
 if ($installType == 'update' && in_array($my_old_version, $update_from_version_8)) {
@@ -259,24 +259,32 @@ if (!isset($_GET['running'])) {
         $installationProfile = api_htmlentities($_GET['profile'], ENT_QUOTES);
     }
 } else {
-    foreach ($_POST as $key => $val) {
-        $magic_quotes_gpc = ini_get('magic_quotes_gpc');
-        if (is_string($val)) {
-            if ($magic_quotes_gpc) {
-                $val = stripslashes($val);
-            }
-            $val = trim($val);
-            $_POST[$key] = $val;
-        } elseif (is_array($val)) {
-            foreach ($val as $key2 => $val2) {
+    // Only assign known installer variables from POST. Never inject
+    // arbitrary POST keys into $GLOBALS — that allows an attacker to
+    // overwrite any global variable and inject code into configuration.php.
+    $allowedFields = [
+        'dbHostForm', 'dbPortForm', 'dbUsernameForm', 'dbPassForm',
+        'dbNameForm', 'urlForm', 'pathForm', 'urlAppendPath',
+        'languageForm', 'emailForm', 'adminLastName', 'adminFirstName',
+        'adminPhoneForm', 'loginForm', 'passForm', 'campusForm',
+        'educationForm', 'institutionForm', 'institutionUrlForm',
+        'encryptPassForm', 'allowSelfReg', 'allowSelfRegProf',
+        'checkEmailByHashSent', 'ShowEmailNotCheckedToStudent',
+        'userMailCanBeEmpty', 'session_lifetime', 'installationProfile',
+        'old_version', 'new_version',
+    ];
+    $magic_quotes_gpc = ini_get('magic_quotes_gpc');
+    foreach ($allowedFields as $field) {
+        if (isset($_POST[$field])) {
+            $val = $_POST[$field];
+            if (is_string($val)) {
                 if ($magic_quotes_gpc) {
-                    $val2 = stripslashes($val2);
+                    $val = stripslashes($val);
                 }
-                $val2 = trim($val2);
-                $_POST[$key][$key2] = $val2;
+                $val = trim($val);
             }
+            $$field = $val;
         }
-        $GLOBALS[$key] = $_POST[$key];
     }
 }
 $dbPortForm = (int) $dbPortForm;
@@ -760,25 +768,25 @@ if (@$_POST['step2']) {
             set_file_folder_permissions();
 
             $manager = connectToDatabase(
-            $dbHostForm,
-            $dbUsernameForm,
-            $dbPassForm,
-            null,
-            $dbPortForm
-        );
+                $dbHostForm,
+                $dbUsernameForm,
+                $dbPassForm,
+                null,
+                $dbPortForm
+            );
 
-            $dbNameForm = preg_replace('/[^a-zA-Z0-9_\-]/', '', $dbNameForm);
+            $dbNameForm = Database::clearDatabaseName($dbNameForm);
 
             // Drop and create the database anyways
             $manager->getConnection()->getSchemaManager()->dropAndCreateDatabase($dbNameForm);
 
             $manager = connectToDatabase(
-            $dbHostForm,
-            $dbUsernameForm,
-            $dbPassForm,
-            $dbNameForm,
-            $dbPortForm
-        );
+                $dbHostForm,
+                $dbUsernameForm,
+                $dbPassForm,
+                $dbNameForm,
+                $dbPortForm
+            );
 
             $sql = getVersionTable();
             $manager->getConnection()->executeQuery($sql);
@@ -898,23 +906,23 @@ if (@$_POST['step2']) {
             $sysPath = api_get_path(SYS_PATH);
 
             finishInstallation(
-            $manager,
-            $sysPath,
-            $encryptPassForm,
-            $passForm,
-            $adminLastName,
-            $adminFirstName,
-            $loginForm,
-            $emailForm,
-            $adminPhoneForm,
-            $languageForm,
-            $institutionForm,
-            $institutionUrlForm,
-            $campusForm,
-            $allowSelfReg,
-            $allowSelfRegProf,
-            $installationProfile
-        );
+                $manager,
+                $sysPath,
+                $encryptPassForm,
+                $passForm,
+                $adminLastName,
+                $adminFirstName,
+                $loginForm,
+                $emailForm,
+                $adminPhoneForm,
+                $languageForm,
+                $institutionForm,
+                $institutionUrlForm,
+                $campusForm,
+                $allowSelfReg,
+                $allowSelfRegProf,
+                $installationProfile
+            );
 
             include 'install_files.inc.php';
         }
