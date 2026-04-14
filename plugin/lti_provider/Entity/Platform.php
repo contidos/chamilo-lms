@@ -32,6 +32,12 @@ class Platform
     /**
      * @var string
      *
+     * @ORM\Column(name="name", type="text")
+     */
+    private $name;
+    /**
+     * @var string
+     *
      * @ORM\Column(name="kid", type="string")
      */
     private $kid;
@@ -71,6 +77,18 @@ class Platform
      * @ORM\Column(name="tool_provider", type="text")
      */
     private $toolProvider;
+    /**
+     * @var string
+     *
+     * @ORM\Column(name="total_licenses", type="integer")
+     */
+    private $totalLicenses;
+    /**
+     * @var string
+     *
+     * @ORM\Column(name="available_licenses", type="integer")
+     */
+    private $availableLicenses;
 
     /**
      * Get id.
@@ -88,6 +106,26 @@ class Platform
         $this->id = $id;
 
         return $this;
+    }
+
+
+    /**
+     * Get name.
+     */
+    public function getName(): string
+    {
+        if (empty($this->name) || null === $this->name) {
+            return "";
+        }
+        return $this->name;
+    }
+
+    /**
+     * Set name.
+     */
+    public function setName(?string $name): void
+    {
+        $this->name = $name;
     }
 
     /**
@@ -228,6 +266,48 @@ class Platform
     public function setDeploymentId(string $deploymentId): Platform
     {
         $this->deploymentId = $deploymentId;
+
+        return $this;
+    }
+
+    /**
+     * Get total licienses.
+     */
+    public function getTotalLicenses()
+    {
+        if (empty($this->totalLicenses) || null === $this->totalLicenses) {
+            return 0;
+        }        
+        return $this->totalLicenses;
+    }
+
+    /**
+     * Set total licenses.
+     */
+    public function setTotalLicenses(int $totalLicenses): Platform
+    {
+        $this->totalLicenses = $totalLicenses;
+
+        return $this;
+    }
+
+    /**
+     * Get available licenses.
+     */
+    public function getAvailableLicenses()
+    {
+        if (empty($this->totalLicenses) || null === $this->totalLicenses || $this->totalLicenses === 0) {
+            return 9999;
+        }   
+        return $this->availableLicenses;
+    }
+
+    /**
+     * Set available licenses.
+     */
+    public function setAvailableLicenses(int $availableLicenses): Platform
+    {
+        $this->availableLicenses = $availableLicenses;
 
         return $this;
     }

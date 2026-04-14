@@ -80,10 +80,10 @@ function validate_data($users, $checkUniqueEmail = false)
     if (api_get_setting('registration', 'email') == 'true' || $checkUniqueEmail) {
         $mandatory_fields[] = 'Email';
     }
-
     $classExistList = [];
     $usergroup = new UserGroup();
     foreach ($users as &$user) {
+
         $user['has_error'] = false;
         $user['message'] = '';
 
@@ -120,8 +120,9 @@ function validate_data($users, $checkUniqueEmail = false)
                 $user['has_error'] = true;
             }
 
-            if ('true' === api_get_setting('login_is_email')) {
+            if ('true' === api_get_setting('login_is_email')) {                
                 if (false === api_valid_email($username)) {
+                    error_log('03.4.1 check if mail is on db');
                     $user['message'] .= Display::return_message(get_lang('PleaseEnterValidEmail'), 'warning');
                     $user['has_error'] = true;
                 }
@@ -151,6 +152,8 @@ function validate_data($users, $checkUniqueEmail = false)
                     $user['message'] .= Display::return_message(get_lang('EmailUsedTwiceInImportFile'), 'warning');
                     $user['has_error'] = true;
                 } else {
+                    $accessUrlId = api_get_current_access_url_id();
+                    //$userFromEmail = api_get_user_info_from_email_with_url($user['Email'], $accessUrlId);
                     $userFromEmail = api_get_user_info_from_email($user['Email']);
                     if (!empty($userFromEmail)) {
                         $user['id'] = $userFromEmail['id'];
@@ -163,6 +166,7 @@ function validate_data($users, $checkUniqueEmail = false)
                 }
             }
         }
+
 
         // 3. Check status.
         if (isset($user['Status']) && !api_status_exists($user['Status'])) {
@@ -197,8 +201,23 @@ function validate_data($users, $checkUniqueEmail = false)
                 $user['has_error'] = true;
             }
         }
-    }
 
+        // 6. Check if extra fields are duplicated
+        $extraFields = api_get_configuration_value('extra_fields_to_validate_on_user_registration');
+        if (!empty($extraFields) && isset($extraFields['extra_fields'])) {
+            $extraFieldList = $extraFields['extra_fields'];
+            foreach ($extraFieldList as $extraFieldToCheck) {
+                if (isset($user[$extraFieldToCheck]) && !empty($user[$extraFieldToCheck])) {
+                    $valueExists = api_user_extra_field_validation($extraFieldToCheck, $user[$extraFieldToCheck]);
+                    if ($valueExists) {
+                        $user['message'] .= Display::return_message(sprintf(get_lang('DuplicatedFieldAt'), $extraFieldToCheck), 'warning');
+                        $user['has_error'] = true;
+                    }
+                }
+            }
+        }
+
+    }
     return $users;
 }
 
@@ -295,45 +314,75 @@ function save_data(
 
         $optionsByField = [];
 
+        $uniqueField = api_get_configuration_value('extra_field_to_validate_on_user_registration');
+
         foreach ($users as &$user) {
             if ($user['has_error']) {
                 $userError[] = $user;
                 continue;
             }
 
-            $user = complete_missing_data($user);
-            $user['Status'] = api_status_key($user['Status']);
-            $redirection = isset($user['Redirection']) ? $user['Redirection'] : '';
+            $returnMessage = '';
+            $user_id = null;
 
-            $user_id = UserManager::create_user(
-                $user['FirstName'],
-                $user['LastName'],
-                $user['Status'],
-                $user['Email'],
-                $user['UserName'],
-                $user['Password'],
-                $user['OfficialCode'],
-                $user['language'],
-                $user['PhoneNumber'],
-                '',
-                $user['AuthSource'],
-                $user['ExpiryDate'],
-                1,
-                0,
-                null,
-                null,
-                $sendMail,
-                false,
-                '',
-                false,
-                null,
-                null,
-                null,
-                $redirection
-            );
+            if (!empty($uniqueField) && !empty($user[$uniqueField])) {
+                $existing = UserManager::isExtraFieldValueUniquePerUrl($user[$uniqueField], true);
+                if ($existing !== null) {
+                    $user_id = $existing;
+                    $returnMessage = Display::return_message(
+                        sprintf(
+                            get_lang('ExistingUserWithSameExtraFieldValue'),
+                            $uniqueField,
+                            $existing
+                        ),
+                        'info'
+                    );
+                }
+            }
+
+            if ($user_id === null) {
+                $user = complete_missing_data($user);
+                $user['Status'] = api_status_key($user['Status']);
+                $redirection = isset($user['Redirection']) ? $user['Redirection'] : '';
+
+                $user_id = UserManager::create_user(
+                    $user['FirstName'],
+                    $user['LastName'],
+                    $user['Status'],
+                    $user['Email'],
+                    $user['UserName'],
+                    $user['Password'],
+                    $user['OfficialCode'],
+                    $user['language'],
+                    $user['PhoneNumber'],
+                    '',
+                    $user['AuthSource'],
+                    $user['ExpiryDate'],
+                    1,
+                    0,
+                    null,
+                    null,
+                    $sendMail,
+                    false,
+                    '',
+                    false,
+                    null,
+                    null,
+                    null,
+                    $redirection
+                );
+
+                if ($user_id) {
+                    $returnMessage = Display::return_message(get_lang('UserAdded'), 'success');
+                } else {
+                    $returnMessage = Display::return_message(get_lang('Error'), 'warning');
+                    $userWarning[] = $user;
+                    $user['message'] = $returnMessage;
+                    continue;
+                }
+            }
 
             if ($user_id) {
-                $returnMessage = Display::return_message(get_lang('UserAdded'), 'success');
 
                 if (isset($user['Courses']) && is_array($user['Courses'])) {
                     foreach ($user['Courses'] as $course) {
@@ -731,6 +780,24 @@ if (isset($_POST['formSent']) && $_POST['formSent'] && $_FILES['import_file']['s
 
             Session::erase('user_import_data_'.$userId);
             $users = Import::csvToArray($_FILES['import_file']['tmp_name']);
+
+            $uniqueField = api_get_configuration_value('extra_field_to_validate_on_user_registration');
+            if (!empty($uniqueField) && !empty($users)) {
+                $firstRow = reset($users);
+                $csvHeader = array_keys($firstRow);
+                $csvHeaderLower = array_map('trim', array_map('strtolower', $csvHeader));
+
+                if (!in_array($uniqueField, $csvHeaderLower, true)) {
+                    Display::addFlash(
+                        Display::return_message(
+                            sprintf('The column "%s" is required in the CSV for this platform', $uniqueField),
+                            'error'
+                        )
+                    );
+                    header('Location: ' . api_get_self());
+                    exit;
+                }
+            }
             $users = parse_csv_data(
                 $users,
                 $_FILES['import_file']['name'],
@@ -755,10 +822,11 @@ if (isset($_POST['formSent']) && $_POST['formSent'] && $_FILES['import_file']['s
             }
         }
 
+        
         // processUsers() triggers save_data() which uses the $extra_fields
         // variable defined above as a global list of fields to treat
         processUsers($users, $sendMail, $targetFolder);
-
+        
         if ($error_kind_file) {
             Display::addFlash(
                 Display::return_message(
@@ -787,7 +855,10 @@ if (isset($_POST['formSent']) && $_POST['formSent'] && $_FILES['import_file']['s
         header('Location: '.api_get_self());
         exit;
     }
+    error_log('c.  end process insert?');
 }
+
+
 
 $importData = Session::read('user_import_data_'.$userId);
 

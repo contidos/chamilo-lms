@@ -1,5 +1,8 @@
 # Check that your Apache virtualhost have this settings:
 
+php_value memory_limit 512M
+php_value max_execution_time 300
+
 #<Directory "/var/www/chamilo-classic">
 #  AllowOverride All
 #  Order allow,deny
@@ -124,3 +127,4 @@ RedirectMatch 403 ^/main/inc/lib/javascript/bigupload/files
 <IfModule mod_headers.c>
   Header always set X-Content-Type-Options nosniff
 </IfModule>
+

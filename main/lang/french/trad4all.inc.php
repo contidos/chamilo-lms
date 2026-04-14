@@ -9007,4 +9007,13 @@ $MoodleVersion = "Version de Moodle";
 $CreateExport = "Créer un export";
 $MoodleExportAdminIDComment = "Moodle requiert une identification de l'utilisateur pour la stocker au sein de fichiers XML qui font partie du format .mbz.
 Merci de bien vouloir fournir un numéro interne (nombre entier) de l'utilisateur qui exporte le cours, ou d'un utilisateur de notre système, qui sera désigné (s'il y a correspondance) comme le propriétaire des ressources importées sur l'autre système. Si vous avez encore des doutes, indiquez simplement '1' et donnez des données fictives.";
+$SelectExtraField = "Sélectionnez le champ extra sur lequel effectuer la recherche";
+$WhatToDoWithUnifiedUsers = "Que faire avec les utilisateurs unifiés";
+$ExtraFieldNotFound = "Champ extra non trouvé";
+$NoDuplicatesFound = "Aucun doublon trouvé";
+$UnifyToThisUser = "Unifier sur cet utilisateur";
+$Unify = "Unifier";
+$AreYouSureToUnify = "Êtes-vous sûr d'unifier";
+$FinalUser = "Utilisateur final";
+$WillMergeNUsers = "Fusionnera {n} utilisateurs";
 ?>

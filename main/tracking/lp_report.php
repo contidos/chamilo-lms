@@ -22,6 +22,7 @@ if (!$is_allowedToTrack) {
 
 $action = $_GET['action'] ?? null;
 $additionalProfileField = $_GET['additional_profile_field'] ?? [];
+$showGlobalInfo = isset($_GET['show_global_info']) && $_GET['show_global_info'] == 1;
 
 $additionalExtraFieldsInfo = [];
 
@@ -304,7 +305,7 @@ function getCount()
  *
  * @see SortableTable#get_table_data($from)
  */
-$getData = function ($from, $numberOfItems, $column, $direction) use ($additionalExtraFieldsInfo) {
+$getData = function ($from, $numberOfItems, $column, $direction) use ($additionalExtraFieldsInfo, $showGlobalInfo, $courseInfo) {
     $sessionId = api_get_session_id();
     $courseCode = api_get_course_id();
     $courseId = api_get_course_int_id();
@@ -343,12 +344,38 @@ $getData = function ($from, $numberOfItems, $column, $direction) use ($additiona
 
     $useNewTable = Tracking::minimumTimeAvailable($sessionId, $courseId);
 
+    // Calculate survey data once for all students (if not in session and showGlobalInfo is enabled)
+    $surveyUserList = [];
+    $totalSurveys = 0;
+    if ($showGlobalInfo && empty($sessionId)) {
+        $surveyList = SurveyManager::get_surveys($courseCode, $sessionId);
+        if ($surveyList) {
+            $totalSurveys = count($surveyList);
+            foreach ($surveyList as $survey) {
+                $userList = SurveyManager::get_people_who_filled_survey(
+                    $survey['survey_id'],
+                    false,
+                    $courseId
+                );
+                foreach ($userList as $user_id) {
+                    isset($surveyUserList[$user_id]) ? $surveyUserList[$user_id]++ : $surveyUserList[$user_id] = 1;
+                }
+            }
+        }
+    }
+
     $users = [];
     foreach ($students as $student) {
         $user = [];
         $userId = $student['id'];
+
+        // Get user info for official code
+        $userInfo = api_get_user_info($userId);
+        $user[] = $userInfo['official_code'];
+
         $user[] = $student['firstname'];
         $user[] = $student['lastname'];
+        $user[] = $userInfo['email'];
         $user[] = $student['username'];
 
         $objExtraValue = new ExtraFieldValue('user');
@@ -356,6 +383,39 @@ $getData = function ($from, $numberOfItems, $column, $direction) use ($additiona
         foreach ($additionalExtraFieldsInfo as $fieldInfo) {
             $extraValue = $objExtraValue->get_values_by_handler_and_field_id($student['id'], $fieldInfo['id'], true);
             $user[] = $extraValue['value'] ?? null;
+        }
+
+        // Add consolidated course metrics (only if showGlobalInfo is enabled)
+        if ($showGlobalInfo) {
+            $totalTime = Tracking::get_time_spent_on_the_course($userId, $courseId, $sessionId);
+            $user[] = api_time_to_hms($totalTime);
+
+            $courseProgress = Tracking::get_avg_student_progress($userId, $courseCode, [], $sessionId);
+            $user[] = $courseProgress.'%';
+
+            // Get first connection date - use a more robust query
+            $table = Database::get_main_table(TABLE_STATISTIC_TRACK_E_COURSE_ACCESS);
+            $sql = "SELECT LEAST(
+                        COALESCE(MIN(login_course_date), '9999-12-31'),
+                        COALESCE(MIN(logout_course_date), '9999-12-31')
+                    ) as first_date
+                    FROM $table
+                    WHERE user_id = $userId
+                    AND c_id = $courseId
+                    AND session_id = $sessionId
+                    AND (login_course_date IS NOT NULL OR logout_course_date IS NOT NULL)";
+            $rs = Database::query($sql);
+            $firstConnection = '-';
+            if (Database::num_rows($rs) > 0) {
+                $firstDate = Database::result($rs, 0, 0);
+                if (!empty($firstDate) && $firstDate != '9999-12-31') {
+                    $firstConnection = api_convert_and_format_date($firstDate, DATE_FORMAT_SHORT);
+                }
+            }
+            $user[] = $firstConnection;
+
+            $lastConnection = Tracking::get_last_connection_date_on_the_course($userId, $courseInfo, $sessionId);
+            $user[] = $lastConnection ? $lastConnection : '-';
         }
 
         $lpTimeList = [];
@@ -390,10 +450,10 @@ $getData = function ($from, $numberOfItems, $column, $direction) use ($additiona
                 $sessionId
             );
 
-            $first = api_convert_and_format_date(
+            $first = !empty($first) ? api_convert_and_format_date(
                 $first,
                 DATE_TIME_FORMAT_LONG
-            );
+            ) : '-';
 
             $last = Tracking::get_last_connection_time_in_lp(
                 $userId,
@@ -401,27 +461,15 @@ $getData = function ($from, $numberOfItems, $column, $direction) use ($additiona
                 $lpId,
                 $sessionId
             );
-            $last = api_convert_and_format_date(
+            $last = !empty($last) ? api_convert_and_format_date(
                 $last,
                 DATE_TIME_FORMAT_LONG
-            );
-
-            $score = Tracking::getAverageStudentScore(
-                $userId,
-                $courseCode,
-                [$lpId],
-                $sessionId
-            );
-
-            if (is_numeric($score)) {
-                $score = $score.'%';
-            }
+            ) : '-';
 
             $user[] = $progress;
             $user[] = $first;
             $user[] = $last;
             $user[] = $time;
-            $user[] = $score;
         }
 
         $users[] = $user;
@@ -438,8 +486,10 @@ $interbreadcrumb[] = [
 $tool_name = get_lang('CourseLearningPathsGenericStats');
 
 $headers = [];
+$headers[] = get_lang('OfficialCode');
 $headers[] = get_lang('FirstName');
 $headers[] = get_lang('LastName');
+$headers[] = get_lang('Email');
 $headers[] = get_lang('Username');
 
 $parameters = [];
@@ -452,13 +502,20 @@ foreach ($additionalExtraFieldsInfo as $fieldInfo) {
     $parameters['additional_profile_field'] = $fieldInfo['id'];
 }
 
+// Add consolidated course metrics (only if showGlobalInfo is enabled)
+if ($showGlobalInfo) {
+    $headers[] = get_lang('TrainingTime');
+    $headers[] = get_lang('CourseProgress');
+    $headers[] = get_lang('FirstLoginInCourse');
+    $headers[] = get_lang('LatestLoginInCourse');
+}
+
 foreach ($lps as $lp) {
     $lpName = $lp['lp_name'];
     $headers[] = get_lang('Progress').': '.$lpName;
     $headers[] = get_lang('FirstAccess').': '.$lpName;
     $headers[] = get_lang('LastAccess').': '.$lpName;
     $headers[] = get_lang('Time').': '.$lpName;
-    $headers[] = get_lang('Score').': '.$lpName;
 }
 
 if (!empty($action)) {
@@ -475,6 +532,14 @@ if (!empty($action)) {
 
 $actionsLeft = TrackingCourseLog::actionsLeft('lp');
 $actionsCenter = '';
+
+$exportParams = [
+    'action' => 'export',
+    'additional_profile_field' => $additionalProfileField,
+];
+if ($showGlobalInfo) {
+    $exportParams['show_global_info'] = 1;
+}
 $actionsRight = Display::url(
     Display::return_icon(
         'export_excel.png',
@@ -482,11 +547,7 @@ $actionsRight = Display::url(
         null,
         ICON_SIZE_MEDIUM
     ),
-    api_get_self().'?action=export&'.api_get_cidreq().'&'
-        .http_build_query([
-            'action' => 'export',
-            'additional_profile_field' => $additionalProfileField,
-        ])
+    api_get_self().'?'.api_get_cidreq().'&'.http_build_query($exportParams)
 );
 
 // Create a sortable table with user-data
@@ -501,8 +562,30 @@ foreach ($headers as $header) {
     $table->set_header($column++, $header, false);
 }
 
+// Add toggle button for global information
+$globalInfoParams = [
+    'cidReq' => api_get_course_id(),
+    'id_session' => api_get_session_id(),
+    'additional_profile_field' => $additionalProfileField,
+];
+if ($showGlobalInfo) {
+    $globalInfoParams['show_global_info'] = 0;
+    $globalInfoText = 'OCULTAR INFORMACIÓN GLOBAL';
+} else {
+    $globalInfoParams['show_global_info'] = 1;
+    $globalInfoText = 'MOSTRAR INFORMACIÓN GLOBAL';
+}
+$globalInfoUrl = api_get_self().'?'.http_build_query($globalInfoParams);
+$globalInfoButton = Display::url(
+    $globalInfoText,
+    $globalInfoUrl,
+    ['class' => 'btn btn-primary']
+);
+
 $content = [];
-$content[] = TrackingCourseLog::displayAdditionalProfileFields($defaultExtraFields, api_get_self());
+$profileFieldsSelector = TrackingCourseLog::displayAdditionalProfileFields($defaultExtraFields, api_get_self());
+$buttonsRow = '<div style="margin-bottom: 10px;">'.$profileFieldsSelector.' '.$globalInfoButton.'</div>';
+$content[] = $buttonsRow;
 $content[] = $table->return_table();
 $toolbarActions = Display::toolbarAction(
     'toolbarUser',

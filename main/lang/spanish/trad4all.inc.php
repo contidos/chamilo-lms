@@ -8041,11 +8041,13 @@ $AfterOrBefore = "Antes o después";
 $Before = "Antes de";
 $ScheduleAnnouncementDescription = "Este formulario permite programar anuncios/avisos para que sean enviados de manera automática a los alumnos que están realizando un curso en una sesión.
 
-Existe dos tipos de anuncios que se pueden enviar:
+Existe tres tipos de anuncios que se pueden enviar:
 
 Envío en una fecha concreta: En este caso se selecciona un día concreto para hacer el envío.
 
-Envío en base a la fecha de inicio/finalización de la sesión: en este caso se ha de indicar el número de días que han de pasar antes de enviar el anuncio. Y esos días pueden estar asociados a antes o después de la fecha de inicio/finalización. Por ejemplo: 3 días después de fecha de inicio.";
+Envío en base a la fecha de inicio/finalización de la sesión: en este caso se ha de indicar el número de días que han de pasar antes de enviar el anuncio. Y esos días pueden estar asociados a antes o después de la fecha de inicio/finalización. Por ejemplo: 3 días después de fecha de inicio.
+
+Envío en base al progreso y fecha de inicio/finalización del curso: En este caso se especifica el progreso que debe tener los alumnos y el número de días que han de pasar antes de enviar el anuncio.";
 $MandatorySurveyNoAnswered = "Usted tiene pendiente una encuesta obligatoria. Para ingresar al curso, primero deberá completarla";
 $ShowPreviousButton = "Mostrar el botón 'anterior'";
 $AllTickets = "Todos los tickets";
@@ -9068,6 +9070,8 @@ $CancelNotifyMe = "Dejar de notificarme";
 $EmptyExpirationDate = "La fecha de expiración no puede ser vacía.";
 $MailingTestNotSent = "El correo de prueba no ha podido ser enviado. Puede que la dirección introducida sea incorrecta, que pertenezca a un usuario inactivo, o que su servidor de correos no esté bien configurado (ver archivo mail.conf.php).";
 $PasswordExpiredPleaseSetNewPassword = "Su contraseña se ha vencido. Por favor, defina una nueva contraseña antes de seguir.";
+$ExistingUserWithSameExtraFieldValue = "Se encontró el mismo %s con un usuario existente (ID %d), se procederá a matricularlo en lugar de crear uno nuevo.";
+$AUserWithTheSameAlreadyExistsInThisPortal = "Ya existe un usuario con el mismo %s en este portal";
 $CopyIframeCodeToIncludeExercise = "Copie el código del iframe a continuación para incluir el ejercicio:";
 $MyMissingSignatures = "Mis firmas faltantes";
 $OnlyShowActiveUsers = "Mostrar solo usuarios activos";
@@ -9097,4 +9101,23 @@ $AdminID = "ID de administrador";
 $MoodleVersion = "Versión de Moodle";
 $CreateExport = "Crear archivo de exporte";
 $MoodleExportAdminIDComment = "Moodle requiere la indentificación de algún usuario para almacenarla dentro de los archivos XML del formato .mbz. Por favor indique un número de ID interno (entero) del usuario quien está exportando este curso, o el ID interno del usuario en Moodle para el usuario quien será propietario de los recursos importados. Si tiene duda, puede simplemente marcar '1' y algunos datos falsos para seguir.";
+$TimeInCourse = "Hola %s, tu tiempo en el curso es:";
+$BaseProgress = "Envío en base al progreso en el curso";
+$ProgressLessEqual = "Progreso menor o igual";
+$DueToInactivityTheSessionIsGoingToCloseJS = "Debido a la inactividad, la sesión se cerrará en";
+$KeepGoingJS = "Continuar";
+$SessionExpiredAtJS = "Sesión caducada el";
+$SessionIsClosingJS = "La sesión se está cerrando por inactividad...";
+$DuplicatedFieldAt = "Valor duplicado en %s";
+$TheValueEntered  = "El valor introducido en el campo %s ya existe";
+$NewTrackingSystem = "Usar nuevo sistema de seguimiento de tiempos";
+$SelectExtraField = "Seleccione el campo extra para buscar";
+$WhatToDoWithUnifiedUsers = "Que hacer con los usuarios unificados";
+$ExtraFieldNotFound = "Campo extra no encontrado";
+$NoDuplicatesFound = "No se encontraron duplicados";
+$UnifyToThisUser = "Unificar a este usuario";
+$Unify = "Unificar";
+$AreYouSureToUnify = "Estas seguro de unificar";
+$FinalUser = "Usuario final";
+$WillMergeNUsers = "Fusionará {n} usuarios";
 ?>

@@ -2429,4 +2429,8 @@ $InvitationReceived = "Invitación recibida";
 $InvitationSent = "Invitación envida";
 $YouAlreadySentAnInvitation = "Ud. ya ha enviado una invitación";
 $LowerCaseUser = "usuario";
+$DueToInactivityTheSessionIsGoingToCloseJS = "Debido a la inactividad, la sesión se cerrará en";
+$KeepGoingJS = "Continuar";
+$SessionExpiredAtJS = "Sesión caducada el";
+$SessionIsClosingJS = "La sesión se está cerrando por inactividad...";
 ?>

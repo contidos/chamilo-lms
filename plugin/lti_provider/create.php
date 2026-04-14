@@ -20,7 +20,13 @@ $form->build();
 
 if ($form->validate()) {
     $formValues = $form->exportValues();
+
+    if($formValues['licenses'] == null || $formValues['licenses'] < 0 || $formValues['licenses'] > 9999) {
+        $formValues['licenses'] = "0";
+    }
+    
     $platform = new Platform();
+    $platform->setName($formValues['name']);
     $platform->setIssuer($formValues['issuer']);
     $platform->setClientId($formValues['client_id']);
     $platform->setAuthLoginUrl($formValues['auth_login_url']);
@@ -30,6 +36,8 @@ if ($form->validate()) {
     $platform->setKid($formValues['kid']);
     $toolProvider = (isset($formValues['tool_provider']) ? $formValues['tool_provider'] : $_POST['tool_provider']);
     $platform->setToolProvider($toolProvider);
+    $platform->setTotalLicenses($formValues['licenses']);
+    $platform->setAvailableLicenses($formValues['licenses']);
 
     $em->persist($platform);
     $em->flush();

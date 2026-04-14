@@ -989,7 +989,7 @@ class TrackingCourseLog
                 }
             }
 
-            if (api_get_setting('show_email_addresses') === 'true') {
+            if (api_get_setting('show_email_addresses') === 'true' || api_get_configuration_value('course_log_force_show_email_addresses') === true) {
                 $userRow['email'] = $user['col4'];
             }
 

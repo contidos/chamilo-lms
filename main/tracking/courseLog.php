@@ -780,7 +780,7 @@ if ($nbStudents > 0 || isset($parameters['user_active'])) {
     $headers['quiz_finalization_date'] = get_lang('QuizFinalizationDate');
 
     $counter = $headerCounter;
-    if (api_get_setting('show_email_addresses') === 'true') {
+    if (api_get_setting('show_email_addresses') === 'true' || api_get_configuration_value('course_log_force_show_email_addresses') === true) {
         $table->set_header($counter, get_lang('Email'), false);
         $headers['email'] = get_lang('Email');
         $counter++;
@@ -1035,6 +1035,11 @@ if ($export_csv) {
             $csv_headers[] = $extra_info[$fieldId]['display_text'];
         }
     }
+
+    if (api_get_setting('show_email_addresses') === 'true' || api_get_configuration_value('course_log_force_show_email_addresses') === true) {
+        $csv_headers[] = get_lang('Email');
+    }
+
     ob_end_clean();
 
     $csvContentInSession = Session::read('csv_content', []);

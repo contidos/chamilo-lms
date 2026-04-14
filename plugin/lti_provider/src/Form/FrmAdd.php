@@ -39,6 +39,8 @@ class FrmAdd extends FormValidator
 
         $this->addHeader($plugin->get_lang('ConnectionDetails'));
 
+        $this->addText('name', get_lang('Name'));
+        $this->addNumeric('licenses', get_lang('Licenses'));
         $this->addText('issuer', $plugin->get_lang('PlatformName'));
         $this->addUrl('auth_login_url', $plugin->get_lang('AuthLoginUrl'));
         $this->addUrl('auth_token_url', $plugin->get_lang('AuthTokenUrl'));
@@ -52,7 +54,8 @@ class FrmAdd extends FormValidator
             get_lang('ToolProvider'),
             [
                 'quiz' => $plugin->get_lang('Quizzes'),
-                'lp' => $plugin->get_lang('Learnpaths'),
+                'lp' => $plugin->get_lang('LessonsAtCourses'),
+                'session' => $plugin->get_lang('LessonsAtSessions'),
             ],
             [
                 'onclick' => 'selectToolProvider(this.value)',
@@ -61,6 +64,7 @@ class FrmAdd extends FormValidator
 
         $this->addElement('html', $plugin->getLearnPathsSelect());
         $this->addElement('html', $plugin->getQuizzesSelect());
+        $this->addElement('html', $plugin->getLearnPathsSessionSelect());
 
         $this->addButtonCreate($plugin->get_lang('AddPlatform'));
         $this->applyFilter('__ALL__', 'trim');
@@ -74,6 +78,8 @@ class FrmAdd extends FormValidator
             $this->platform = new Platform();
         }
 
+        $defaults['name'] = '';
+        $defaults['licenses'] = 0;
         $defaults['issuer'] = $this->platform->getIssuer();
         $defaults['auth_login_url'] = $this->platform->getAuthLoginUrl();
         $defaults['auth_token_url'] = $this->platform->getAuthTokenUrl();

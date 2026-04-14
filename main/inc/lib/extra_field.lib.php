@@ -821,12 +821,51 @@ class ExtraField extends Model
             $help
         );
 
-        if (!empty($requiredFields)) {
-            /** @var HTML_QuickForm_input $element */
-            foreach ($form->getElements() as $element) {
-                $name = str_replace('extra_', '', $element->getName());
-                if (in_array($name, $requiredFields)) {
-                    $form->setRequired($element);
+        $requiredFields = is_array($requiredFields) ? $requiredFields : [];
+        $uniqueField = api_get_configuration_value('extra_field_to_validate_on_user_registration');
+        $currentUserId = $form->getElementValue('item_id') ?: null;
+
+        if (
+            ($this->type === 'user' || $this->type === 'session') &&
+            !$filter &&
+            !empty($uniqueField) &&
+            !in_array($uniqueField, $requiredFields, true)
+        ) {
+            $requiredFields[] = $uniqueField;
+        }
+
+        /** @var HTML_QuickForm_input $element */
+        foreach ($form->getElements() as $element) {
+            $name = str_replace('extra_', '', $element->getName());
+
+            if (in_array($name, $requiredFields, true)) {
+                $form->setRequired($element);
+            }
+
+            if ($this->type === 'user' && !empty($uniqueField) && $name === $uniqueField) {
+                $elementName = 'extra_'.$uniqueField;
+                $message = sprintf(
+                    get_lang('AUserWithTheSameAlreadyExistsInThisPortal'),
+                    $uniqueField
+                );
+
+                if (empty($currentUserId)) {
+                    $form->addRule(
+                        $elementName,
+                        $message,
+                        'callback',
+                        ['UserManager', 'isExtraFieldValueUniquePerUrl']
+                    );
+                } else {
+                    $form->addRule(
+                        $elementName,
+                        $message,
+                        'callback',
+                        function ($value) use ($currentUserId) {
+                            $existingId = UserManager::isExtraFieldValueUniquePerUrl($value, true);
+                            return $existingId === null || $existingId == $currentUserId;
+                        }
+                    );
                 }
             }
         }

@@ -106,6 +106,20 @@ class Result
      */
     protected $ltiLaunchId;
 
+    /**
+     * @var int
+     *
+     * @ORM\Column(name="session_id", type="integer")
+     */
+    protected $sessionId;
+
+    /**
+     * @var string
+     *
+     * @ORM\Column(name="client_id", type="string")
+     */
+    protected $clientId;
+
     public function getId(): int
     {
         return $this->id;
@@ -261,6 +275,30 @@ class Result
     public function setLtiLaunchId(string $ltiLaunchId): Result
     {
         $this->ltiLaunchId = $ltiLaunchId;
+
+        return $this;
+    }
+
+    public function getSessionId(): int
+    {
+        return $this->sessionId;
+    }
+
+    public function setSessionId(int $id): Result
+    {
+        $this->sessionId = $id;
+
+        return $this;
+    }
+
+    public function getClientId(): string
+    {
+        return $this->clientId;
+    }
+
+    public function setClientId(string $clientId): Result
+    {
+        $this->clientId = $clientId;
 
         return $this;
     }

@@ -9,10 +9,18 @@
 */
 
 /**
+ * Class BBBPlugin
  * Videoconference plugin with BBB
  */
 class BBBPlugin extends Plugin
 {
+    const INTERFACE_FLASH = 0;
+    const INTERFACE_HTML5 = 1;
+
+    const LAUNCH_TYPE_DEFAULT = 0;
+    const LAUNCH_TYPE_SET_BY_TEACHER = 1;
+    const LAUNCH_TYPE_SET_BY_STUDENT = 2;
+
     const ROOM_OPEN = 0;
     const ROOM_CLOSE = 1;
     const ROOM_CHECK = 2;
@@ -34,8 +42,12 @@ class BBBPlugin extends Plugin
             'type' => 'checkbox',
         ],
         [
-            'name' => 'big_blue_button_students_start_conference_in_groups',
-            'type' => 'checkbox',
+            'name' => 'big_blue_button_max_students_allowed',
+            'type' => 'input',
+        ],
+        [
+            'name' => 'big_blue_button_meeting_duration',
+            'type' => 'input',
         ],
     ];
 
@@ -44,43 +56,53 @@ class BBBPlugin extends Plugin
      */
     protected function __construct()
     {
-        $settings = [
-            'tool_enable' => 'boolean',
-            'host' => 'text',
-            'salt' => 'text',
-            'enable_global_conference' => 'boolean',
-            'enable_global_conference_per_user' => 'boolean',
-            'enable_conference_in_course_groups' => 'boolean',
-            'enable_global_conference_link' => 'boolean',
-            'disable_download_conference_link' => 'boolean',
-            'max_users_limit' => 'text',
-            'global_conference_allow_roles' => [
-                'type' => 'select',
-                'options' => [
-                    PLATFORM_ADMIN => get_lang('Administrator'),
-                    COURSEMANAGER => get_lang('Teacher'),
-                    STUDENT => get_lang('Student'),
-                    STUDENT_BOSS => get_lang('StudentBoss'),
-                ],
-                'attributes' => ['multiple' => 'multiple'],
-            ],
-            'allow_regenerate_recording' => 'boolean',
-            // Default course settings, must be the same as $course_settings
-            'big_blue_button_record_and_store' => 'checkbox',
-            'bbb_enable_conference_in_groups' => 'checkbox',
-            'bbb_force_record_generation' => 'checkbox',
-            'disable_course_settings' => 'boolean',
-            'meeting_duration' => 'text',
-        ];
-
-        if (1 === (int) api_get_current_access_url_id()) {
-            $settings['plugin_bbb_multiple_urls_cron_apply_to_all'] = 'checkbox';
-        }
-
         parent::__construct(
-            '2.11',
-            'Julio Montoya, Yannick Warnier, Angel Fernando Quiroz Campos, Jose Angel Ruiz, Ghazi Triki, Adnen Manssouri',
-            $settings
+            '2.8.2',
+            'Julio Montoya, Yannick Warnier, Angel Fernando Quiroz Campos, Jose Angel Ruiz',
+            [
+                'tool_enable' => 'boolean',
+                'host' => 'text',
+                'salt' => 'text',
+                'enable_global_conference' => 'boolean',
+                'enable_global_conference_per_user' => 'boolean',
+                'enable_conference_in_course_groups' => 'boolean',
+                'enable_global_conference_link' => 'boolean',
+                'disable_download_conference_link' => 'boolean',
+                'max_users_limit' => 'text',
+                'global_conference_allow_roles' => [
+                    'type' => 'select',
+                    'options' => [
+                        PLATFORM_ADMIN => get_lang('Administrator'),
+                        COURSEMANAGER => get_lang('Teacher'),
+                        STUDENT => get_lang('Student'),
+                        STUDENT_BOSS => get_lang('StudentBoss'),
+                    ],
+                    'attributes' => ['multiple' => 'multiple'],
+                ],
+                'interface' => [
+                    'type' => 'select',
+                    'options' => [
+                        self::INTERFACE_HTML5 => 'HTML5',
+                        self::INTERFACE_FLASH => 'Flash',
+                    ],
+                ],
+                'launch_type' => [
+                    'type' => 'select',
+                    'options' => [
+                        self::LAUNCH_TYPE_DEFAULT => 'SetByDefault',
+                        self::LAUNCH_TYPE_SET_BY_TEACHER => 'SetByTeacher',
+                        self::LAUNCH_TYPE_SET_BY_STUDENT => 'SetByStudent',
+                    ],
+                    'translate_options' => true, // variables will be translated using the plugin->get_lang
+                ],
+                'allow_regenerate_recording' => 'boolean',
+                // Default course settings, must be the same as $course_settings
+                'big_blue_button_record_and_store' => 'checkbox',
+                'bbb_enable_conference_in_groups' => 'checkbox',
+                'bbb_force_record_generation' => 'checkbox',
+                'disable_course_settings' => 'boolean',
+                'meeting_duration' => 'text',
+            ]
         );
 
         $this->isAdminPlugin = true;
@@ -182,7 +204,8 @@ class BBBPlugin extends Plugin
                 voice_bridge INT NOT NULL DEFAULT 1,
                 access_url INT NOT NULL DEFAULT 1,
                 video_url TEXT NULL,
-                has_video_m4v TINYINT NOT NULL DEFAULT 0
+                has_video_m4v TINYINT NOT NULL DEFAULT 0,
+                interface INT NOT NULL DEFAULT 0
                 )";
         Database::query($sql);
 
@@ -193,12 +216,13 @@ class BBBPlugin extends Plugin
                 participant_id int(11) NOT NULL,
                 in_at datetime,
                 out_at datetime,
+                interface int NOT NULL DEFAULT 0,
                 close INT NOT NULL DEFAULT 0
             );"
         );
         $fieldLabel = 'plugin_bbb_course_users_limit';
         $fieldType = ExtraField::FIELD_TYPE_INTEGER;
-        $fieldTitle = $this->get_lang('MaxUsersInConferenceRoom');
+        $fieldTitle = 'MaxUsersInConferenceRoom';
         $fieldDefault = '0';
         $extraField = new ExtraField('course');
         $fieldId = CourseManager::create_course_extra_field(
@@ -236,34 +260,8 @@ class BBBPlugin extends Plugin
             ]
         );
 
-        Database::query(
-            "CREATE TABLE IF NOT EXISTS plugin_bbb_meeting_format (
-                id int unsigned not null PRIMARY KEY AUTO_INCREMENT,
-                meeting_id int unsigned not null,
-                format_type varchar(255) not null,
-                resource_url text not null
-            );"
-        );
-
-        // Copy icons into the main/img/icons folder
-        $iconName = 'bigbluebutton';
-        $iconsList = [
-            '64/'.$iconName.'.png',
-            '64/'.$iconName.'_na.png',
-            '32/'.$iconName.'.png',
-            '32/'.$iconName.'_na.png',
-            '22/'.$iconName.'.png',
-            '22/'.$iconName.'_na.png',
-        ];
-        $sourceDir = api_get_path(SYS_PLUGIN_PATH).'bbb/resources/img/';
-        $destinationDir = api_get_path(SYS_CODE_PATH).'img/icons/';
-        foreach ($iconsList as $icon) {
-            $src = $sourceDir.$icon;
-            $dest = $destinationDir.$icon;
-            copy($src, $dest);
-        }
         // Installing course settings
-        $this->install_course_fields_in_all_courses(true);
+        $this->install_course_fields_in_all_courses();
     }
 
     /**
@@ -288,7 +286,9 @@ class BBBPlugin extends Plugin
             'bbb_plugin_host',
             'bbb_plugin_salt',
             'max_users_limit',
-            'global_conference_allow_roles'
+            'global_conference_allow_roles',
+            'interface',
+            'launch_type',
         ];
 
         $urlId = api_get_current_access_url_id();
@@ -328,9 +328,6 @@ class BBBPlugin extends Plugin
             $sql = "DELETE FROM $t_tool WHERE name = 'bbb' AND c_id != 0";
             Database::query($sql);
 
-            if ($sm->tablesExist('plugin_bbb_meeting_format')) {
-                Database::query('DROP TABLE IF EXISTS plugin_bbb_meeting_format');
-            }
             if ($sm->tablesExist('plugin_bbb_room')) {
                 Database::query('DROP TABLE IF EXISTS plugin_bbb_room');
             }
@@ -340,24 +337,6 @@ class BBBPlugin extends Plugin
 
             // Deleting course settings
             $this->uninstall_course_fields_in_all_courses($this->course_settings);
-
-            // Remove icons from the main/img/icons folder
-            $iconName = 'bigbluebutton';
-            $iconsList = [
-                '64/'.$iconName.'.png',
-                '64/'.$iconName.'_na.png',
-                '32/'.$iconName.'.png',
-                '32/'.$iconName.'_na.png',
-                '22/'.$iconName.'.png',
-                '22/'.$iconName.'_na.png',
-            ];
-            $destinationDir = api_get_path(SYS_CODE_PATH).'img/icons/';
-            foreach ($iconsList as $icon) {
-                $dest = $destinationDir.$icon;
-                if (is_file($dest)) {
-                    @unlink($dest);
-                }
-            }
         }
     }
 
@@ -381,6 +360,53 @@ class BBBPlugin extends Plugin
                 ['close' => BBBPlugin::ROOM_CLOSE]
             );
         }
+    }
+
+    /**
+     * Return an array with URL
+     *
+     * @param string $conferenceUrl
+     *
+     * @return array
+     */
+    public function getUrlInterfaceLinks($conferenceUrl)
+    {
+        $urlList[] = $this->getFlashUrl($conferenceUrl);
+        $urlList[] = $this->getHtmlUrl($conferenceUrl);
+
+        return $urlList;
+    }
+
+    /**
+     * @param string $conferenceUrl
+     *
+     * @return array
+     */
+    public function getFlashUrl($conferenceUrl)
+    {
+        $data = [
+            'text' => $this->get_lang('EnterConferenceFlash'),
+            'url' => $conferenceUrl.'&interface='.self::INTERFACE_FLASH,
+            'icon' => 'resources/img/64/videoconference_flash.png',
+        ];
+
+        return $data;
+    }
+
+    /**
+     * @param string $conferenceUrl
+     *
+     * @return array
+     */
+    public function getHtmlUrl($conferenceUrl)
+    {
+        $data = [
+            'text' => $this->get_lang('EnterConferenceHTML5'),
+            'url' => $conferenceUrl.'&interface='.self::INTERFACE_HTML5,
+            'icon' => 'resources/img/64/videoconference_html5.png',
+        ];
+
+        return $data;
     }
 
     /**

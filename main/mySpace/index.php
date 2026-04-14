@@ -36,7 +36,7 @@ $logInfo = [
 ];
 Event::registerLog($logInfo);
 
-$allowToTrack = api_is_platform_admin(true, true) || api_is_teacher();
+$allowToTrack = api_is_platform_admin(true, true) || api_is_teacher() || $is_drh;
 
 if (!$allowToTrack) {
     api_not_allowed(true);

@@ -60,6 +60,9 @@ class LtiProvider
             Session::erase('exerciseResult');
             Session::erase('objExercise');
             Session::erase('questionList');
+
+            Session::erase('session_name');
+            Session::erase('id_session');
         }
         Session::erase('is_allowed_in_course');
         Session::erase('_real_cid');
@@ -84,7 +87,7 @@ class LtiProvider
     /**
      * Verify if user is in the provider platform to create it and login (true) or not (false).
      */
-    public function validateUser(array $launchData, string $courseCode, string $toolName): bool
+    public function validateUser(array $launchData, string $courseCode, string $toolName, int $sessionId = 0): bool
     {
         if (empty($launchData)) {
             return false;
@@ -124,14 +127,37 @@ class LtiProvider
             $userId = $userInfo['user_id'];
         }
 
-        if (!CourseManager::is_user_subscribed_in_course($userId, $courseCode)) {
-            CourseManager::subscribeUser($userId, $courseCode);
+        if ($sessionId) {
+            if (!SessionManager::isUserSubscribedAsStudent($sessionId, $userId)) {
+                SessionManager::subscribeUsersToSession(
+                    $sessionId,
+                    [$userId],
+                    SESSION_VISIBLE_READ_ONLY,
+                    false
+                );
+            }
+        } else {
+            if (!CourseManager::is_user_subscribed_in_course($userId, $courseCode)) {
+                CourseManager::subscribeUser($userId, $courseCode);
+            }
         }
 
         $this->logout($toolName);
 
         $login = UserManager::loginAsUser($userId, false);
-        if ($login && CourseManager::is_user_subscribed_in_course($userId, $courseCode)) {
+
+        if ($login && SessionManager::isUserSubscribedAsStudent($sessionId, $userId)) {
+            $_course = api_get_course_info($courseCode);
+            $sessionInfo = api_get_session_info($sessionId);
+            if (!empty($sessionInfo)) {
+                Session::write('session_name', $sessionInfo['name']);
+                Session::write('id_session', $sessionInfo['id']);
+            }
+            Session::write('is_allowed_in_course', true);
+            Session::write('_real_cid', $_course['real_id']);
+            Session::write('_cid', $_course['code']);
+            Session::write('_course', $_course);
+        } else if ($login && CourseManager::is_user_subscribed_in_course($userId, $courseCode)) {
             $_course = api_get_course_info($courseCode);
             Session::write('is_allowed_in_course', true);
             Session::write('_real_cid', $_course['real_id']);
