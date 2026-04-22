@@ -8457,41 +8457,4 @@ SQL;
 
         return $url;
     }
-
-    public static function isExtraFieldValueUniquePerUrl($value, $returnId = false)
-    {
-        $field = api_get_configuration_value('extra_field_to_validate_on_user_registration');
-        if (empty($field) || $value === '') {
-            return $returnId ? null : true;
-        }
-
-        $accessUrlId = api_get_current_access_url_id();
-
-        $tUser = Database::get_main_table(TABLE_MAIN_USER);
-        $tField = Database::get_main_table(TABLE_EXTRA_FIELD);
-        $tValue = Database::get_main_table(TABLE_EXTRA_FIELD_VALUES);
-        $tRelUrl = Database::get_main_table(TABLE_MAIN_ACCESS_URL_REL_USER);
-
-        $sql = "
-        SELECT u.id
-        FROM   {$tUser} u
-        JOIN   {$tValue} v   ON v.item_id    = u.id
-        JOIN   {$tField} f   ON f.id         = v.field_id
-        JOIN   {$tRelUrl} url ON url.user_id = u.id
-        WHERE  f.variable        = '".Database::escape_string($field)."'
-          AND  v.value           = '".Database::escape_string($value)."'
-          AND  url.access_url_id = {$accessUrlId}
-          ORDER BY u.id DESC
-        LIMIT  1
-        ";
-
-        $result = Database::query($sql);
-        $row = Database::fetch_array($result, 'ASSOC');
-
-        if ($returnId) {
-            return isset($row['id']) ? $row['id'] : null;
-        }
-
-        return empty($row);
-    }
 }
