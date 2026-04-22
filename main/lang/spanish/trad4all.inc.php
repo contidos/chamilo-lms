@@ -9148,4 +9148,5 @@ $AreYouSureToUnify = "Estas seguro de unificar";
 $FinalUser = "Usuario final";
 $WillMergeNUsers = "Fusionará {n} usuarios";
 $UserUnsubscribedFromOldSessionAsThereWasOnlyOneCourse = "Nota: El usuario fue desinscrito de la sesión anterior porque solo contenía este curso.";
+$AUserWithTheSameXAlreadyExistsInThisPortal = "Ya existe un usuario con el mismo %s en este portal";
 ?>

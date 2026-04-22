@@ -3321,7 +3321,7 @@ JAVASCRIPT;
 
         $elementName = 'extra_'.$fieldVar;
         $message = sprintf(
-            get_lang('A user with the same %s already exists in this portal'),
+            get_lang('AUserWithTheSameXAlreadyExistsInThisPortal'),
             $fieldVar
         );
 
