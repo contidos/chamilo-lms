@@ -42,6 +42,18 @@ if (!list($session_name, $course_title) = Database::fetch_row($result)) {
     exit();
 }
 
+$allowedPages = [
+    'session_course_list.php',
+    'resume_session.php',
+];
+
+$page = isset($_GET['page']) ? basename($_GET['page']) : 'session_course_list.php';
+
+if (!in_array($page,$allowedPages)) {
+    $page = 'session_course_list.php';
+}
+
+
 $interbreadcrumb[] = ['url' => "session_list.php", "name" => get_lang("SessionList")];
 $interbreadcrumb[] = [
     'url' => "resume_session.php?id_session=".$id_session,
@@ -49,25 +61,15 @@ $interbreadcrumb[] = [
 ];
 $interbreadcrumb[] = [
     'url' => "session_course_list.php?id_session=$id_session",
-    "name" => api_htmlentities($session_name, ENT_QUOTES, $charset),
+    "name" => api_htmlentities($session_name, ENT_QUOTES),
 ];
 
 $arr_infos = [];
 if (isset($_POST['formSent']) && $_POST['formSent']) {
     // get all tutor by course_code in the session
-    $sql = "SELECT user_id
-	        FROM $tbl_session_rel_course_rel_user
-	        WHERE session_id = '$id_session' AND c_id = '".$courseId."' AND status = 2";
-    $rs_coaches = Database::query($sql);
+    $coaches_course_session = SessionManager::getCoachesByCourseSession($id_session, $courseId);
 
-    $coaches_course_session = [];
-    if (Database::num_rows($rs_coaches) > 0) {
-        while ($row_coaches = Database::fetch_row($rs_coaches)) {
-            $coaches_course_session[] = $row_coaches[0];
-        }
-    }
-
-    $id_coaches = isset($_POST['id_coach']) ? $_POST['id_coach'] : [0];
+    $id_coaches = $_POST['id_coach'] ?? [0];
     if (is_array($id_coaches) && count($id_coaches) > 0) {
         foreach ($id_coaches as $id_coach) {
             $id_coach = intval($id_coach);
@@ -90,7 +92,7 @@ if (isset($_POST['formSent']) && $_POST['formSent']) {
             );
         }
         Display::addFlash(Display::return_message(get_lang('Updated')));
-        header('Location: '.Security::remove_XSS($_GET['page']).'?id_session='.$id_session);
+        header('Location: '.$page.'?id_session='.$id_session);
         exit();
     }
 } else {

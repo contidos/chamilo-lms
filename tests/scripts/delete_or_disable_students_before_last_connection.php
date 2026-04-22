@@ -12,7 +12,7 @@
  */
 
 // Remove the following line to enable
-//exit;
+exit;
 
 if (PHP_SAPI != 'cli') {
     die('This script can only be executed from the command line'.PHP_EOL);
@@ -30,9 +30,9 @@ $date = $argv[2];
 $force = '--force' === ($argv[3] ?? '');
 
 // URL white list. It will only take users that have access to those URLs
-//$urlWhiteList = "19";
+//$urlWhiteList = "1,2";
 // URL black list. It will not take users that have access to those URLs
-//$urlBlackList = "19";
+//$urlBlackList = "1,2";
 
 if (!in_array($action, ['disable', 'delete'])) {
     die('Action not allowed'.PHP_EOL);
@@ -53,13 +53,13 @@ if (isset($urlBlackList)){
     $whereURLBlackList = " AND user_id NOT IN (SELECT user_id from $tblUrlRelUser where access_url_id in ($urlBlackList)) ";
 }
 
-
 $result = Database::query(
     sprintf(
         "SELECT id, username FROM $tblUser
-            WHERE last_login <= '%s' AND status = %d $whereURLWhiteList $whereURLBlackList
+            WHERE last_login <= '%s' AND active = %d AND status = %d $whereURLWhiteList $whereURLBlackList
            ORDER BY last_login",
         $date,
+        1,
         STUDENT
     )
 );

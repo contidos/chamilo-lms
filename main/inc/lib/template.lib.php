@@ -787,12 +787,14 @@ class Template
             'jquery/dist/jquery.min.js',
             'bootstrap/dist/js/bootstrap.min.js',
             'jquery-ui/jquery-ui.min.js',
+            'en' !== $isoCode ? "jquery-ui/ui/minified/i18n/datepicker-$isoCode.js" : null,
             'jqueryui-touch-punch/jquery.ui.touch-punch.min.js',
             'moment/min/moment-with-locales.js',
             'bootstrap-daterangepicker/daterangepicker.js',
             'jquery-timeago/jquery.timeago.js',
             'mediaelement/build/mediaelement-and-player.min.js',
             'jqueryui-timepicker-addon/dist/jquery-ui-timepicker-addon.min.js',
+            'en' !== $isoCode ? "jqueryui-timepicker-addon/dist/i18n/jquery-ui-timepicker-$isoCode.js" : null,
             'image-map-resizer/js/imageMapResizer.min.js',
             'jquery.scrollbar/jquery.scrollbar.min.js',
             'readmore-js/readmore.min.js',
@@ -853,6 +855,8 @@ class Template
                 $bowerJsFiles[] = 'jquery-ui/ui/minified/i18n/datepicker-'.$isoCode.'.min.js';
             }
         }
+
+        $bowerJsFiles = array_filter($bowerJsFiles);
 
         foreach ($bowerJsFiles as $file) {
             $js_file_to_string .= '<script src="'.api_get_cdn_path(api_get_path(WEB_PUBLIC_PATH).'assets/'.$file).'"></script>'."\n";
@@ -1318,7 +1322,7 @@ class Template
         $html = $form->returnForm();
         if (api_get_setting('openid_authentication') == 'true') {
             include_once api_get_path(SYS_CODE_PATH).'auth/openid/login.php';
-            $html .= '<div>'.openid_form().'</div>';
+            $html .= '<div>'.openid_form()->returnForm().'</div>';
         }
 
         $pluginKeycloak = api_get_plugin_setting('keycloak', 'tool_enable') === 'true';
@@ -1939,6 +1943,11 @@ class Template
         $setting = api_get_configuration_value('security_referrer_policy');
         if (!empty($setting)) {
             header('Referrer-Policy: '.$setting);
+        }
+        // Permissions-Policy
+        $setting = api_get_configuration_value('security_permissions_policy');
+        if (!empty($setting)) {
+            header('Permissions-Policy: '.$setting);
         }
         // end of HTTP headers security block
     }

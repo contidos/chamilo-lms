@@ -1,8 +1,6 @@
 <?php
 /* For licensing terms, see /license.txt */
 
-use Brumann\Polyfill\Unserialize;
-
 /**
  * Class UnserializeApi.
  */
@@ -88,11 +86,11 @@ class UnserializeApi
                     [
                         learnpath::class,
                         learnpathItem::class,
-                        aicc::class,
-                        aiccBlock::class,
-                        aiccItem::class,
-                        aiccObjective::class,
-                        aiccResource::class,
+                        //aicc::class,
+                        //aiccBlock::class,
+                        //aiccItem::class,
+                        //aiccObjective::class,
+                        //aiccResource::class,
                         scorm::class,
                         scormItem::class,
                         scormMetadata::class,
@@ -109,13 +107,13 @@ class UnserializeApi
         }
 
         if ($ignoreErrors) {
-            return @Unserialize::unserialize(
+            return @unserialize(
                 $serialized,
                 ['allowed_classes' => $allowedClasses]
             );
         }
 
-        return Unserialize::unserialize(
+        return unserialize(
             $serialized,
             ['allowed_classes' => $allowedClasses]
         );

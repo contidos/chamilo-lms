@@ -49,6 +49,33 @@ class SurveyManager
     }
 
     /**
+     * Checks if the survey code is unique.
+     *
+     * @param string $surveyCode Proposed new survey code
+     *
+     * @return bool
+     * @assert ('') === false
+     */
+    public static function checkUniqueCode($surveyCode)
+    {
+        if (empty($surveyCode)) {
+            return false;
+        }
+        $courseId = api_get_course_int_id();
+        $table = Database::get_course_table(TABLE_SURVEY);
+        $surveyCode = Database::escape_string($surveyCode);
+
+        $sql = "SELECT * FROM $table
+                WHERE code = '$surveyCode' AND c_id = $courseId";
+        $result = Database::query($sql);
+        if (Database::num_rows($result)) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    /**
      * Deletes all survey invitations of a user.
      *
      * @param int $user_id
@@ -735,7 +762,8 @@ class SurveyManager
     public static function copy_survey(
         $survey_id,
         $new_survey_id = null,
-        $targetCourseId = null
+        $targetCourseId = null,
+        $surveyCode = null
     ) {
         $course_id = api_get_course_int_id();
         if (!$targetCourseId) {
@@ -757,7 +785,14 @@ class SurveyManager
 
         if (empty($new_survey_id)) {
             $params = $survey_data;
-            $params['code'] = self::generate_unique_code($params['code']);
+
+            if (!empty($surveyCode)) {
+                $surveyCode = preg_replace('/\s+/', '', $surveyCode);
+                $params['code'] = $surveyCode;
+            } else {
+                $params['code'] = self::generate_unique_code($params['code']);
+            }
+
             $params['c_id'] = $targetCourseId;
             unset($params['survey_id']);
             $params['session_id'] = api_get_session_id();

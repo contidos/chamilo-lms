@@ -59,16 +59,18 @@ class AllowIframes extends HTMLPurifier_Filter
         // Domain Whitelist
         $hostName = [];
         preg_match('#https?://(.*)#i', api_get_path(WEB_PATH), $hostName);
+        $extra = ' frameborder="0"';
 
         $youTubeMatch = preg_match('#src="(https:)?//www.youtube(-nocookie)?.com/#i', $matches[1]);
         $vimeoMatch = preg_match('#://player.vimeo.com/#i', $matches[1]);
         $googleMapsMatch = preg_match('#src="https://maps.google.com/#i', $matches[1]);
         $slideShare = preg_match('#src="(https?:)?//www.slideshare.net/#', $matches[1]);
+        $geniallyMatch = preg_match('#src="https://view.genially.com/#i', $matches[1]);
         $platformDomain = preg_match('#src="https?://(.+\.)?'.$hostName[1].'#i', $matches[1]);
 
-        if ($youTubeMatch || $vimeoMatch || $googleMapsMatch || $slideShare || $platformDomain) {
+        if ($youTubeMatch || $vimeoMatch || $googleMapsMatch || $slideShare || $geniallyMatch || $platformDomain) {
             $extra = ' frameborder="0"';
-            if ($youTubeMatch) {
+            if ($youTubeMatch || $geniallyMatch) {
                 $extra .= ' allowfullscreen';
             } elseif ($vimeoMatch) {
                 $extra .= ' webkitAllowFullScreen mozallowfullscreen allowFullScreen';
@@ -78,5 +80,7 @@ class AllowIframes extends HTMLPurifier_Filter
         } else {
             return '';
         }
+
+        return '<iframe '.$matches[1].$extra.'></iframe>';
     }
 }

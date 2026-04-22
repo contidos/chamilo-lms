@@ -86,6 +86,7 @@ switch ($action) {
                     if ($values['type'] == 'base_progress') {
                         $values['extra_use_base_progress'] = $values['progress'];
                     }
+
                     break;
                 case 'specific_date':
                     $values['date'] = api_get_utc_datetime($values['date']);
@@ -142,7 +143,6 @@ switch ($action) {
                 $id,
                 'use_base_progress'
             );
-
             $values['extra_use_base_progress_comment'] = $baseProgress["comment"];
 
             $values['item_id'] = $id;

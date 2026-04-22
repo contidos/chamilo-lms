@@ -23,26 +23,33 @@ api_protect_webservices();
 
 $httpRequest = HttpRequest::createFromGlobals();
 
-$hash = $httpRequest->query->get('hash');
+$jsonContent = 'application/json' === $httpRequest->headers->get('Content-Type')
+    ? json_decode($httpRequest->getContent(), true)
+    : [];
 
-if ($hash) {
-    $hashParams = Rest::decodeParams($hash);
-    if (!empty($hashParams)) {
-        foreach ($hashParams as $key => $value) {
-            $httpRequest->query->set($key, Security::remove_XSS($value));
-        }
+foreach ($jsonContent as $key => $value) {
+    $value = Security::remove_XSS($value);
+
+    $httpRequest->query->set($key, $value);
+    $httpRequest->request->set($key, $value);
+    $httpRequest->overrideGlobals();
+}
+
+if ($hash = $httpRequest->query->get('hash')) {
+    foreach (Rest::decodeParams($hash) as $key => $value) {
+        $httpRequest->query->set($key, Security::remove_XSS($value));
     }
 }
 
-$action = $httpRequest->query->get('action') ?: $httpRequest->request->get('action');
+$action = $httpRequest->query->get('action', $httpRequest->request->get('action'));
 $username = Security::remove_XSS(
-    $httpRequest->query->get('username') ?: $httpRequest->request->get('username')
+    $httpRequest->query->get('username', $httpRequest->request->get('username'))
 );
 $apiKey = Security::remove_XSS(
-    $httpRequest->query->get('api_key') ?: $httpRequest->request->get('api_key')
+    $httpRequest->query->get('api_key', $httpRequest->request->get('api_key'))
 );
-$course = $httpRequest->query->getInt('course') ?: $httpRequest->request->getInt('course');
-$session = $httpRequest->query->getInt('session') ?: $httpRequest->request->getInt('session');
+$course = $httpRequest->query->getInt('course', $httpRequest->request->getInt('course'));
+$session = $httpRequest->query->getInt('session', $httpRequest->request->getInt('session'));
 
 $restResponse = new RestResponse();
 
@@ -154,7 +161,12 @@ try {
             $receivers = $_POST['receivers'] ?? [];
             $subject = !empty($_POST['subject']) ? $_POST['subject'] : null;
             $text = !empty($_POST['text']) ? $_POST['text'] : null;
-            $data = $restApi->saveUserMessage($subject, $text, $receivers);
+            if (!empty($_POST['only_local']) && ('false' != $_POST['only_local'])) {
+                $only_local = true;
+            } else {
+                $only_local = false;
+            }
+            $data = $restApi->saveUserMessage($subject, $text, $receivers, $only_local);
             Event::addEvent(LOG_WS.$action, 'username', $username);
             $restResponse->setData($data);
             break;
@@ -217,6 +229,19 @@ try {
         case Rest::VIEW_COURSE_HOME:
             Event::addEvent(LOG_WS.$action, 'username', $username);
             $restApi->viewCourseHome();
+            break;
+        case REST::GET_COURSE_BY_CODE:
+            $q = $httpRequest->query->get('q');
+            $sessionId = $httpRequest->query->getInt('session_id');
+
+            Event::addEvent(
+                LOG_WS.$action,
+                'course_code_session_id',
+                $q.'__'.$sessionId
+            );
+
+            $courses = $restApi->getCourseByCode($q, $sessionId);
+            $restResponse->setData($courses);
             break;
         case Rest::GET_COURSE_INFO:
             Event::addEvent(LOG_WS.$action, 'course_id', (int) $_POST['course']);
@@ -310,6 +335,13 @@ try {
             $fields = $_POST['fields'] ?? [];
             $restResponse->setData(
                 $restApi->getCourseExercises($fields)
+            );
+            break;
+        case Rest::GET_COURSE_GRADEBOOK:
+            Event::addEvent(LOG_WS.$action, 'course_id', $course);
+
+            $restResponse->setData(
+                $restApi->getCourseGradebook()
             );
             break;
         case Rest::SAVE_COURSE_NOTEBOOK:
@@ -548,6 +580,43 @@ try {
             $data = $restApi->getUsersCampus($_POST);
             $restResponse->setData($data);
             break;
+        case Rest::GET_USER_INFO_FROM_USERNAME:
+            if (!api_is_platform_admin()) {
+                throw new Exception(get_lang('NotAllowed'));
+            }
+
+            $loginname = trim($httpRequest->request->get('loginname'));
+            if (empty($loginname)) {
+                throw new Exception(get_lang('NoData'));
+            }
+            $item = api_get_user_info_from_username($loginname);
+
+            if (!$item) {
+                throw new Exception(get_lang('NoUser'));
+            }
+
+            $userInfo = [
+                'id' => $item['user_id'],
+                'firstname' => $item['firstname'],
+                'lastname' => $item['lastname'],
+                'email' => $item['email'],
+                'username' => $item['username'],
+                'active' => $item['active'],
+            ];
+
+            if (api_is_teacher()) {
+                $extraInfo = (new ExtraFieldValue('user'))->getAllValuesForAnItem($item['user_id'], true);
+
+                $userInfo['extra'] = ExtraFieldValue::formatValues($extraInfo);
+            }
+
+            Event::addEvent(
+                LOG_WS.$action,
+                'username',
+                Database::escape_string($loginname)
+            );
+            $restResponse->setData($userInfo);
+            break;
         case Rest::USERNAME_EXIST:
             Event::addEvent(LOG_WS.$action, 'username', $_POST['loginname']);
             $data = $restApi->usernameExist($_POST['loginname']);
@@ -655,6 +724,25 @@ try {
                 )
             );
             break;
+        case Rest::GET_USER_PROGRESS_AND_TIME_IN_SESSION:
+            $userId = (string) $_REQUEST['user_id'];
+            $sessionId = (string) $_REQUEST['session_id'];
+
+            if (empty($userId)) {
+                throw new Exception('user_id not provided');
+            }
+            if (empty($sessionId)) {
+                throw new Exception('session_id not provided');
+            }
+
+            Event::addEvent(LOG_WS.$action, 'user_id', $userId);
+            $restResponse->setData(
+                $restApi->getUserProgressAndTimeInSession(
+                    $userId,
+                    $sessionId
+                )
+            );
+            break;
         case Rest::GET_USER_SUB_GROUP:
             $userId = isset($_POST['user_id']) ? (int) $_POST['user_id'] : 0;
             if (empty($userId)) {
@@ -710,7 +798,7 @@ try {
             $restResponse->setData($courseList);
             break;
         case Rest::SAVE_COURSE:
-            $data = $restApi->addCourse($_POST);
+            $data = $restApi->addCourse($httpRequest->request);
             Event::addEvent(LOG_WS.$action, 'course_id', $data['id']);
             $restResponse->setData($data);
             break;
@@ -740,16 +828,32 @@ try {
             $restResponse->setData(['status' => $result]);
             break;
         case Rest::GET_SESSION_FROM_EXTRA_FIELD:
-            if (empty($_POST['field_name']) || empty($_POST['field_value'])) {
+            $fieldName = trim($httpRequest->request->get('field_name'));
+            $fieldValue = trim($httpRequest->request->get('field_value'));
+            if (empty($fieldName) || empty($fieldValue)) {
                 throw new Exception(get_lang('NoData'));
             }
-            $idSession = $restApi->getSessionFromExtraField($_POST['field_name'], $_POST['field_value']);
+            $idSession = $restApi->getSessionFromExtraField($fieldName, $fieldValue);
             Event::addEvent(
                 LOG_WS.$action,
                 'extra_field_name-extra_field_value',
-                Database::escape_string($_POST['field_name']).':'.Database::escape_string($_POST['field_value'])
+                $fieldName.':'.$fieldValue
             );
             $restResponse->setData([$idSession]);
+            break;
+        case Rest::GET_SESSION_INFO_FROM_EXTRA_FIELD:
+            $fieldName = trim($httpRequest->request->get('field_name'));
+            $fieldValue = trim($httpRequest->request->get('field_value'));
+            if (empty($fieldName) || empty($fieldValue)) {
+                throw new Exception(get_lang('NoData'));
+            }
+            $sessionInfo = $restApi->getSessionInfoFromExtraField($fieldName, $fieldValue);
+            Event::addEvent(
+                LOG_WS.$action,
+                'extra_field_name-extra_field_value',
+                $fieldName.':'.$fieldValue
+            );
+            $restResponse->setData($sessionInfo);
             break;
         case Rest::SAVE_SESSION:
             $data = $restApi->addSession($_POST);
@@ -794,8 +898,12 @@ try {
             if (!empty($_POST['id_campus'])) {
                 $campusId = (int) $_POST['id_campus'];
             }
+            $getExtraFields = false;
+            if (!empty($_POST['get_extra_fields']) && ('false' != $_POST['get_extra_fields'])) {
+                $getExtraFields = true;
+            }
             Event::addEvent(LOG_WS.$action, 'id_campus', $campusId);
-            $data = $restApi->getSessionsCampus($campusId);
+            $data = $restApi->getSessionsCampus($campusId, $getExtraFields);
             $restResponse->setData($data);
             break;
         case Rest::ADD_COURSES_SESSION:
@@ -816,6 +924,10 @@ try {
                 (int) $_POST['id_session'].':'.implode(',', $_POST['list_users'])
             );
             $restResponse->setData($data);
+            break;
+        case Rest::ADD_SESSION_COURSE_COACHES:
+            $restApi->addSessionCourseCoaches($httpRequest->request);
+            $restResponse->setData([]);
             break;
         case Rest::UNSUBSCRIBE_USERS_FROM_SESSION:
             $data = $restApi->unsubscribeUsersFromSession($_POST);
@@ -1010,6 +1122,113 @@ try {
             $data = $restApi->getAuditItems($defaultEventType, $cId, $sessionId, $afterDate, $beforeDate, $userId, $offset, $limit);
             Event::addEvent(LOG_WS.$action, 'success', 'true');
             $restResponse->setData($data);
+            break;
+        /**
+         * Subscribe a course to a session using extra field values for identification.
+         *
+         * Validates parameters from $_POST and calls the Rest method.
+         *
+         * Required POST parameters:
+         * - api_key: API key for authentication.
+         * - username: Username for authentication.
+         * - session_field_name: Name of the extra field for sessions.
+         * - session_field_value: Value of the session extra field.
+         * - course_field_name: Name of the extra field for courses.
+         * - course_field_value: Value of the course extra field.
+         *
+         * @return void Outputs JSON response via existing echo.
+         */
+        case Rest::SUBSCRIBE_COURSE_TO_SESSION_FROM_EXTRA_FIELD:
+            $required_params = ['api_key', 'username', 'session_field_name', 'session_field_value', 'course_field_name', 'course_field_value'];
+            $missing = [];
+            foreach ($required_params as $param) {
+                if (empty($_POST[$param])) {
+                    $missing[] = $param;
+                }
+            }
+            if (!empty($missing)) {
+                $result = [
+                    'error' => true,
+                    'message' => 'Missing required parameters: '.implode(', ', $missing),
+                ];
+                break;
+            }
+            $params = $_POST;
+            $result = $restApi->subscribeCourseToSessionFromExtraField($params);
+            if ($result['error']) {
+                $restResponse->setErrorMessage($result['message']);
+            } else {
+                $restResponse->setData($result['data']);
+            }
+            break;
+        /**
+         * Subscribe a user to a session using extra field values for identification.
+         *
+         * Validates parameters from $_POST and calls the Rest method, handling response via $restResponse.
+         *
+         * Required POST parameters:
+         * - api_key: API key for authentication.
+         * - username: Username for authentication.
+         * - session_field_name: Name of the extra field for sessions.
+         * - session_field_value: Value of the session extra field.
+         * - user_field_name: Name of the extra field for users.
+         * - user_field_value: Value of the user extra field.
+         *
+         * @return void Sets response via existing $restResponse object.
+         */
+        case Rest::SUBSCRIBE_USER_TO_SESSION_FROM_EXTRA_FIELD:
+            $required_params = ['api_key', 'username', 'session_field_name', 'session_field_value', 'user_field_name', 'user_field_value'];
+            $missing = [];
+            foreach ($required_params as $param) {
+                if (empty($_POST[$param])) {
+                    $missing[] = $param;
+                }
+            }
+            if (!empty($missing)) {
+                $restResponse->setErrorMessage('Missing required parameters: '.implode(', ', $missing));
+                break;
+            }
+            $params = $_POST;
+            $result = $restApi->subscribeUserToSessionFromExtraField($params);
+            if ($result['error']) {
+                $restResponse->setErrorMessage($result['message']);
+            } else {
+                $restResponse->setData($result['data']);
+            }
+            break;
+        /**
+         * Update a session using extra field value for identification.
+         *
+         * Validates parameters from $_POST and calls the Rest method, handling response via $restResponse.
+         *
+         * Required POST parameters:
+         * - api_key: API key for authentication.
+         * - username: Username for authentication.
+         * - field_name: Name of the extra field for sessions.
+         * - field_value: Value of the session extra field.
+         * - Optional: name, coach_username, access_start_date, access_end_date, etc.
+         *
+         * @return void Sets response via existing $restResponse object.
+         */
+        case Rest::UPDATE_SESSION_FROM_EXTRA_FIELD:
+            $required_params = ['api_key', 'username', 'field_name', 'field_value'];
+            $missing = [];
+            foreach ($required_params as $param) {
+                if (empty($_POST[$param])) {
+                    $missing[] = $param;
+                }
+            }
+            if (!empty($missing)) {
+                $restResponse->setErrorMessage('Missing required parameters: '.implode(', ', $missing));
+                break;
+            }
+            $params = $_POST;
+            $result = $restApi->updateSessionFromExtraField($params);
+            if ($result['error']) {
+                $restResponse->setErrorMessage($result['message']);
+            } else {
+                $restResponse->setData($result['data']);
+            }
             break;
         default:
             throw new Exception(get_lang('InvalidAction'));
