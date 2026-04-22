@@ -155,19 +155,30 @@ class Login
      */
     public static function handle_encrypted_password($user, $by_username = false)
     {
+        // Generar nueva contraseña directamente
+        $newPassword = api_generate_password();
+        $userId = $by_username ? $user['uid'] : $user[0]['uid'];
+        UserManager::updatePassword($userId, $newPassword);
+
+        // Actualizar el array de usuario con la nueva contraseña
+        if ($by_username) {
+            $user['password'] = $newPassword;
+        } else {
+            $user[0]['password'] = $newPassword;
+        }
+
         $email_subject = "[".api_get_setting('siteName')."] ".get_lang('LoginRequest'); // SUBJECT
 
         if ($by_username) {
-            // Show only for lost password
-            $user_account_list = self::get_user_account_list($user, true, $by_username); // BODY
+            // Show only for lost password - enviar contraseña directamente (false = no reset link)
+            $user_account_list = self::get_user_account_list($user, false, $by_username); // BODY
             $email_to = $user['email'];
         } else {
-            $user_account_list = self::get_user_account_list($user, true); // BODY
+            $user_account_list = self::get_user_account_list($user, false); // BODY
             $email_to = $user[0]['email'];
         }
         $email_body = get_lang('DearUser')." :\n".get_lang('password_request')."\n";
         $email_body .= $user_account_list."\n-----------------------------------------------\n\n";
-        $email_body .= get_lang('PasswordEncryptedForSecurity');
         $email_body .= "\n\n".
             get_lang('SignatureFormula').",\n".
             api_get_setting('administratorName')." ".
@@ -194,12 +205,7 @@ class Login
         );
 
         if ($result == 1) {
-            $passwordEncryption = api_get_configuration_value('password_encryption');
-            if ($passwordEncryption === 'none') {
-                return get_lang('YourPasswordHasBeenEmailed');
-            }
-
-            return get_lang('AnEmailToResetYourPasswordHasBeenSent');
+            return get_lang('YourPasswordHasBeenEmailed');
         } else {
             $admin_email = Display::encrypted_mailto_link(
                 api_get_setting('emailAdministrator'),

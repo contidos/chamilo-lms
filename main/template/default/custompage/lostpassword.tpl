@@ -5,6 +5,16 @@
                 <div class="logo">
                     <img width="250px" class="img-responsive" title="{{ _s.site_name }}" src="{{ _p.web_css_theme }}images/header-logo.svg">
                 </div>
+                {% if info %}
+                    <div class="alert alert-info">
+                        {{ info }}
+                    </div>
+                {% endif %}
+                {% if error %}
+                    <div class="alert alert-danger">
+                        {{ error }}
+                    </div>
+                {% endif %}
                 {{ form }}
                 <div class="software-name">
                     <a href="{{_p.web}}" target="_blank">
