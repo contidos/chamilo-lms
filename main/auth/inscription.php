@@ -699,7 +699,7 @@ if ($formValid) {
 
                             Display::addFlash(
                                 Display::return_message(
-                                    get_lang('TheValueEntered ').$extra_field.get_lang('AlreadyExists'),
+                                    sprintf(get_lang('TheValueEntered'), $extra_field),
                                     'error',
                                     false
                                 )

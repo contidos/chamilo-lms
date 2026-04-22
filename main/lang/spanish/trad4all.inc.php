@@ -9149,4 +9149,5 @@ $FinalUser = "Usuario final";
 $WillMergeNUsers = "Fusionará {n} usuarios";
 $UserUnsubscribedFromOldSessionAsThereWasOnlyOneCourse = "Nota: El usuario fue desinscrito de la sesión anterior porque solo contenía este curso.";
 $AUserWithTheSameXAlreadyExistsInThisPortal = "Ya existe un usuario con el mismo %s en este portal";
+$TheValueEntered = "Ya existe un usuario registrado con este %s en el campus. Por favor contacta con formacion-prevsalud@zaragoza.es";
 ?>

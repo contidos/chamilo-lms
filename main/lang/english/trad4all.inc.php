@@ -9124,4 +9124,5 @@ $FinalUser = "Final user";
 $WillMergeNUsers = "Will merge {n} users";
 $UserUnsubscribedFromOldSessionAsThereWasOnlyOneCourse = "Note: User was unsubscribed from the previous session, as there was only this course there.";
 $AUserWithTheSameXAlreadyExistsInThisPortal = "A user with the same %s already exists in this portal";
+$TheValueEntered = "The value entered in the field %s already exists";
 ?>
