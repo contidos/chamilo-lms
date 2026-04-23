@@ -12,9 +12,9 @@
                 {{ login_failed }}
 
                 {% set azure_plugin_enabled = 'azure_active_directory'|api_get_plugin_setting('enable') %}
-                {% set azure_plugin_manage_login = 'azure_active_directory'|api_get_plugin_setting('manage_login_enable') %}
+                {% set azure_plugin_manage_login = 'azure_active_directory'|api_get_plugin_setting('management_login_enable') %}
 
-                {% if 'false' == azure_plugin_enabled or 'false' == azure_plugin_manage_login %}
+                {% if 'false' == azure_plugin_enabled or 'false' == azure_plugin_manage_login or management_login_enabled %}
                     {{ login_form }}
 
                     {% if "allow_lostpassword" | api_get_setting == 'true' or "allow_registration"|api_get_setting == 'true' %}
