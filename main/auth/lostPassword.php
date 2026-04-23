@@ -130,7 +130,7 @@ if ($form->validate()) {
 
         $tpl = new Template(null);
         $homeUrl = api_get_path(WEB_PATH);
-        $content = Display::return_message($messageText, 'info', false);
+        $content = '<div class="alert alert-info">'.$messageText.'</div>';
         $content .= '<div class="text-center" style="margin-top: 20px;">';
         $content .= '<a href="'.$homeUrl.'" class="btn btn-primary btn-lg">'.get_lang('Home').'</a>';
         $content .= '</div>';
@@ -170,7 +170,7 @@ if ($form->validate()) {
 
         $tpl = new Template(null);
         $homeUrl = api_get_path(WEB_PATH);
-        $content = Display::return_message($messageText, 'info', false);
+        $content = '<div class="alert alert-info">'.$messageText.'</div>';
         $content .= '<div class="text-center" style="margin-top: 20px;">';
         $content .= '<a href="'.$homeUrl.'" class="btn btn-primary btn-lg">'.get_lang('Home').'</a>';
         $content .= '</div>';
@@ -191,7 +191,7 @@ if ($form->validate()) {
 
     $tpl = new Template(null);
     $homeUrl = api_get_path(WEB_PATH);
-    $content = Display::return_message($messageText, 'info', false);
+    $content = '<div class="alert alert-info">'.$messageText.'</div>';
     $content .= '<div class="text-center" style="margin-top: 20px;">';
     $content .= '<a href="'.$homeUrl.'" class="btn btn-primary btn-lg">'.get_lang('Home').'</a>';
     $content .= '</div>';
