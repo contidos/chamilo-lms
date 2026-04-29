@@ -96,10 +96,10 @@ if ($form->validate()) {
         // prevents that information leak.
         $messageText = get_lang('AnEmailToResetYourPasswordHasBeenSent');
 
-        if (CustomPages::enabled() && CustomPages::exists(CustomPages::INDEX_UNLOGGED)) {
+        if (CustomPages::enabled() && CustomPages::exists(CustomPages::LOST_PASSWORD)) {
             CustomPages::display(
-                CustomPages::INDEX_UNLOGGED,
-                ['info' => $messageText]
+                CustomPages::LOST_PASSWORD,
+                ['info' => $messageText, 'form' => '']
             );
             exit;
         }
