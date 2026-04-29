@@ -9,13 +9,20 @@
                     <div class="alert alert-info">
                         {{ info }}
                     </div>
+                    <div class="text-center" style="margin-top: 20px;">
+                        <a href="{{_p.web}}" class="btn btn-primary btn-block">
+                            {{ "BackToHomePage" |get_lang }}
+                        </a>
+                    </div>
                 {% endif %}
                 {% if error %}
                     <div class="alert alert-danger">
                         {{ error }}
                     </div>
                 {% endif %}
-                {{ form }}
+                {% if not info %}
+                    {{ form }}
+                {% endif %}
                 <div class="software-name">
                     <a href="{{_p.web}}" target="_blank">
                         {{ "PoweredByX" |get_lang | format(_s.software_name) }}
