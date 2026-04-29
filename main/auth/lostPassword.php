@@ -128,14 +128,10 @@ if ($form->validate()) {
             exit;
         }
 
-        $tpl = new Template(null);
-        $homeUrl = api_get_path(WEB_PATH);
-        $content = '<div class="alert alert-info">'.$messageText.'</div>';
-        $content .= '<div class="text-center" style="margin-top: 20px;">';
-        $content .= '<a href="'.$homeUrl.'" class="btn btn-primary btn-lg">'.get_lang('Home').'</a>';
-        $content .= '</div>';
-        $tpl->assign('content', $content);
-        $tpl->display_one_col_template();
+        Display::addFlash(
+            Display::return_message($messageText, 'info', false)
+        );
+        header('Location: '.api_get_path(WEB_PATH));
         exit;
     }
 
@@ -168,14 +164,10 @@ if ($form->validate()) {
             exit;
         }
 
-        $tpl = new Template(null);
-        $homeUrl = api_get_path(WEB_PATH);
-        $content = '<div class="alert alert-info">'.$messageText.'</div>';
-        $content .= '<div class="text-center" style="margin-top: 20px;">';
-        $content .= '<a href="'.$homeUrl.'" class="btn btn-primary btn-lg">'.get_lang('Home').'</a>';
-        $content .= '</div>';
-        $tpl->assign('content', $content);
-        $tpl->display_one_col_template();
+        Display::addFlash(
+            Display::return_message($messageText, 'info', false)
+        );
+        header('Location: '.api_get_path(WEB_PATH));
         exit;
     }
 
@@ -189,14 +181,10 @@ if ($form->validate()) {
         exit;
     }
 
-    $tpl = new Template(null);
-    $homeUrl = api_get_path(WEB_PATH);
-    $content = '<div class="alert alert-info">'.$messageText.'</div>';
-    $content .= '<div class="text-center" style="margin-top: 20px;">';
-    $content .= '<a href="'.$homeUrl.'" class="btn btn-primary btn-lg">'.get_lang('Home').'</a>';
-    $content .= '</div>';
-    $tpl->assign('content', $content);
-    $tpl->display_one_col_template();
+    Display::addFlash(
+        Display::return_message($messageText, 'info', false)
+    );
+    header('Location: '.api_get_path(WEB_PATH));
     exit;
 }
 
