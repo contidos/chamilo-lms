@@ -118,7 +118,6 @@ function manageForm($default, $select_from_user_list = null, $sent_to = '', $tpl
     if (api_get_configuration_value('send_only_messages_to_teachers') && api_is_student()) {
         $onlyTeachers = true;
     }
-    echo "<!-- DEBUG: onlyTeachers=".($onlyTeachers ? 'TRUE' : 'FALSE')." | userId=".api_get_user_id()." | isStudent=".(api_is_student() ? 'TRUE' : 'FALSE')." | configValue=".(api_get_configuration_value('send_only_messages_to_teachers') ? 'TRUE' : 'FALSE')." -->";
 
     if (isset($_SESSION['form_values'])) {
         $default = $_SESSION['form_values'];
@@ -204,7 +203,6 @@ function manageForm($default, $select_from_user_list = null, $sent_to = '', $tpl
                         }
                     }
 
-                    echo "<!-- DEBUG-TEACHERS: total=".count($teachers)." | data=".htmlspecialchars(json_encode($teachers))." -->";
 
                     if (!empty($teachers)) {
                         asort($teachers);
@@ -549,4 +547,3 @@ if ($allowSocial) {
     $tpl->assign('content', $content);
     $tpl->display_one_col_template();
 }
-    
