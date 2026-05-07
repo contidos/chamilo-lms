@@ -2866,6 +2866,8 @@ class Category implements GradebookItem
 
         $courseEvaluations = $category->get_evaluations($userId, true);
         $courseLinks = $category->get_links($userId, true);
+
+
         $evaluationsAndLinks = array_merge($courseEvaluations, $courseLinks);
 
         $categoryScore = 0;

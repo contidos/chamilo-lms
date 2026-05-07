@@ -566,7 +566,6 @@ switch ($action) {
             $tplContent->assign('course_url', $url);
             $layoutContent = $tplContent->get_template('mail/content_ending_learnpath.tpl');
             $emailBody = $tplContent->fetch($layoutContent);
-
             MessageManager::send_message_simple(
                 $coachInfo['user_id'],
                 sprintf(get_lang('StudentXFinishedLp'), $studentInfo['complete_name']),

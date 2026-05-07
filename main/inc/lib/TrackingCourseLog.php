@@ -889,65 +889,120 @@ class TrackingCourseLog
 
             // store columns in array $users
             $userRow = [];
+            
+            // Obtener configuración de campos excluidos
+            $excludedFields = isset($GLOBALS['excluded_fields']) ? $GLOBALS['excluded_fields'] : [];
+            
             if ($displaySessionInfo && !empty($GLOBALS['session_id'])) {
                 $sessionInfo = api_get_session_info($GLOBALS['session_id']);
-                $userRow['session_name'] = $sessionInfo['name'];
-                $userRow['session_startdate'] = $sessionInfo['access_start_date'];
-                $userRow['session_enddate'] = $sessionInfo['access_end_date'];
-                $userRow['course_name'] = $courseInfo['name'];
+                if (!in_array('session_name', $excludedFields)) {
+                    $userRow['session_name'] = $sessionInfo['name'];
+                }
+                if (!in_array('session_start_date', $excludedFields)) {
+                    $userRow['session_startdate'] = $sessionInfo['access_start_date'];
+                }
+                if (!in_array('session_end_date', $excludedFields)) {
+                    $userRow['session_enddate'] = $sessionInfo['access_end_date'];
+                }
+                if (!in_array('course_name', $excludedFields)) {
+                    $userRow['course_name'] = $courseInfo['name'];
+                }
             }
-            $userRow['official_code'] = $user['official_code']; //0
+            
+            if (!in_array('official_code', $excludedFields)) {
+                $userRow['official_code'] = $user['official_code']; //0
+            }
+            
             if ($sortByFirstName) {
-                $userRow['firstname'] = $user['col2'];
-                $userRow['lastname'] = $user['col1'];
+                if (!in_array('firstname', $excludedFields)) {
+                    $userRow['firstname'] = $user['col2'];
+                }
+                if (!in_array('lastname', $excludedFields)) {
+                    $userRow['lastname'] = $user['col1'];
+                }
             } else {
-                $userRow['lastname'] = $user['col1'];
-                $userRow['firstname'] = $user['col2'];
+                if (!in_array('lastname', $excludedFields)) {
+                    $userRow['lastname'] = $user['col1'];
+                }
+                if (!in_array('firstname', $excludedFields)) {
+                    $userRow['firstname'] = $user['col2'];
+                }
             }
-            $userRow['username'] = $user['username'];
-            $userRow['time'] = $user['time'];
-            $userRow['average_progress'] = $user['average_progress'];
-            $userRow['exercise_progress'] = $user['exercise_progress'];
-            $userRow['exercise_average_best_attempt'] = $user['exercise_average_best_attempt'];
-            $userRow['student_score'] = $user['student_score'];
-            $userRow['student_score_best'] = $user['student_score_best'];
+            
+            if (!in_array('username', $excludedFields)) {
+                $userRow['username'] = $user['username'];
+            }
+            if (!in_array('training_time', $excludedFields)) {
+                $userRow['time'] = $user['time'];
+            }
+            if (!in_array('course_progress', $excludedFields)) {
+                $userRow['average_progress'] = $user['average_progress'];
+            }
+            if (!in_array('exercise_progress', $excludedFields)) {
+                $userRow['exercise_progress'] = $user['exercise_progress'];
+            }
+            if (!in_array('exercise_average', $excludedFields)) {
+                $userRow['exercise_average_best_attempt'] = $user['exercise_average_best_attempt'];
+            }
+            if (!in_array('score', $excludedFields)) {
+                $userRow['student_score'] = $user['student_score'];
+            }
+            if (!in_array('score_best', $excludedFields)) {
+                $userRow['student_score_best'] = $user['student_score_best'];
+            }
             if (!empty($exerciseResults)) {
                 foreach ($exerciseResults as $exerciseId => $bestResult) {
                     $userRow[$exerciseId] = $bestResult;
                 }
             }
 
-            $userRow['count_assignments'] = $user['count_assignments'];
-            $userRow['count_messages'] = $user['count_messages'];
+            if (!in_array('student_publication', $excludedFields)) {
+                $userRow['count_assignments'] = $user['count_assignments'];
+            }
+            if (!in_array('messages', $excludedFields)) {
+                $userRow['count_messages'] = $user['count_messages'];
+            }
 
-            $userGroupManager = new UserGroup();
-            if ($GLOBALS['export_csv']) {
-                $userRow['classes'] = implode(
-                    ',',
-                    $userGroupManager->getNameListByUser($user['user_id'], UserGroup::NORMAL_CLASS)
-                );
-            } else {
-                $userRow['classes'] = $userGroupManager->getLabelsFromNameList(
-                    $user['user_id'],
-                    UserGroup::NORMAL_CLASS
-                );
+            if (!in_array('classes', $excludedFields)) {
+                $userGroupManager = new UserGroup();
+                if ($GLOBALS['export_csv']) {
+                    $userRow['classes'] = implode(
+                        ',',
+                        $userGroupManager->getNameListByUser($user['user_id'], UserGroup::NORMAL_CLASS)
+                    );
+                } else {
+                    $userRow['classes'] = $userGroupManager->getLabelsFromNameList(
+                        $user['user_id'],
+                        UserGroup::NORMAL_CLASS
+                    );
+                }
             }
 
             if (empty($GLOBALS['session_id'])) {
                 $userRow['survey'] = $user['survey'];
             } else {
-                $userSession = SessionManager::getUserSession($user['user_id'], $GLOBALS['session_id']);
-                $userRow['registered_at'] = '';
-                if ($userSession) {
-                    $userRow['registered_at'] = api_get_local_time($userSession['registered_at']);
+                if (!in_array('registration_date', $excludedFields)) {
+                    $userSession = SessionManager::getUserSession($user['user_id'], $GLOBALS['session_id']);
+                    $userRow['registered_at'] = '';
+                    if ($userSession) {
+                        $userRow['registered_at'] = api_get_local_time($userSession['registered_at']);
+                    }
                 }
             }
 
-            $userRow['first_connection'] = $user['first_connection'];
-            $userRow['last_connection'] = $user['last_connection'];
+            if (!in_array('first_login', $excludedFields)) {
+                $userRow['first_connection'] = $user['first_connection'];
+            }
+            if (!in_array('last_login', $excludedFields)) {
+                $userRow['last_connection'] = $user['last_connection'];
+            }
 
-            $userRow['lp_finalization_date'] = $user['lp_finalization_date'];
-            $userRow['quiz_finalization_date'] = $user['quiz_finalization_date'];
+            if (!in_array('lp_finalization_date', $excludedFields)) {
+                $userRow['lp_finalization_date'] = $user['lp_finalization_date'];
+            }
+            if (!in_array('quiz_finalization_date', $excludedFields)) {
+                $userRow['quiz_finalization_date'] = $user['quiz_finalization_date'];
+            }
 
             // we need to display an additional profile field
             if (isset($_GET['additional_profile_field'])) {
@@ -991,6 +1046,22 @@ class TrackingCourseLog
 
             if (api_get_setting('show_email_addresses') === 'true') {
                 $userRow['email'] = $user['col4'];
+            }
+
+            // Add extra fields data if configured for CSV export
+            if ($GLOBALS['export_csv'] &&
+                isset($GLOBALS['user_extra_fields_data'], $GLOBALS['extra_fields_config'])) {
+                $userId = $user['user_id'];
+                if (isset($GLOBALS['user_extra_fields_data'][$userId])) {
+                    foreach ($GLOBALS['extra_fields_config'] as $fieldVariable => $fieldInfo) {
+                        // Asegurarse de que el campo exista en el array de datos del usuario
+                        if (isset($GLOBALS['user_extra_fields_data'][$userId][$fieldVariable])) {
+                            $userRow[$fieldVariable] = $GLOBALS['user_extra_fields_data'][$userId][$fieldVariable];
+                        } else {
+                            $userRow[$fieldVariable] = ''; // Valor por defecto si no existe
+                        }
+                    }
+                }
             }
 
             $userRow['link'] = $user['link'];

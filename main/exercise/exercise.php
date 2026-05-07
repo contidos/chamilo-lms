@@ -266,6 +266,18 @@ if (!empty($action) && $is_allowedToEdit) {
                         break;
                     }
 
+                    $visibleOnBaseCourse = api_get_item_visibility(
+                        $courseInfo,
+                        TOOL_QUIZ,
+                        $objExerciseTmp->iid,
+                        0
+                    );
+
+                    if (!$visibleOnBaseCourse) {
+                        Display::addFlash(Display::return_message('No se puede cambiar la visibilidad del ejercicio ' . $objExerciseTmp->name . ' por estar oculto en el curso base', 'error'));
+                        break;
+                    }               
+
                     // enables an exercise
                     if (empty($sessionId)) {
                         $objExerciseTmp->enable();
@@ -379,14 +391,20 @@ if ($is_allowedToEdit) {
                             }
                         }
 
-                        api_item_property_update(
+                        $updateResult = api_item_property_update(
                             $courseInfo,
                             TOOL_QUIZ,
                             $objExerciseTmp->iid,
                             'visible',
                             $userId
                         );
-                        Display::addFlash(Display::return_message(get_lang('VisibilityChanged'), 'confirmation'));
+
+                        if ($updateResult) {
+                            Display::addFlash(Display::return_message(get_lang('VisibilityChanged'), 'confirmation'));
+                        }
+                        else {
+                            Display::addFlash(Display::return_message(get_lang('ThereWasAnError'), 'error'));
+                        }
                         break;
                     case 'disable':
                         if ($limitTeacherAccess && !api_is_platform_admin()) {
@@ -405,14 +423,20 @@ if ($is_allowedToEdit) {
                             }
                         }
 
-                        api_item_property_update(
+                        $updateResult = api_item_property_update(
                             $courseInfo,
                             TOOL_QUIZ,
                             $objExerciseTmp->iid,
                             'invisible',
                             $userId
                         );
-                        Display::addFlash(Display::return_message(get_lang('VisibilityChanged'), 'confirmation'));
+
+                        if ($updateResult) {
+                            Display::addFlash(Display::return_message(get_lang('VisibilityChanged'), 'confirmation'));
+                        }
+                        else {
+                            Display::addFlash(Display::return_message(get_lang('ThereWasAnError'), 'error'));
+                        }
                         break;
                     case 'disable_results':
                         //disable the results for the learners
@@ -668,7 +692,7 @@ if ($is_allowedToEdit && $origin !== 'learnpath') {
 
     $actionsLeft .= Display::url(
         Display::return_icon('export_pdf.png', get_lang('ExportAllExercisesAllResults'), [], ICON_SIZE_MEDIUM),
-        api_get_path(WEB_CODE_PATH).'exercise/export/export_exercise_results.php?'.api_get_cidreq()
+        api_get_path(WEB_CODE_PATH).'exercise/exercise.php?'.api_get_cidreq().'&action=export_all_exercises_results'
     );
 
     if ($limitTeacherAccess) {

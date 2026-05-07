@@ -342,7 +342,7 @@ ANSWER_EXPLANATION: C'est un commentaire facultatif de retour qui apparaîtra à
 SCORE: 20";
 $ImportAikenQuizExplanation = "Le format Aiken est un fichier (.txt) avec un texte simple, avec plusieurs blocs de questions, chacune séparée par une ligne blanche. La première ligne est la question, les lignes de réponse sont préfixés par une lettre et un point, et la bonne réponse vient avec le préfixe 'ANSWER'.
 Voir l'exemple ci-dessous.";
-$ExerciseAikenErrorNoAnswerOptionGiven = "Le fichier importé comporte au moins une question sans réponse (ou les réponses ne comprennent pas la lettre de préfixe requis). Assurez-vous que chaque question a au moins une réponse et qu'elle est précédée par une lettre et un point ou une parenthèse, comme ceci: 
+$ExerciseAikenErrorNoAnswerOptionGiven = "Le fichier importé comporte au moins une question sans réponse (ou les réponses ne comprennent pas la lettre de préfixe requis). Assurez-vous que chaque question a au moins une réponse et qu'elle est précédée par une lettre et un point ou une parenthèse, comme ceci:
 A. Réponse 1";
 $ExerciseAikenErrorNoCorrectAnswerDefined = "Le fichier importé comporte au moins une question sans réponse correcte définie. Assurez-vous que toutes les questions comprennent la réponse: [Lettre] ligne.";
 $SearchCourseBySession = "Recherche de cours par session";
@@ -2637,7 +2637,7 @@ $MailCronCourseExpirationReminderBody = "Cher/Chère %s,
 
 Nous avons remarqué que vous n'avez pas terminé le cours %s alors que sa date de fin a été établie au %s, vous laissant %s jour(s) pour le terminer. Nous vous rappelons que vous ne disposez de la possibilité de suivre ce cours qu'une fois par an. Nous vous invitons donc avec insistance à le compléter dans le délai qu'il vous reste. Vous pouvez retrouver le cours en vous connectant à la plate-forme à cette adresse: %s
 
--- 
+--
 
 Cordialement,
 
@@ -6606,7 +6606,7 @@ $DateExpiredNotBeLessDeadLine = "La date de blocage effectif de l'envoi du trava
 $NotRevised = "Non coté";
 $DirExists = "Opération impossible, un répertoire du même nom existe déjà (peut-être dans une autre session).";
 $DocMv = "Document déplacé.";
-$ThereIsNoClassScheduledTodayTryPickingAnotherDay = "Aucune classe n'a été programmée aujourd'hui. Choisissez un autre you ou ajoutez votre classe vous-même en utilisant les icônes d'action.";
+$ThereIsNoClassScheduledTodayTryPickingAnotherDay = "Aucune classe n'a été programmée aujourd'hui. Choisissez un autre jour ou ajoutez votre classe vous-même en utilisant les icônes d'action.";
 $AddToCalendar = "Ajouter au calendrier";
 $TotalWeight = "Poids total";
 $RandomPick = "Sélection aléatoire";
@@ -9007,4 +9007,15 @@ $MoodleVersion = "Version de Moodle";
 $CreateExport = "Créer un export";
 $MoodleExportAdminIDComment = "Moodle requiert une identification de l'utilisateur pour la stocker au sein de fichiers XML qui font partie du format .mbz.
 Merci de bien vouloir fournir un numéro interne (nombre entier) de l'utilisateur qui exporte le cours, ou d'un utilisateur de notre système, qui sera désigné (s'il y a correspondance) comme le propriétaire des ressources importées sur l'autre système. Si vous avez encore des doutes, indiquez simplement '1' et donnez des données fictives.";
+$Learners = "Apprenants";
+$ExistingUserWithSameExtraFieldValue = "Un utilisateur existant avec le même %s a été trouvé (ID %d), inscription au lieu de créer.";
+$SelectExtraField = "Sélectionnez le champ extra sur lequel effectuer la recherche";
+$WhatToDoWithUnifiedUsers = "Que faire avec les utilisateurs unifiés";
+$ExtraFieldNotFound = "Champ extra non trouvé";
+$NoDuplicatesFound = "Aucun doublon trouvé";
+$UnifyToThisUser = "Unifier sur cet utilisateur";
+$Unify = "Unifier";
+$AreYouSureToUnify = "Êtes-vous sûr d'unifier";
+$FinalUser = "Utilisateur final";
+$WillMergeNUsers = "Fusionnera {n} utilisateurs";
 ?>

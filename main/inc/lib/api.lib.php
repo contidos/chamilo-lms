@@ -20,7 +20,7 @@ use Symfony\Component\Finder\Finder;
  */
 
 // PHP version requirement.
-define('REQUIRED_PHP_VERSION', '7.4');
+define('REQUIRED_PHP_VERSION', '7.1');
 define('REQUIRED_MIN_MEMORY_LIMIT', '128');
 define('REQUIRED_MIN_UPLOAD_MAX_FILESIZE', '10');
 define('REQUIRED_MIN_POST_MAX_SIZE', '10');
@@ -2033,6 +2033,42 @@ function api_get_user_info_from_email($email = '')
 }
 
 /**
+ * Get first user with an email and optionally filter by access URL.
+ *
+ * @param string $email
+ * @param int    $urlId Optional access URL ID to filter by
+ *
+ * @return array|bool
+ */
+function api_get_user_info_from_email_with_url($email = '', $urlId = 0)
+{
+    if (empty($email)) {
+        return false;
+    }
+
+    $sql = "SELECT u.* FROM ".Database::get_main_table(TABLE_MAIN_USER)." u";
+    
+    if ($urlId > 0) {
+        $sql .= " INNER JOIN ".Database::get_main_table(TABLE_MAIN_ACCESS_URL_REL_USER)." url 
+                 ON u.user_id = url.user_id 
+                 WHERE u.email = '".Database::escape_string($email)."' 
+                 AND url.access_url_id = ".intval($urlId);
+    } else {
+        $sql .= " WHERE u.email = '".Database::escape_string($email)."'";
+    }
+    
+    $sql .= " LIMIT 1";
+    
+    $result = Database::query($sql);
+    if (Database::num_rows($result) > 0) {
+        $resultArray = Database::fetch_array($result);
+        return _api_format_user($resultArray);
+    }
+
+    return false;
+}
+
+/**
  * @return string
  */
 function api_get_course_id()
@@ -2957,7 +2993,7 @@ function api_get_session_visibility(
 
             $totalDuration = $firstAccess + $duration + $userDuration;
 
-            return $totalDuration > $currentTime ? SESSION_AVAILABLE : SESSION_VISIBLE_READ_ONLY;
+            return $totalDuration > $currentTime ? SESSION_AVAILABLE : $visibility;
         }
 
         return SESSION_AVAILABLE;
@@ -9464,8 +9500,6 @@ function api_format_time($time, $originFormat = 'php')
 
     if ($originFormat == 'js') {
         $formattedTime = trim(sprintf("%02d : %02d : %02d", $hours, $mins, $secs));
-    } elseif ($originFormat == 'lang') {
-        $formattedTime = trim(sprintf(get_lang('HoursMinutesSeconds'), $hours, $mins, $secs));
     } else {
         $formattedTime = trim(sprintf("%02d$h%02d'%02d\"", $hours, $mins, $secs));
     }
@@ -10698,4 +10732,98 @@ function api_encrypt_hash($data, $secret)
   );
 
     return base64_encode($iv).base64_encode($encrypted.$tag);
+}
+
+
+/**
+ * Check existence of a user extra field with a specific value
+ *
+ * @param string $extraField       The name of the extra field to check.
+ * @param string $extraFieldValue  The value of the extra field to validate against.
+ *
+ * @return bool True if the extra field with the specified value exists, false otherwise.
+ */
+function api_user_extra_field_validation_old($extraField, $extraFieldValue, $userId = null) {
+    $fieldValue = new ExtraFieldValue('user');
+    $result = $fieldValue->get_item_id_from_field_variable_and_field_value($extraField, $extraFieldValue, false, false, true);
+
+    if ($userId) {
+        foreach ($result as $data) {
+            if ($data['item_id'] === $userId) {
+                return false;
+            }
+        }
+    }
+
+    if ($result) {
+        return true;
+    }
+    return false;
+}
+
+function api_user_extra_field_validation($extraField, $extraFieldValue, $userId = null) {
+    $fieldValue = new ExtraFieldValue('user');
+    $result = $fieldValue->get_item_id_from_field_variable_and_field_value($extraField, $extraFieldValue, false, false, true);
+
+    $accessUrlId = api_get_current_access_url_id();
+
+    if ($userId) {
+        foreach ($result as $data) {
+            if ($data['item_id'] === $userId) {
+                return false;
+            }
+        }
+    }
+
+    foreach ($result as $data) {
+        $userFoundId = $data['item_id'];
+        $userInSite = UrlManager::relation_url_user_exist($userFoundId, $accessUrlId);
+
+        if ($userInSite) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Searches user by extraFieldValue
+ *
+ * @param string $dni extraField name
+ * @param string $dni extraField value
+ * @param int $siteId access_url id
+ *
+ * @return array|bool User info|false
+ */
+function api_find_user_by_extra_field($extraField, $extraFieldValue, $siteId = null) {
+    if (empty($extraField)) {
+        return false;
+    }
+
+    if (empty($siteId)) {
+        $siteId = api_get_current_access_url_id();
+    }
+
+    $fieldValue = new ExtraFieldValue('user');
+    $result = $fieldValue->get_item_id_from_field_variable_and_field_value($extraField, $extraFieldValue, false, false, true);
+
+    if (empty($result)) {
+        return false;
+    }
+
+    foreach ($result as $data) {
+        $userId = $data['item_id'];
+
+        $userInSite = UrlManager::relation_url_user_exist($userId, $siteId);
+
+        if ($userInSite) {
+            $userInfo = api_get_user_info($userId);
+            if (!empty($userInfo)) {
+                return $userInfo;
+            }
+        }
+    }
+
+    return false;
 }

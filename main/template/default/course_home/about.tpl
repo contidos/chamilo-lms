@@ -186,34 +186,6 @@
                         {% endif %}
                     </div>
                 </div>
-                {% if course.teachers and not 'course_about_teacher_name_hide'|api_get_configuration_value %}
-                    <div class="panel panel-default">
-                        <div class="panel-body">
-                            <div class="panel-teachers">
-                                <h3 class="sub-title">{{ "Coaches"|get_lang }}</h3>
-                            </div>
-                            {%  for teacher in course.teachers %}
-                            <div class="coach-information">
-                                <div class="coach-header">
-                                    <div class="coach-avatar">
-                                        <img class="img-circle img-responsive"
-                                             src="{{ teacher.image }}"
-                                             alt="{{ teacher.complete_name }}"
-                                        >
-                                    </div>
-                                    <div class="coach-title">
-                                        <h4>{{ teacher.complete_name }}</h4>
-                                        <p> {{ teacher.diploma | remove_xss }}</p>
-                                    </div>
-                                </div>
-                                <div class="open-area  {{ course.teachers | length >= 2 ? 'open-more' : ' ' }}">
-                                    {{ teacher.openarea | remove_xss }}
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                {% endif %}
             </div>
         </div>
     </section>

@@ -62,6 +62,7 @@ function save_item(
     $forceIframeSave = 0
 ) {
     $debug = 0;
+
     $return = null;
     $courseCode = api_get_course_id();
     if (!empty($courseId)) {
@@ -574,6 +575,7 @@ function save_item(
     if ($saveStatus) {
         // To be sure progress is updated.
         $myLP->save_last($score);
+
         HookLearningPathItemViewed::create()
             ->setEventData(['item_view_id' => $myLPI->db_item_view_id])
             ->notifyLearningPathItemViewed();

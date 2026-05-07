@@ -237,9 +237,16 @@ if (!$myCourseListAsCategory) {
 }
 
 // Check if a user is enrolled only in one course for going directly to the course after the login.
-if (api_get_setting('go_to_course_after_login') == 'true') {
+if (api_get_setting('go_to_course_after_login') == 'true' && (!api_is_course_tutor()
+ && !api_is_course_admin()
+ && !api_is_session_general_coach()
+  && !api_is_platform_admin()
+   && !api_is_session_admin()
+    && !api_is_drh()
+     && !api_is_teacher())) {
     $count_of_sessions = $courseAndSessions['session_count'];
     $count_of_courses_no_sessions = $courseAndSessions['course_count'];
+
     // User is subscribe in 1 session and 0 courses.
     if ($count_of_sessions == 1 && $count_of_courses_no_sessions == 0) {
         $sessions = SessionManager::get_sessions_by_user($userId);
@@ -295,13 +302,17 @@ $controller->tpl->assign('content', $courseAndSessions['html']);
 // Display the Site Use Cookie Warning Validation
 $useCookieValidation = api_get_setting('cookie_warning');
 if ($useCookieValidation === 'true') {
-    if (!api_site_use_cookie_warning_cookie_exist()) {
-        if (Template::isToolBarDisplayedForUser()) {
-            $controller->tpl->assign('toolBarDisplayed', true);
-        } else {
-            $controller->tpl->assign('toolBarDisplayed', false);
+    if (isset($_POST['acceptCookies'])) {
+        api_set_site_use_cookie_warning_cookie();
+    } else {
+        if (!api_site_use_cookie_warning_cookie_exist()) {
+            if (Template::isToolBarDisplayedForUser()) {
+                $controller->tpl->assign('toolBarDisplayed', true);
+            } else {
+                $controller->tpl->assign('toolBarDisplayed', false);
+            }
+            $controller->tpl->assign('displayCookieUsageWarning', true);
         }
-        $controller->tpl->enableCookieUsageWarning();
     }
 }
 

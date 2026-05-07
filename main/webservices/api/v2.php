@@ -627,44 +627,6 @@ try {
                 )
             );
             break;
-        case Rest::GET_USER_LAST_CONNEXION:
-            $username = (string) $_REQUEST['user'];
-
-            if (empty($username)) {
-                throw new Exception(get_lang('NoData'));
-            }
-
-            Event::addEvent(LOG_WS.$action, 'username', $username);
-            $restResponse->setData(
-                $restApi->getUserLastConnexion(
-                    $username
-                )
-            );
-            break;
-        case Rest::GET_USER_TOTAL_CONNEXION_TIME:
-            $username = (string) $_REQUEST['user'];
-
-            if (empty($username)) {
-                throw new Exception(get_lang('NoData'));
-            }
-
-            Event::addEvent(LOG_WS.$action, 'username', $username);
-            $restResponse->setData(
-                $restApi->getUserTotalConnexionTime(
-                    $username
-                )
-            );
-            break;
-        case Rest::GET_USER_SUB_GROUP:
-            $userId = isset($_POST['user_id']) ? (int) $_POST['user_id'] : 0;
-            if (empty($userId)) {
-                throw new Exception('user_id not provided');
-            }
-
-            Event::addEvent(LOG_WS.$action, 'user_id', $userId);
-            $data = $restApi->getUserSubGroup($userId);
-            $restResponse->setData($data);
-            break;
         case Rest::GET_COURSES:
             $campusId = api_get_current_access_url_id();
             if (!empty($_POST['id_campus'])) {
@@ -903,113 +865,12 @@ try {
                 $restApi->getTestAverageResultsList($_POST['ids'], $fields)
             );
             break;
-        /* groups/classes */
-        case Rest::GET_GROUPS:
-            Event::addEvent(LOG_WS.$action, 'username', $username);
-            $data = $restApi->getGroups($_POST);
-            $restResponse->setData($data);
-            break;
-        case Rest::GROUP_EXISTS:
-            Event::addEvent(LOG_WS.$action, 'groupname', $_POST['name']);
-            $data = $restApi->groupExists($_POST['name']);
-            $restResponse->setData([$data]);
-            break;
-        case Rest::ADD_GROUP:
-            $data = $restApi->addGroup($_POST);
-            Event::addEvent(LOG_WS.$action, 'user_id', $data);
-            $restResponse->setData($data);
-            break;
-        case Rest::DELETE_GROUP:
-            $data = $restApi->deleteGroup($_POST['id']);
-            Event::addEvent(LOG_WS.$action, 'group_id', $data);
-            $restResponse->setData($data);
-            break;
-        case Rest::GET_GROUP_SUB_USERS:
-            $data = $restApi->getGroupSubscribedUsers($_POST['id']);
-            Event::addEvent(LOG_WS.$action, 'group_id', $data);
-            $restResponse->setData($data);
-            break;
-        case Rest::GET_GROUP_SUB_COURSES:
-            $data = $restApi->getGroupSubscribedCourses($_POST['id']);
-            Event::addEvent(LOG_WS.$action, 'group_id', $data);
-            $restResponse->setData($data);
-            break;
-        case Rest::GET_GROUP_SUB_SESSIONS:
-            $data = $restApi->getGroupSubscribedSessions($_POST['id']);
-            Event::addEvent(LOG_WS.$action, 'group_id', $data);
-            $restResponse->setData($data);
-            break;
-        case Rest::ADD_GROUP_SUB_USER:
-            $groupId = (int) $_POST['group_id'];
-            $userId = (int) $_POST['user_id'];
-            if (empty($userId)) {
-                throw new Exception('user_id not provided');
-            }
-            if (empty($groupId)) {
-                throw new Exception('group_id not provided');
-            }
-            $role = 2;
-            if (isset($_POST['role'])) {
-                $role = (int) $_POST['role'];
-            }
-            $data = $restApi->addGroupSubscribedUser($groupId, $userId, $role);
-            Event::addEvent(LOG_WS.$action, 'group_id', $groupId);
-            $restResponse->setData($data);
-            break;
-        case Rest::ADD_GROUP_SUB_COURSE:
-            $groupId = (int) $_POST['group_id'];
-            $courseId = (int) $_POST['course_id'];
-            $data = $restApi->addGroupSubscribedCourse($groupId, $courseId);
-            Event::addEvent(LOG_WS.$action, 'group_id', $groupId);
-            $restResponse->setData($data);
-            break;
-        case Rest::ADD_GROUP_SUB_SESSION:
-            $groupId = (int) $_POST['group_id'];
-            $sessionId = (int) $_POST['session_id'];
-            $data = $restApi->addGroupSubscribedSession($groupId, $sessionId);
-            Event::addEvent(LOG_WS.$action, 'group_id', $groupId);
-            $restResponse->setData($data);
-            break;
-        case Rest::DELETE_GROUP_SUB_USER:
-            $groupId = (int) $_POST['group_id'];
-            $userId = (int) $_POST['user_id'];
-            $data = $restApi->deleteGroupSubscribedUser($groupId, $userId);
-            Event::addEvent(LOG_WS.$action, 'group_id', $groupId);
-            $restResponse->setData($data);
-            break;
-        case Rest::DELETE_GROUP_SUB_COURSE:
-            $groupId = (int) $_POST['group_id'];
-            $courseId = (int) $_POST['course_id'];
-            $data = $restApi->deleteGroupSubscribedCourse($groupId, $courseId);
-            Event::addEvent(LOG_WS.$action, 'group_id', $groupId);
-            $restResponse->setData($data);
-            break;
-        case Rest::DELETE_GROUP_SUB_SESSION:
-            $groupId = (int) $_POST['group_id'];
-            $sessionId = (int) $_POST['session_id'];
-            $data = $restApi->deleteGroupSubscribedSession($groupId, $sessionId);
-            Event::addEvent(LOG_WS.$action, 'group_id', $groupId);
-            $restResponse->setData($data);
-            break;
-        case Rest::GET_AUDIT_ITEMS:
-            $defaultEventType = $_POST['event_type'];
-
-            $cId = ($_POST['c_id'] ? (int) $_POST['c_id'] : null);
-            $sessionId = ($_POST['session_id'] ? (int) $_POST['session_id'] : null);
-            $userId = ($_POST['user_id'] ? (int) $_POST['user_id'] : null);
-
-            $afterDate = ($_POST['after_date'] ?? null);
-            $beforeDate = ($_POST['before_date'] ?? null);
-            $offset = ($_POST['offset'] ? (int) $_POST['offset'] : 0);
-            $limit = ($_POST['limit'] ? (int) $_POST['limit'] : 100);
-
-            if (empty($defaultEventType)) {
-                throw new Exception('event_type is required');
-            }
-
-            $data = $restApi->getAuditItems($defaultEventType, $cId, $sessionId, $afterDate, $beforeDate, $userId, $offset, $limit);
-            Event::addEvent(LOG_WS.$action, 'success', 'true');
-            $restResponse->setData($data);
+        case Rest::GET_USER_COURSE_REGISTRATION:
+            $startDate = $_POST['start_date'];
+            $endDate = $_POST['end_date'];
+            $restResponse->setData(
+                $restApi->GetUserCourseRegistration($startDate, $endDate)
+            );
             break;
         default:
             throw new Exception(get_lang('InvalidAction'));

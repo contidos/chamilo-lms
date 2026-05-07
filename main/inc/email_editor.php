@@ -14,7 +14,7 @@ use ChamiloSession as Session;
  */
 require_once __DIR__.'/../inc/global.inc.php';
 
-if (empty(api_get_user_id()) || ("true" !== api_get_setting('allow_email_editor'))) {
+if (empty(api_get_user_id())) {
     api_not_allowed(true);
 }
 
@@ -26,6 +26,7 @@ if (empty($originUrl)) {
 }
 
 $action = isset($_GET['action']) ? $_GET['action'] : null;
+$sessionId = isset($_GET['session_id']) ? $_GET['session_id'] : null;
 
 $form = new FormValidator('email_editor', 'post');
 $form->addElement('hidden', 'dest');
@@ -45,12 +46,18 @@ switch ($action) {
 
         $objTemplate = new Template();
         $objTemplate->assign('session_name', $sessionName);
-        $objTemplate->assign('user', api_get_user_info(api_get_user_id(), false, false, true));
+        $objTemplate->assign('user', api_get_user_info(api_get_user_id(), false, false, true, true, true, true));
         $mailTemplate = $objTemplate->get_template('mail/subscribe_me_to_session.tpl');
 
         $emailDest = api_get_setting('emailAdministrator');
         $emailTitle = get_lang('SubscribeToSessionRequest');
         $emailText = $objTemplate->fetch($mailTemplate);
+
+        $userGateKeeperEnabled = api_get_plugin_setting('usergatekeeper', 'tool_enable');
+        if ($userGateKeeperEnabled) {
+            $form->addElement('hidden', 'subscribe_me_to_session');
+            $form->addElement('hidden', 'session_id');
+        }
         break;
     default:
         $emailDest = isset($_REQUEST['dest']) ? Security::remove_XSS($_REQUEST['dest']) : '';
@@ -64,6 +71,8 @@ $defaults = [
     'email_address' => $emailDest,
     'email_title' => $emailTitle,
     'email_text' => $emailText,
+    'subscribe_me_to_session' => '1',
+    'session_id' => $sessionId
 ];
 $form->setDefaults($defaults);
 
@@ -102,6 +111,14 @@ if ($form->validate()) {
                 $text,
                 get_lang('Anonymous')
             );
+        }
+
+        if ($values['subscribe_me_to_session'] === '1' ) {
+            $userGateKeeperEnabled = api_get_plugin_setting('usergatekeeper', 'tool_enable');
+            if ($userGateKeeperEnabled) {
+                $sessionId = isset($values['session_id']) ? $values['session_id'] : null;
+                UserGatekeeper::addUserSession(api_get_user_id(), $sessionId, false);
+            }
         }
 
         Display::addFlash(Display::return_message(get_lang('MessageSent')));

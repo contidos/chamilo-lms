@@ -1392,6 +1392,7 @@ class CoursesAndSessionsCatalog
             $url .= http_build_query([
                 'action' => 'subscribe_me_to_session',
                 'session' => Security::remove_XSS($sessionName),
+                'session_id' => $sessionId,
             ]);
 
             $result = Display::toolbarButton(

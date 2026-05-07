@@ -112,38 +112,86 @@ switch ($action) {
     case 'export_csv':
         $selectedSessions = explode(',', $idMultiple);
 
-        $csvHeaders = [];
-        $csvHeaders[] = get_lang('SessionName');
-        $csvHeaders[] = get_lang('SessionStartDate');
-        $csvHeaders[] = get_lang('SessionEndDate');
-        $csvHeaders[] = get_lang('CourseName');
-        $csvHeaders[] = get_lang('OfficialCode');
-        if (api_sort_by_first_name()) {
-            $csvHeaders[] = get_lang('FirstName');
-            $csvHeaders[] = get_lang('LastName');
-        } else {
-            $csvHeaders[] = get_lang('LastName');
-            $csvHeaders[] = get_lang('FirstName');
+        $extraFieldsData = [];
+        $extraFieldVariables = [];
+
+        $extraFieldVariables = api_get_configuration_value('session_csv_export_extra_fields');
+
+        if (!is_array($extraFieldVariables)) {
+            $extraFieldVariables = [];
         }
-        $csvHeaders[] = get_lang('Login');
-        $csvHeaders[] = get_lang('TrainingTime');
-        $csvHeaders[] = get_lang('CourseProgress');
-        $csvHeaders[] = get_lang('ExerciseProgress');
-        $csvHeaders[] = get_lang('ExerciseAverage');
-        $csvHeaders[] = get_lang('Score');
-        $csvHeaders[] = get_lang('Score').' - '.get_lang('BestAttempt');
-        $csvHeaders[] = get_lang('Student_publication');
-        $csvHeaders[] = get_lang('Messages');
-        $csvHeaders[] = get_lang('Classes');
-        $csvHeaders[] = get_lang('RegistrationDate');
-        $csvHeaders[] = get_lang('FirstLoginInCourse');
-        $csvHeaders[] = get_lang('LatestLoginInCourse');
-        $csvHeaders[] = get_lang('LpFinalizationDate');
-        $csvHeaders[] = get_lang('QuizFinalizationDate');
+
+        // Leer configuración de campos excluidos
+        $excludedFields = api_get_configuration_value('session_csv_export_excluded_fields');
+        if (!is_array($excludedFields)) {
+            $excludedFields = [];
+        }
+
+        if (!empty($extraFieldVariables)) {
+            $objExtraField = new ExtraField('user');
+
+            foreach ($extraFieldVariables as $variable) {
+                $fieldInfo = $objExtraField->get_handler_field_info_by_field_variable($variable);
+                if ($fieldInfo) {
+                    $extraFieldsData[$variable] = $fieldInfo;
+                }
+            }
+        }
+
+        // Mapeo de campos con sus claves identificadoras
+        $fieldMapping = [
+            'session_name' => get_lang('SessionName'),
+            'session_start_date' => get_lang('SessionStartDate'),
+            'session_end_date' => get_lang('SessionEndDate'),
+            'course_name' => get_lang('CourseName'),
+            'official_code' => get_lang('OfficialCode'),
+        ];
+
+        if (api_sort_by_first_name()) {
+            $fieldMapping['firstname'] = get_lang('FirstName');
+            $fieldMapping['lastname'] = get_lang('LastName');
+        } else {
+            $fieldMapping['lastname'] = get_lang('LastName');
+            $fieldMapping['firstname'] = get_lang('FirstName');
+        }
+
+        $fieldMapping['username'] = get_lang('Login');
+        $fieldMapping['training_time'] = get_lang('TrainingTime');
+        $fieldMapping['course_progress'] = get_lang('CourseProgress');
+        $fieldMapping['exercise_progress'] = get_lang('ExerciseProgress');
+        $fieldMapping['exercise_average'] = get_lang('ExerciseAverage');
+        $fieldMapping['score'] = get_lang('Score');
+        $fieldMapping['score_best'] = get_lang('Score').' - '.get_lang('BestAttempt');
+        $fieldMapping['student_publication'] = get_lang('Student_publication');
+        $fieldMapping['messages'] = get_lang('Messages');
+        $fieldMapping['classes'] = get_lang('Classes');
+        $fieldMapping['registration_date'] = get_lang('RegistrationDate');
+        $fieldMapping['first_login'] = get_lang('FirstLoginInCourse');
+        $fieldMapping['last_login'] = get_lang('LatestLoginInCourse');
+        $fieldMapping['lp_finalization_date'] = get_lang('LpFinalizationDate');
+        $fieldMapping['quiz_finalization_date'] = get_lang('QuizFinalizationDate');
+
+        // Construir headers filtrados
+        $csvHeaders = [];
+        foreach ($fieldMapping as $fieldKey => $fieldLabel) {
+            if (!in_array($fieldKey, $excludedFields)) {
+                $csvHeaders[] = $fieldLabel;
+            }
+        }
+
+        // **Agregar headers de campos extra**
+        if (!empty($extraFieldsData)) {
+            foreach ($extraFieldsData as $fieldVariable => $fieldInfo) {
+                $csvHeaders[] = $fieldInfo['display_text'];
+            }
+        }
+
         $csvData = [];
-        $i = 0;
+
         foreach ($selectedSessions as $sessionId) {
+            $sessionId = (int)$sessionId;
             $courses = SessionManager::get_course_list_by_session_id($sessionId);
+
             if (!empty($courses)) {
                 foreach ($courses as $course) {
                     $courseCode = $course['course_code'];
@@ -152,13 +200,60 @@ switch ($action) {
                         true,
                         $sessionId
                     );
-
                     $nbStudents = count($studentList);
-                    // Set global variables used by get_user_data()
+
+                    if ($nbStudents == 0) {
+                        continue;
+                    }
+
+                    // **Preparar datos de campos extra para todos los usuarios**
+                    $userExtraFieldsData = [];
+                    if (!empty($extraFieldsData)) {
+                        $tableExtraFieldValues = Database::get_main_table(TABLE_EXTRA_FIELD_VALUES);
+                        $userIds = array_map('intval', array_keys($studentList));
+                        $fieldIds = array_map(function($field) { return (int)$field['id']; }, $extraFieldsData);
+
+                        // Consulta más eficiente para obtener todos los valores de una sola vez
+                        $sql = "SELECT item_id as user_id, field_id, value
+                                FROM $tableExtraFieldValues
+                                WHERE item_id IN (" . implode(',', $userIds) . ")
+                                AND field_id IN (" . implode(',', $fieldIds) . ")";
+
+                        $result = Database::query($sql);
+                        $allValues = [];
+
+                        // Organizar los valores por usuario y campo
+                        while ($row = Database::fetch_assoc($result)) {
+                            $allValues[$row['user_id']][$row['field_id']] = $row['value'];
+                        }
+
+                        // Mapear los IDs de campo a sus variables
+                        $fieldIdToVariable = [];
+                        foreach ($extraFieldsData as $fieldVariable => $fieldInfo) {
+                            $fieldIdToVariable[$fieldInfo['id']] = $fieldVariable;
+                        }
+
+                        // Construir el array final de datos
+                        foreach ($userIds as $userId) {
+                            $userExtraFieldsData[$userId] = [];
+                            foreach ($fieldIds as $fieldId) {
+                                $fieldVariable = $fieldIdToVariable[$fieldId];
+                                $userExtraFieldsData[$userId][$fieldVariable] = $allValues[$userId][$fieldId] ?? '';
+                            }
+                        }
+                    }
+
+                    // Configurar variables globales para getUserData()
                     $GLOBALS['user_ids'] = array_keys($studentList);
                     $GLOBALS['session_id'] = $sessionId;
                     $GLOBALS['course_code'] = $courseCode;
                     $GLOBALS['export_csv'] = true;
+                    $GLOBALS['user_extra_fields_data'] = $userExtraFieldsData;
+                    $GLOBALS['extra_fields_config'] = $extraFieldsData;
+                    $GLOBALS['excluded_fields'] = $excludedFields;
+                    $GLOBALS['field_mapping'] = array_keys($fieldMapping);
+
+                    // Obtener datos de usuarios
                     $csvContentInSession = TrackingCourseLog::getUserData(
                         null,
                         $nbStudents,
@@ -172,6 +267,12 @@ switch ($action) {
                     if (!empty($csvContentInSession)) {
                         $csvData = array_merge($csvData, $csvContentInSession);
                     }
+
+                    // Limpiar variables globales
+                    unset($GLOBALS['user_extra_fields_data']);
+                    unset($GLOBALS['extra_fields_config']);
+                    unset($GLOBALS['excluded_fields']);
+                    unset($GLOBALS['field_mapping']);
                 }
             }
         }
@@ -182,7 +283,6 @@ switch ($action) {
             Export::arrayToCsv($csvData, $filename);
             exit;
         }
-
         break;
     case 'export_multiple':
         $sessionList = explode(',', $idMultiple);

@@ -96,7 +96,6 @@ class LearnpathLink extends AbstractLink
 
         // order by id, that way the student's first attempt is accessed first
         $sql .= ' ORDER BY view_count DESC';
-
         $scores = Database::query($sql);
         // for 1 student
         if (isset($stud_id)) {

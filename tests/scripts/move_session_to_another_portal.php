@@ -5,14 +5,14 @@
 /**
  * Move sessions from URL 1 to URL 2
  */
-exit;
 
 require_once __DIR__.'/../../main/inc/global.inc.php';
+exit;
 
 $test = true;
-$sessionsToMove = [1];
-$urlSourceId = 2;
-$urlDestinationId = 3;
+$sessionsToMove = [4552];
+$urlSourceId = 21;
+$urlDestinationId = 2;
 
 $urlSourceInfo = UrlManager::get_url_data_from_id($urlSourceId);
 if (empty($urlSourceInfo)) {
@@ -34,8 +34,6 @@ if ($test) {
 
 foreach ($sessionsToMove as $sessionId) {
     $sessionInfo = api_get_session_info($sessionId);
-    echo "Session: $sessionId ".PHP_EOL;
-
     if (empty($sessionInfo)) {
         echo "Session does not exists $sessionId ".PHP_EOL;
         continue;

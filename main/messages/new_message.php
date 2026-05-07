@@ -118,6 +118,7 @@ function manageForm($default, $select_from_user_list = null, $sent_to = '', $tpl
     if (api_get_configuration_value('send_only_messages_to_teachers') && api_is_student()) {
         $onlyTeachers = true;
     }
+    echo "<!-- DEBUG: onlyTeachers=".($onlyTeachers ? 'TRUE' : 'FALSE')." | userId=".api_get_user_id()." | isStudent=".(api_is_student() ? 'TRUE' : 'FALSE')." | configValue=".(api_get_configuration_value('send_only_messages_to_teachers') ? 'TRUE' : 'FALSE')." -->";
 
     if (isset($_SESSION['form_values'])) {
         $default = $_SESSION['form_values'];
@@ -155,8 +156,11 @@ function manageForm($default, $select_from_user_list = null, $sent_to = '', $tpl
             }
             if (empty($default['users'])) {
                 if ($onlyTeachers) {
-                    $courses = CourseManager::get_courses_list_by_user_id(api_get_user_id());
+                    $userId = api_get_user_id();
                     $teachers = [];
+
+                    // 1. Get teachers from base courses
+                    $courses = CourseManager::get_courses_list_by_user_id($userId);
                     foreach ($courses as $course) {
                         $courseTeachers = CourseManager::getTeachersFromCourse($course['real_id']);
                         if ($courseTeachers) {
@@ -165,6 +169,43 @@ function manageForm($default, $select_from_user_list = null, $sent_to = '', $tpl
                             }
                         }
                     }
+
+                    // 2. Get coaches from sessions (direct SQL to bypass visibility/date filters)
+                    $tblSessionCourseUser = Database::get_main_table(TABLE_MAIN_SESSION_COURSE_USER);
+                    $tblSession = Database::get_main_table(TABLE_MAIN_SESSION);
+                    $sql = "SELECT DISTINCT s.id AS session_id, s.id_coach
+                            FROM $tblSession s
+                            INNER JOIN $tblSessionCourseUser srcu ON srcu.session_id = s.id
+                            WHERE srcu.user_id = $userId AND srcu.status = 0";
+                    $sessionResult = Database::query($sql);
+                    while ($sessionRow = Database::fetch_array($sessionResult, 'ASSOC')) {
+                        $sessionId = $sessionRow['session_id'];
+
+                        // Get general coach of the session
+                        if (!empty($sessionRow['id_coach'])) {
+                            $coachInfo = api_get_user_info($sessionRow['id_coach']);
+                            if ($coachInfo) {
+                                $teachers[$coachInfo['user_id']] = $coachInfo['complete_name'];
+                            }
+                        }
+
+                        // Get course coaches (tutors) from the session
+                        $sessionCourses = SessionManager::get_course_list_by_session_id($sessionId);
+                        foreach ($sessionCourses as $sessionCourse) {
+                            $courseCoaches = CourseManager::get_coachs_from_course(
+                                $sessionId,
+                                $sessionCourse['real_id']
+                            );
+                            if (!empty($courseCoaches)) {
+                                foreach ($courseCoaches as $coach) {
+                                    $teachers[$coach['user_id']] = $coach['full_name'];
+                                }
+                            }
+                        }
+                    }
+
+                    echo "<!-- DEBUG-TEACHERS: total=".count($teachers)." | data=".htmlspecialchars(json_encode($teachers))." -->";
+
                     if (!empty($teachers)) {
                         asort($teachers);
                     }
@@ -508,3 +549,4 @@ if ($allowSocial) {
     $tpl->assign('content', $content);
     $tpl->display_one_col_template();
 }
+    

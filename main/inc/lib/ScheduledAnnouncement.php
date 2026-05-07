@@ -461,6 +461,29 @@ class ScheduledAnnouncement extends Model
     }
 
     /**
+     * Returns a new datetime string shifting the original date by the given number of years.
+     */
+    public static function shiftDateForCopy($date, $yearOffset = 1)
+    {
+        if (empty($date)) {
+            return $date;
+        }
+
+        try {
+            $dateTime = new DateTime($date);
+            if (!empty($yearOffset)) {
+                $dateTime->modify('+'.(int) $yearOffset.' year');
+            }
+
+            return $dateTime->format('Y-m-d H:i:s');
+        } catch (Exception $exception) {
+            error_log('ScheduledAnnouncement::shiftDateForCopy: '.$exception->getMessage());
+
+            return $date;
+        }
+    }
+
+    /**
      * @return array
      */
     public function getTags()

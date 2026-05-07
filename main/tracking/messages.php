@@ -100,9 +100,13 @@ foreach ($messages as $message) {
         continue;
     }
 
+
+    $contentWithoutHead = preg_replace('/<head>.*?<\/head>/is', '', $message['content'], 1);
+    $contentWithoutHeadAndStyles = preg_replace(array('/<link.*?>/is', '/<style.*?>.*?<\/style>/is'), '', $contentWithoutHead);
+
     $content .= Display::panelCollapse(
         $title,
-        $message['content'].'<br />'.Display::dateToStringAgoAndLongDate($message['send_date']),
+        $contentWithoutHeadAndStyles.'<br />'.Display::dateToStringAgoAndLongDate($message['send_date']),
         'message-'.$message['id'],
         null,
         'message-'.$message['id'],

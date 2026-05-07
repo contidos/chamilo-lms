@@ -656,15 +656,12 @@ while ($row = Database::fetch_array($rs)) {
 $sessionTable = Database::get_main_table(TABLE_MAIN_SESSION);
 
 // Get the list of sessions where the user is subscribed as student
-$sql = 'SELECT DISTINCT sc.session_id, sc.c_id
-        FROM '.Database::get_main_table(TABLE_MAIN_SESSION_COURSE).' sc
+$sql = 'SELECT scu.session_id, scu.c_id
+        FROM '.Database::get_main_table(TABLE_MAIN_SESSION_COURSE_USER).' scu
         INNER JOIN '.$sessionTable.' as s
-        ON (s.id = sc.session_id)
-        INNER JOIN '.Database::get_main_table(TABLE_MAIN_SESSION_COURSE_USER).' as scu
-        ON (scu.session_id = sc.session_id)
-        WHERE s.id = scu.session_id
-        AND user_id = '.$student_id.'
-        ORDER BY display_end_date DESC, position ASC
+        ON (s.id = scu.session_id)
+        WHERE user_id = '.$student_id.'
+        ORDER BY display_end_date DESC
         ';
 $rs = Database::query($sql);
 $tmp_sessions = [];
@@ -1759,17 +1756,16 @@ if (empty($details)) {
                     $totalLpTime = isset($lpTime[$lp_id]) ? (int) $lpTime[$lp_id] : 0;
 
                     if (Tracking::minimumTimeAvailable($sessionId, $courseInfo['real_id'])) {
+                        
                         $accumulateWorkTime = learnpath::getAccumulateWorkTimePrerequisite(
                             $lp_id,
                             $courseInfo['real_id']
                         );
                         if ($accumulateWorkTime > 0) {
-
                             // If the time spent is less than necessary,
                             // then we show an icon in the actions column indicating the warning
                             $formattedLpTime = api_time_to_hms($totalLpTime);
                             $formattedWorkTime = api_time_to_hms($accumulateWorkTime * 60);
-
                             if ($totalLpTime < ($accumulateWorkTime * 60)) {
                                 $linkMinTime = Display::return_icon(
                                     'warning.png',
@@ -2405,11 +2401,10 @@ if (!empty($sessionId)) {
 $allow = api_get_configuration_value('allow_user_message_tracking');
 if ($allow && (api_is_drh() || api_is_platform_admin())) {
     if ($filterMessages) {
-        $users = MessageManager::getUsersThatHadConversationWithUser($student_id, $coachAccessStartDate, $coachAccessEndDate);
+        $users = MessageManager::getMessageExchangeWithUser($student_id, $coachAccessStartDate, $coachAccessEndDate);
     } else {
-        $users = MessageManager::getUsersThatHadConversationWithUser($student_id);
+        $users = MessageManager::getMessageExchangeWithUser($student_id);
     }
-    $users = MessageManager::getUsersThatHadConversationWithUser($student_id);
     echo Display::page_subheader2(get_lang('MessageTracking'));
 
     $table = new HTML_Table(['class' => 'table']);

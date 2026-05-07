@@ -727,11 +727,26 @@ If you have issues with files taking a long time to download, make sure you reco
   &lt;Directory ~/.&gt;
     AllowOverride None
 	Options -Indexes
-  &lt;/Directory&gt;
 
   &lt;Directory "/var/www/chamilo"&gt;
 	RewriteEngine On
 	RewriteCond %{QUERY_STRING} ^id=(.*)$
+<<<<<<< HEAD
+	RewriteRule ^certificates/$ certificates/index.php?id=%1 [L]
+	RewriteRule ^courses/([^/]+)/?$ main/course_home/course_home.php?cDir=$1 [QSA,L]
+	RewriteRule ^courses/([^/]+)/index.php$ main/course_home/course_home.php?cDir=$1 [QSA,L]
+	RewriteRule ^courses/([^/]+)/scorm/(.*([\.js|\.css|\.png|\.jpg|\.jpeg|\.gif]))$ app/courses/$1/scorm/$2 [QSA,L] 
+	RewriteRule ^courses/([^/]+)/scorm/(.*)$ main/document/download_scorm.php?doc_url=/$2&cDir=$1 [QSA,L]
+	RewriteRule ^courses/([^/]+)/document/certificates/(.*)$ app/courses/$1/document/certificates/$2 [QSA,L]
+	RewriteRule ^courses/([^/]+)/document/(.*)$ main/document/download.php?doc_url=/$2&cDir=$1 [QSA,L]
+	RewriteRule ^courses/([^/]+)/upload/([^/]+)/(.*)$ main/document/download_uploaded_files.php?code=$1&type=$2&file=$3 [QSA,L]
+	RewriteRule ^courses/([^/]+)/work/(.*)$ main/work/download.php?file=work/$2&cDir=$1 [QSA,L]
+	RewriteRule ^courses/([^/]+)/course-pic85x85.png$ main/inc/ajax/course.ajax.php?a=get_course_image&code=$1&image=course_image_source [QSA,L]
+	RewriteRule ^courses/([^/]+)/course-pic.png$ main/inc/ajax/course.ajax.php?a=get_course_image&code=$1&image=course_image_large_source [QSA,L]
+	RewriteRule ^courses/([^/]+)/upload/course_home_icons/(.*([\.png|\.jpg|\.jpeg|\.gif]))$ app/courses/$1/upload/course_home_icons/$2 [QSA,L] 
+	RewriteRule ^courses/([^/]+)/(.*)$ app/courses/$1/$2 [QSA,L]
+	RewriteRule ^session/(\d{1,})/about/?$ main/session/about.php?session_id=$1 [L]
+=======
     RewriteRule ^certificates/$ certificates/index.php?id=%1 [L]
     RewriteRule ^courses/([^/]+)/?$ main/course_home/course_home.php?cDir=$1 [QSA,L]
     RewriteRule ^courses/([^/]+)/index.php$ main/course_home/course_home.php?cDir=$1 [QSA,L]
@@ -747,6 +762,7 @@ If you have issues with files taking a long time to download, make sure you reco
     RewriteRule ^courses/([^/]+)/(.*)$ app/courses/$1/$2 [QSA,L]
     RewriteRule ^session/(\d{1,})/about/?$ main/session/about.php?session_id=$1 [L]
     RewriteRule ^course/(\d{1,})/about/?$ main/course_info/about.php?course_id=$1 [L]
+>>>>>>> 5d675a60ffa472a37191323626db50d351a7c9d1
     RewriteRule ^badge/(\d{1,}) main/badge/issued.php?issue=$1 [L]
     RewriteRule ^skill/(\d{1,})/user/(\d{1,}) main/badge/issued_all.php?skill=$1&user=$2 [L]
     RewriteRule ^badge/(\d{1,})/user/(\d{1,}) main/badge/issued_all.php?skill=$1&user=$2 [L]

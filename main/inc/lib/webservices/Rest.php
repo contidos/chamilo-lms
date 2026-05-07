@@ -101,9 +101,6 @@ class Rest extends WebService
     public const DELETE_USER = 'delete_user';
     public const GET_USERS_API_KEYS = 'get_users_api_keys';
     public const GET_USER_API_KEY = 'get_user_api_key';
-    public const GET_USER_LAST_CONNEXION = 'get_user_last_connexion';
-    public const GET_USER_TOTAL_CONNEXION_TIME = 'get_user_total_connexion_time';
-    public const GET_USER_SUB_GROUP = 'get_user_sub_group';
 
     public const GET_COURSES = 'get_courses';
     public const GET_COURSES_FROM_EXTRA_FIELD = 'get_courses_from_extra_field';
@@ -138,20 +135,7 @@ class Rest extends WebService
     public const GET_TEST_UPDATES_LIST = 'get_test_updates_list';
     public const GET_TEST_AVERAGE_RESULTS_LIST = 'get_test_average_results_list';
 
-    public const GET_GROUPS = 'get_groups';
-    public const GROUP_EXISTS = 'group_exists';
-    public const ADD_GROUP = 'add_group';
-    public const DELETE_GROUP = 'delete_group';
-    public const GET_GROUP_SUB_USERS = 'get_group_sub_users';
-    public const GET_GROUP_SUB_COURSES = 'get_group_sub_courses';
-    public const GET_GROUP_SUB_SESSIONS = 'get_group_sub_sessions';
-    public const ADD_GROUP_SUB_USER = 'add_group_sub_user';
-    public const ADD_GROUP_SUB_COURSE = 'add_group_sub_course';
-    public const ADD_GROUP_SUB_SESSION = 'add_group_sub_session';
-    public const DELETE_GROUP_SUB_USER = 'delete_group_sub_user';
-    public const DELETE_GROUP_SUB_COURSE = 'delete_group_sub_course';
-    public const DELETE_GROUP_SUB_SESSION = 'delete_group_sub_session';
-    public const GET_AUDIT_ITEMS = 'get_audit_items';
+    public const GET_USER_COURSE_REGISTRATION = 'get_user_course_registration';
 
     /**
      * @var Session
@@ -1619,13 +1603,9 @@ class Rest extends WebService
     {
         self::protectAdminEndpoint();
 
-        if ('*' === $params['status']) {
-            $conditions = [];
-        } else {
-            $conditions = [
-                'status' => $params['status'],
-            ];
-        }
+        $conditions = [
+            'status' => $params['status'],
+        ];
         $idCampus = !empty($params['id_campus']) ?? 1;
         $fields = [];
         if (!empty($params['extra_fields'])) {
@@ -1704,46 +1684,6 @@ class Rest extends WebService
         }
 
         return $shortList;
-    }
-
-    /**
-     * Returns an array of groups with id, group_type, name, description, visibility.
-     *
-     * @param array $params An array of parameters to filter the results (currently supports 'type')
-     *
-     * @throws Exception
-     */
-    public function getGroups(array $params): array
-    {
-        self::protectAdminEndpoint();
-
-        if ('*' === $params['type']) {
-            $conditions = [];
-        } else {
-            $conditions = ['where' => ['group_type = ?' => $params['type']]];
-        }
-        $userGroup = new UserGroup();
-        $groups = $userGroup->getDataToExport($conditions);
-        $list = [];
-        /** @var \Chamilo\UserBundle\Entity\Group $item */
-        foreach ($groups as $item) {
-            $listTemp = [
-                'id' => $item['id'],
-                'name' => $item['name'],
-                'description' => $item['description'],
-                'visibility' => $item['visibility'],
-                'type' => $item['group_type'],
-            ];
-            if (in_array($item['group_type'], [0, 1])) {
-                $listTemp['type_name'] = ($item['group_type'] == 0) ? 'class' : 'social';
-            }
-            if (in_array($item['visibility'], [1, 2])) {
-                $listTemp['visibility_name'] = ($item['visibility'] == 1) ? 'open' : 'closed';
-            }
-            $list[] = $listTemp;
-        }
-
-        return $list;
     }
 
     /**
@@ -1883,7 +1823,6 @@ class Rest extends WebService
         $hr_dept_id = 0;
         $original_user_id_name = $userParam['original_user_id_name'];
         $original_user_id_value = $userParam['original_user_id_value'];
-        $sendMail = (empty($userParam['send_mail']) ? false : true);
 
         $extra_list = isset($userParam['extra']) ? $userParam['extra'] : [];
         if (isset($userParam['language'])) {
@@ -1896,22 +1835,12 @@ class Rest extends WebService
             $expiration_date = $userParam['expiration_date'];
         }
 
-        // If check_email_duplicates was set, trigger exception (i.e. do not create) if the e-mail is already used
-        if ($userParam['check_email_duplicates']) {
-            if (!empty($email)) {
-                $userFromEmail = api_get_user_info_from_email($email);
-                if (!empty($userFromEmail)) {
-                    throw new Exception(get_lang('EmailUsedTwice'));
-                }
-            }
-        }
-
         // Default language.
         if (empty($language)) {
             $language = api_get_setting('platformLanguage');
         }
 
-        // First check whether the login already exists.
+        // First check wether the login already exists.
         if (!UserManager::is_username_available($loginName)) {
             throw new Exception(get_lang('UserNameNotAvailable'));
         }
@@ -1930,10 +1859,7 @@ class Rest extends WebService
             $auth_source,
             $expiration_date,
             $active,
-            $hr_dept_id,
-            [],
-            '',
-            $sendMail
+            $hr_dept_id
         );
 
         if (empty($userId)) {
@@ -2130,19 +2056,6 @@ class Rest extends WebService
     {
         // MESSAGE_STATUS_NEW is also used for messages that have been "read"
         MessageManager::update_message_status($this->user->getId(), $messageId, MESSAGE_STATUS_NEW);
-    }
-
-    /**
-     * Add a group.
-     *
-     * @param array Params
-     */
-    public function createGroup($params)
-    {
-        self::protectAdminEndpoint();
-
-        $name = $params['name'];
-        $description = $params['description'];
     }
 
     /**
@@ -2579,8 +2492,6 @@ class Rest extends WebService
      * Updates a user identified by its login name.
      *
      * @throws Exception on failure
-     *
-     * @todo make a safe version for use by the final user on its account
      */
     public function updateUserFromUserName(array $parameters): bool
     {
@@ -2604,13 +2515,6 @@ class Rest extends WebService
 
         if (!api_is_platform_admin() && $userId != $this->user->getId()) {
             self::throwNotAllowedException();
-        }
-
-        if (!empty($parameters['new_login_name'])) {
-            // Make sure the new username, if set, is available
-            if (!UserManager::is_username_available($parameters['new_login_name'])) {
-                throw new Exception(get_lang('LoginAlreadyTaken'));
-            }
         }
 
         /** @var User $user */
@@ -2639,9 +2543,6 @@ class Rest extends WebService
                     break;
                 case 'firstname':
                     $user->setFirstname($value);
-                    break;
-                case 'new_login_name':
-                    $user->setUsername($value);
                     break;
                 case 'phone':
                     $user->setPhone($value);
@@ -2796,20 +2697,6 @@ class Rest extends WebService
     public function usernameExist($loginname)
     {
         return false !== api_get_user_info_from_username($loginname);
-    }
-
-    /**
-     * Returns whether a user group name exists.
-     *
-     * @param string $name the group name
-     *
-     * @return bool whether the group name exists
-     */
-    public function groupExists($name)
-    {
-        $userGroup = new UserGroup();
-
-        return false !== $userGroup->usergroup_exists($name);
     }
 
     /**
@@ -3321,6 +3208,92 @@ class Rest extends WebService
 
         return $resultArray;
     }
+
+    public function GetUserCourseRegistration(string $startDate, string $endDate)
+    {
+        $resultArray = [];
+
+        $username = $this->user->getUsername();
+        $users = api_get_configuration_value('webservice_user_registered_courses_stats');
+
+        if ($users) {
+            $coursesConfig = $users[$username];
+            $coursesIn = implode(',', $coursesConfig);
+
+            $startDate = Database::escape_string($startDate);
+            $endDate = Database::escape_string($endDate);
+
+            $tableTrackCourseAccess = Database::get_main_table(TABLE_STATISTIC_TRACK_E_COURSE_ACCESS);
+            $tableCourse = Database::get_main_table(TABLE_MAIN_COURSE);
+            $tableUser = Database::get_main_table(TABLE_MAIN_USER);
+            $tableSession = Database::get_main_table(TABLE_MAIN_SESSION);
+            $tableSessionRelUser = Database::get_main_table(TABLE_MAIN_SESSION_USER);
+            $tableSessionRelCourse = Database::get_main_table(TABLE_MAIN_SESSION_COURSE);
+
+            /*$query = "
+                SELECT s.id as session_id, s.name AS session_name, src.c_id,
+                    c.title AS course_name, c.code AS course_code,
+                    sru.user_id, u.username, sru.registered_at as date
+                    FROM $tableSession s
+                    LEFT JOIN $tableSessionRelCourse src on s.id = src.session_id
+                    LEFT JOIN $tableCourse c on src.c_id = c.id
+                    LEFT JOIN $tableSessionRelUser sru on s.id = sru.session_id
+                    LEFT JOIN $tableUser u on sru.user_id = u.id
+                    WHERE c.id in ($coursesIn)
+                    AND sru.registered_at BETWEEN '$startDate 00:00:00' AND '$endDate 23:59:59'
+                    AND (u.id <> s.session_admin_id OR s.session_admin_id is NULL)
+                    AND u.status = 5
+
+                union
+
+                SELECT teca.session_id, '' AS session_name, teca.c_id,
+                    c.title AS course_name, c.code AS course_code,
+                    teca.user_id, u.username, min(teca.login_course_date) as date
+                    FROM $tableTrackCourseAccess teca
+                    LEFT JOIN $tableCourse c on teca.c_id = c.id
+                    LEFT JOIN $tableUser u on teca.user_id = u.id
+                    WHERE c.id in ($coursesIn)
+                    AND teca.login_course_date BETWEEN '$startDate 00:00:00' AND '$endDate 23:59:59'
+                    AND teca.session_id = 0
+                    AND u.status = 5
+                    GROUP BY teca.user_id, teca.session_id, teca.c_id, c.title, c.code, u.username
+            ";*/
+
+            $query = "
+                SELECT s.id as session_id, s.name AS session_name, src.c_id,
+                    c.title AS course_name, c.code AS course_code,
+                    sru.user_id, u.username, sru.registered_at as date
+                    FROM $tableSession s
+                    LEFT JOIN $tableSessionRelCourse src on s.id = src.session_id
+                    LEFT JOIN $tableCourse c on src.c_id = c.id
+                    LEFT JOIN $tableSessionRelUser sru on s.id = sru.session_id
+                    LEFT JOIN $tableUser u on sru.user_id = u.id
+                    WHERE c.id in ($coursesIn)
+                    AND sru.registered_at BETWEEN '$startDate 00:00:00' AND '$endDate 23:59:59'
+                    AND (u.id <> s.session_admin_id OR s.session_admin_id is NULL)
+                    AND u.status = 5
+            ";            
+
+            $result = Database::query($query);
+
+            if (Database::num_rows($result) > 0) {
+                while ($row = Database::fetch_assoc($result)) {
+                    $params = [
+                        'session_id' => $row['session_id'],
+                        'session_name' => $row['session_name'],
+                        'course_id' => $row['c_id'],
+                        'course_name' => $row['course_name'],
+                        'course_code' => $row['course_code'],
+                        'user_id' => $row['user_id'],
+                        'user_name' => $row['username'],
+                        'date' => $row['date']
+                    ];
+                    $resultArray[] = $params;
+                }
+            }
+        }
+        return $resultArray;
+    }    
 
     public function logout()
     {
@@ -3982,47 +3955,6 @@ class Rest extends WebService
         ];
     }
 
-    /**
-     * @throws Exception
-     */
-    public function getUserLastConnexion(string $username): array
-    {
-        $userInfo = api_get_user_info_from_username($username);
-
-        if (empty($userInfo)) {
-            throw new Exception(get_lang('UserNotFound'));
-        }
-
-        $lastConnexionDate = Tracking::get_last_connection_date($userInfo['id']);
-
-        return [
-            'id' => $userInfo['id'],
-            'username' => $userInfo['username'],
-            'last_connexion_date' => $lastConnexionDate,
-        ];
-    }
-
-    /**
-     * @throws Exception
-     */
-    public function getUserTotalConnexionTime(string $username): array
-    {
-        $userInfo = api_get_user_info_from_username($username);
-
-        if (empty($userInfo)) {
-            throw new Exception(get_lang('UserNotFound'));
-        }
-
-        $totalConnexionTimeInSecond = Tracking::get_time_spent_on_the_platform($userInfo['id'], 'ever');
-        $totalConnexionTime = api_time_to_hms($totalConnexionTimeInSecond);
-
-        return [
-            'id' => $userInfo['id'],
-            'username' => $userInfo['username'],
-            'total_connexion_time' => $totalConnexionTime,
-        ];
-    }
-
     public static function isAllowedByRequest(bool $inpersonate = false): bool
     {
         $username = $_GET['username'] ?? null;
@@ -4054,220 +3986,6 @@ class Rest extends WebService
         exit;
     }
 
-    /**
-     * Create a group/class.
-     *
-     * @param $params
-     *
-     * @throws Exception
-     */
-    public function addGroup($params): array
-    {
-        self::protectAdminEndpoint();
-
-        if (!empty($params['type'])) {
-            $params['group_type'] = $params['type'];
-        }
-
-        // First check wether the login already exists.
-        $userGroup = new UserGroup();
-        if ($userGroup->usergroup_exists($params['name'])) {
-            throw new Exception($params['name'].' '.get_lang('AlreadyExists'));
-        }
-
-        $groupId = $userGroup->save($params);
-
-        if (empty($groupId)) {
-            throw new Exception(get_lang('NotRegistered'));
-        }
-
-        return [$groupId];
-    }
-
-    /**
-     * Delete a group/class.
-     *
-     * @throws Exception
-     *
-     * @return bool
-     */
-    public function deleteGroup(int $id): array
-    {
-        self::protectAdminEndpoint();
-
-        if (empty($id)) {
-            return false;
-        }
-
-        // First check wether the login already exists.
-        $userGroup = new UserGroup();
-        if (!$userGroup->delete($id)) {
-            throw new Exception(get_lang('NotDeleted'));
-        }
-
-        return [$id];
-    }
-
-    /**
-     * Get the list of users subscribed to the given group/class.
-     *
-     * @return array The list of users (userID => [firstname, lastname, relation_type]
-     */
-    public function getGroupSubscribedUsers(int $groupId): array
-    {
-        $userGroup = new UserGroup();
-
-        return $userGroup->get_all_users_by_group($groupId);
-    }
-
-    /**
-     * Get the list of courses to which the given group/class is subscribed.
-     *
-     * @return array The list of courses (ID => [title]
-     */
-    public function getGroupSubscribedCourses(int $groupId): array
-    {
-        $userGroup = new UserGroup();
-
-        return $userGroup->get_courses_by_usergroup($groupId, true);
-    }
-
-    /**
-     * Get the list of sessions to which the given group/class is subscribed.
-     *
-     * @return array The list of courses (ID => [title]
-     */
-    public function getGroupSubscribedSessions(int $groupId): array
-    {
-        $userGroup = new UserGroup();
-
-        return $userGroup->get_sessions_by_usergroup($groupId, true);
-    }
-
-    /**
-     * Add a new user to the given group/class.
-     *
-     * @param int $relationType (1:admin, 2:reader, etc. See GROUP_USER_PERMISSION_ constants in api.lib.php)
-     *
-     * @return array One item array containing true on success, false otherwise
-     */
-    public function addGroupSubscribedUser(int $groupId, int $userId, int $relationType = 2): array
-    {
-        $userGroup = new UserGroup();
-
-        if (!$userGroup->groupExists($groupId) or !$userGroup->userExists($userId)) {
-            throw new Exception('user_id or group_id does not exist');
-        }
-
-        return [$userGroup->add_user_to_group($userId, $groupId, $relationType)];
-    }
-
-    /**
-     * Get the list of group/class IDs to which the user belongs.
-     *
-     * @return array Array containing the group IDs like ['groups' => [1, 2, 3]]
-     */
-    public function getUserSubGroup(int $userId): array
-    {
-        $userGroup = new UserGroup();
-
-        $res = $userGroup->get_usergroup_by_user($userId);
-
-        return ['groups' => $res];
-    }
-
-    /**
-     * Add a new course to which the given group/class is subscribed.
-     *
-     * @return array One item array containing the ID of the course on success, nothing on failure
-     */
-    public function addGroupSubscribedCourse(int $groupId, int $courseId): array
-    {
-        $userGroup = new UserGroup();
-
-        return [$userGroup->subscribe_courses_to_usergroup($groupId, [$courseId], false)];
-    }
-
-    /**
-     * Add a new session to which the given group/class is subscribed.
-     *
-     * @return array One item array containing the ID of the session on success, nothing on failure
-     */
-    public function addGroupSubscribedSession(int $groupId, int $sessionId): array
-    {
-        $userGroup = new UserGroup();
-
-        return [$userGroup->subscribe_sessions_to_usergroup($groupId, [$sessionId], false)];
-    }
-
-    /**
-     * Remove a user from the given group/class.
-     *
-     * @return array One item array containing true on success, false otherwise
-     */
-    public function deleteGroupSubscribedUser(int $groupId, int $userId): array
-    {
-        $userGroup = new UserGroup();
-
-        return [$userGroup->delete_user_rel_group($userId, $groupId)];
-    }
-
-    /**
-     * Remove a course to which the given group/class is subscribed.
-     *
-     * @return array One item array containing true on success, false otherwise
-     */
-    public function deleteGroupSubscribedCourse(int $groupId, int $courseId): array
-    {
-        $userGroup = new UserGroup();
-
-        return [$userGroup->unsubscribe_courses_from_usergroup($groupId, [$courseId])];
-    }
-
-    /**
-     * Remove a session to which the given group/class is subscribed.
-     *
-     * @return array One item array containing true on success, false otherwise
-     */
-    public function deleteGroupSubscribedSession(int $groupId, int $sessionId): array
-    {
-        $userGroup = new UserGroup();
-
-        return [$userGroup->unsubscribeSessionsFromUserGroup($groupId, [$sessionId], false)];
-    }
-
-    /**
-     * Get audit items from track_e_default.
-     *
-     * @throws Exception
-     */
-    public function getAuditItems(
-        string $defaultEventType,
-        ?int $cId = null,
-        ?int $sessionId = null,
-        ?string $afterDate = null,
-        ?string $beforeDate = null,
-        ?int $userId = null,
-        int $offset = 0,
-        int $limit = 100
-    ): array {
-        self::protectAdminEndpoint();
-
-        return Event::getAuditItems(
-            $defaultEventType,
-            $cId,
-            $sessionId,
-            $afterDate,
-            $beforeDate,
-            $userId,
-            $offset,
-            $limit
-        );
-    }
-
-    /**
-     * Generate an API key for webservices access for the given user ID.
-     */
     protected static function generateApiKeyForUser(int $userId): string
     {
         UserManager::add_api_key($userId, self::SERVICE_NAME);
@@ -4278,8 +3996,6 @@ class Rest extends WebService
     }
 
     /**
-     * Encode the given parameters (structured array) in JSON format.
-     *
      * @param array $additionalParams Optional
      *
      * @return string
@@ -4297,10 +4013,6 @@ class Rest extends WebService
         return json_encode($params);
     }
 
-    /**
-     * Helper generating a query URL (to the current script) from an array of parameters
-     * (course, session, api_key and username) commonly used in webservice calls.
-     */
     private function generateUrl(array $additionalParams = []): string
     {
         $queryParams = [

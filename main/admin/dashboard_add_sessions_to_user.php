@@ -12,6 +12,7 @@ require_once __DIR__.'/../inc/global.inc.php';
 // create an ajax object
 $xajax = new xajax();
 $xajax->registerFunction('search_sessions');
+$xajax->registerFunction('search_sessions_anywhere');
 
 // setting the section (for the tabs)
 $this_section = SECTION_PLATFORM_ADMIN;
@@ -86,6 +87,86 @@ function search_sessions($needle, $type)
         while ($session = Database::fetch_array($rs)) {
             $return .= '<option value="'.$session['id'].'" title="'.htmlspecialchars($session['name'], ENT_QUOTES).'">'.$session['name'].'</option>';
         }
+        $return .= '</select>';
+        $xajax_response->addAssign(
+            'ajax_list_sessions_multiple',
+            'innerHTML',
+            api_utf8_encode($return)
+        );
+    }
+
+    return $xajax_response;
+}
+
+function search_sessions_anywhere($needle, $type)
+{
+    global $user_id;
+    $tbl_session = Database::get_main_table(TABLE_MAIN_SESSION);
+    $tbl_session_rel_access_url = Database::get_main_table(TABLE_MAIN_ACCESS_URL_REL_SESSION);
+    $xajax_response = new xajaxResponse();
+    $return = '';
+    if (!empty($needle) && !empty($type)) {
+        $needle = Database::escape_string($needle);
+        $assigned_sessions_to_hrm = SessionManager::get_sessions_followed_by_drh($user_id);
+        $assigned_sessions_id = array_keys($assigned_sessions_to_hrm);
+
+        $without_assigned_sessions = '';
+        if (count($assigned_sessions_id) > 0) {
+            $without_assigned_sessions = " AND s.id NOT IN(".implode(',', $assigned_sessions_id).")";
+        }
+
+        if (api_is_multiple_url_enabled()) {
+            $sql = " SELECT s.id, s.name FROM $tbl_session s
+                     LEFT JOIN $tbl_session_rel_access_url a
+                     ON (s.id = a.session_id)
+                     WHERE
+                        s.name LIKE '%$needle%' $without_assigned_sessions AND
+                        access_url_id = ".api_get_current_access_url_id();
+        } else {
+            $sql = "SELECT s.id, s.name FROM $tbl_session s
+                    WHERE  s.name LIKE '%$needle%' $without_assigned_sessions ";
+        }
+        $rs = Database::query($sql);
+        $return .= '<select class="form-control" id="origin" name="NoAssignedSessionsList[]" multiple="multiple" size="20">';
+        while ($session = Database::fetch_array($rs)) {
+            $return .= '<option value="'.$session['id'].'" title="'.htmlspecialchars($session['name'], ENT_QUOTES).'">'.$session['name'].'</option>';
+        }
+        $return .= '</select>';
+        $xajax_response->addAssign(
+            'ajax_list_sessions_multiple',
+            'innerHTML',
+            api_utf8_encode($return)
+        );
+    }
+
+    if(empty($needle)) {
+        $needle = Database::escape_string($needle);
+        $assigned_sessions_to_hrm = SessionManager::get_sessions_followed_by_drh($user_id);
+        $assigned_sessions_id = array_keys($assigned_sessions_to_hrm);
+
+        $without_assigned_sessions = '';
+        if (count($assigned_sessions_id) > 0) {
+            $without_assigned_sessions = " AND s.id NOT IN(".implode(',', $assigned_sessions_id).")";
+        }
+
+        if (api_is_multiple_url_enabled()) {
+            $sql = " SELECT s.id, s.name FROM $tbl_session s
+                     LEFT JOIN $tbl_session_rel_access_url a
+                     ON (s.id = a.session_id)
+                     WHERE
+                        1=1
+                        $without_assigned_sessions AND
+                        access_url_id = ".api_get_current_access_url_id();
+        } else {
+            $sql = "SELECT s.id, s.name FROM $tbl_session s
+                    WHERE  1=1 $without_assigned_sessions ";
+        }
+        $rs = Database::query($sql);
+        $return .= '<select class="form-control" id="origin" name="NoAssignedSessionsList[]" multiple="multiple" size="20">';
+        while ($session = Database::fetch_array($rs)) {
+            $return .= '<option value="'.$session['id'].'" title="'.htmlspecialchars($session['name'], ENT_QUOTES).'">'.$session['name'].'</option>';
+        }
+
         $return .= '</select>';
         $xajax_response->addAssign(
             'ajax_list_sessions_multiple',
@@ -240,6 +321,9 @@ $result = Database::query($sql);
             <div class="code-course">
                 <?php if ($add_type == 'multiple') {
                         ?>
+                <p>Filtrar sesiones <?php //echo get_lang('SearchUserAddThreeletter'); ?> :</p>
+                <input type="text" id="user-search" class="col-md-4 form-control" onkeydown="return event.key != 'Enter';" onkeyup="xajax_search_sessions_anywhere(this.value, 'multiple')"/>
+                <br /><br /><br />
                 <p><?php echo get_lang('FirstLetterSession'); ?> :</p>
                 <select class="selectpicker form-control" name="firstLetterSession" onchange = "xajax_search_sessions(this.value, 'multiple')">
                     <option value="%">--</option>
@@ -273,7 +357,7 @@ $result = Database::query($sql);
 
                 <?php
                 }
-                echo '<button class="btn btn-success" type="button" value="" onclick="valide()" >'.$tool_name.'</button>';
+                echo '<button class="btn btn-success" type="button" style="white-space:normal;"  value="" onclick="valide()" >'.$tool_name.'</button>';
                 ?>
             </div>
         </div>

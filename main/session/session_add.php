@@ -1,5 +1,6 @@
 <?php
 
+
 /* For licensing terms, see /license.txt */
 
 $cidReset = true;
@@ -7,6 +8,7 @@ $cidReset = true;
 require_once __DIR__.'/../inc/global.inc.php';
 
 $xajax = new xajax();
+
 $xajax->registerFunction('search_coachs');
 
 // setting the section (for the tabs)
@@ -77,7 +79,6 @@ function search_coachs($needle)
 
     return $xajax_response;
 }
-
 $xajax->processRequests();
 $htmlHeadXtra[] = $xajax->getJavascript('../inc/lib/xajax/');
 $htmlHeadXtra[] = "
@@ -369,6 +370,12 @@ if (false !== $fillExtraField && !empty($fillExtraField['fields'])) {
         $extraValue = UserManager::get_extra_user_data_by_field(api_get_user_id(), $userVariable);
         $formDefaults['extra_'.$sessionVariable] = isset($extraValue[$userVariable]) ? $extraValue[$userVariable] : '';
     }
+}
+
+$sendSubscriptionNotificationDefaultValue = api_get_configuration_value('session_creation_default_value_send_subscription_notification_to_users');
+
+if (!empty($sendSubscriptionNotificationDefaultValue)) {
+    $formDefaults['send_subscription_notification'] = $sendSubscriptionNotificationDefaultValue;
 }
 
 $form->setDefaults($formDefaults);

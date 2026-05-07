@@ -963,11 +963,12 @@ class ExtraFieldValue extends Model
     }
 
     /**
-     * @param int $itemId
+     * @param int  $itemId
+     * @param bool $applyFilter If true, only returns fields with filter=1. If false, returns all fields.
      *
      * @return array
      */
-    public function getAllValuesByItem($itemId)
+    public function getAllValuesByItem($itemId, $applyFilter = true)
     {
         $itemId = (int) $itemId;
         $extraFieldType = $this->getExtraField()->getExtraFieldType();
@@ -995,7 +996,10 @@ class ExtraFieldValue extends Model
         $em = Database::getManager();
 
         $extraField = new ExtraField($this->type);
-        $allData = $extraField->get_all(['filter = ?' => 1]);
+        // Si $applyFilter es true, solo carga campos con filter=1
+        // Si es false, carga todos los campos
+        $conditions = $applyFilter ? ['filter = ?' => 1] : [];
+        $allData = $extraField->get_all($conditions);
         $allResults = [];
         foreach ($allData as $field) {
             if (in_array($field['id'], $idList)) {

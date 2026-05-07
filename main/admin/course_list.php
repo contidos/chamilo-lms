@@ -591,7 +591,7 @@ if (isset($_GET['search']) && $_GET['search'] === 'advanced') {
     $parameters = [];
     $parameters['sec_token'] = Security::get_token();
     if (isset($_GET['keyword'])) {
-        $parameters = ['keyword' => Security::remove_XSS($_GET['keyword'])];
+        $parameters['keyword'] = Security::remove_XSS($_GET['keyword']);
     } elseif (isset($_GET['keyword_code'])) {
         $parameters['keyword_code'] = Security::remove_XSS($_GET['keyword_code']);
         $parameters['keyword_title'] = Security::remove_XSS($_GET['keyword_title']);

@@ -14,7 +14,7 @@ CKEDITOR.editorConfig = function (config) {
 
     // Simplify the dialog windows.
     config.removeDialogTabs = 'image:advanced;link:advanced';
-
+    
     config.templates_files  = [
         '{{ _p.web_main ~ 'inc/lib/elfinder/templates.php'}}'
     ];

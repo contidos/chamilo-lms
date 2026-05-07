@@ -148,7 +148,7 @@ function formExportSubmit(formId) {
 }
 async function exportToPdf() {
     window.scrollTo(0, 0);
-
+    
     $("#dialog-confirm").dialog({
         autoOpen: false,
         show: "blind",
@@ -232,30 +232,35 @@ async function exportToPdf() {
             var canvasHeight = canvas.height;
             var imgWidth = 515;
             var imgHeight = canvasHeight;
+            //var y = currentHeight;
             var y = j === 0 ? currentHeight + 60 : currentHeight;
             var renderedHeight = 0;
-
+        
             while (renderedHeight < imgHeight) {
                 var remainingHeight = imgHeight - renderedHeight;
                 var heightToDraw = Math.min(remainingHeight, maxHeightPerPage - y);
                 var sourceHeight = heightToDraw * (canvasWidth / imgWidth);
-
+        
                 // New canvas for cropping image
                 var sectionCanvas = document.createElement("canvas");
                 sectionCanvas.width = canvasWidth;
                 sectionCanvas.height = sourceHeight;
                 var ctx = sectionCanvas.getContext("2d");
 
+                // Fill the background with white color
+                ctx.fillStyle = "#FFFFFF"; // Set fill color to white
+                ctx.fillRect(0, 0, canvasWidth, sourceHeight); // Fill the canvas with white                
+        
                 // Draw the image section on new canvas
                 ctx.drawImage(canvas, 0, renderedHeight, canvasWidth, sourceHeight, 0, 0, canvasWidth, sourceHeight);
-
+        
                 var sectionImgData = sectionCanvas.toDataURL("image/jpeg", 0.7);
-
+        
                 pdf.addImage(sectionImgData, "JPEG", 40, y, imgWidth, heightToDraw);
-
+        
                 renderedHeight += sourceHeight;
                 y = heightToDraw + y;
-
+        
                 if (renderedHeight < imgHeight && remainingHeight > maxHeightPerPage - y) {
                     pdf.addPage();
                     page++;
@@ -263,7 +268,7 @@ async function exportToPdf() {
                     currentHeight = 40;
                 }
             }
-
+        
             if (renderedHeight >= imgHeight) {
                 currentHeight = y;
             }

@@ -356,10 +356,6 @@ class GradebookDataGenerator
                     $row[] = $result['display'];
                     $row['result_score'] = $result['score'];
                     $row['result_score_weight'] = $result['score'];
-                    $showPercentage = true;
-                    if ($this->hidePercentage) {
-                        $showPercentage = false;
-                    }
 
                     if (empty($model)) {
                         // Best
@@ -367,7 +363,7 @@ class GradebookDataGenerator
                             $best = $defaultData[$item->get_id()]['best'];
                             if ($useExerciseScoreInTotal) {
                                 $bestScore = $best['score'];
-                                $best['display'] = ExerciseLib::show_score($bestScore[0], $bestScore[1], $showPercentage);
+                                $best['display'] = ExerciseLib::show_score($bestScore[0], $bestScore[1], true);
                             } else {
                                 $best = $defaultData[$item->get_id()]['best'];
                             }
@@ -384,7 +380,7 @@ class GradebookDataGenerator
                             $average = $defaultData[$item->get_id()]['average'];
                             if ($useExerciseScoreInTotal) {
                                 $averageScore = $average['score'];
-                                $average['display'] = ExerciseLib::show_score($averageScore[0], $averageScore[1], $showPercentage);
+                                $average['display'] = ExerciseLib::show_score($averageScore[0], $averageScore[1], true);
                             }
                         } else {
                             $average = $this->buildAverageResultColumn($item, $useExerciseScoreInTotal);

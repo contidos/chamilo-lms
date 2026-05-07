@@ -43,6 +43,9 @@ class Login
                     $reset_link = Display::url($reset_link, $reset_link);
                 } else {
                     $reset_link = get_lang('Pass')." : $user[password]";
+                    // elimina posibles espacios en blanco izquierda y derecha de reset_link
+                    $reset_link = trim($reset_link)."\n";
+
                 }
                 $user_account_list = get_lang('YourRegistrationData')." : \n".
                     get_lang('UserName').' : '.$user['loginName']."\n".
@@ -74,6 +77,8 @@ class Login
                 $user = $user[0];
             }
             $reset_link = get_lang('Pass')." : $user[password]";
+                    // elimina posibles espacios en blanco izquierda y derecha de reset_link
+                    $reset_link = trim($reset_link)."\n";
             $user_account_list =
                 get_lang('YourRegistrationData')." : \n".
                 get_lang('UserName').' : '.$user['loginName']."\n".
@@ -227,11 +232,10 @@ class Login
         Database::getManager()->flush();
 
         $url = api_get_path(WEB_CODE_PATH).'auth/reset.php?token='.$uniqueId;
-        $link = "<a href=\"$url\">$url</a>";
         $mailSubject = get_lang('ResetPasswordInstructions');
         $mailBody = sprintf(
             get_lang('ResetPasswordCommentWithUrl'),
-            $link
+            $url
         );
 
         api_mail_html(
@@ -820,7 +824,8 @@ class Login
     }
 
     /**
-     * Returns true if user exists in the platform when asking the password.
+     * Returns the users that correspond to this username or email if exist else false.
+     * If many users correspond to this email or username the users as ordered by registration_date desc
      *
      * @param string $username (email or username)
      *
@@ -828,6 +833,8 @@ class Login
      */
     public static function get_user_accounts_by_username($username)
     {
+        $access_url_id = api_get_current_access_url_id();
+
         if (strpos($username, '@')) {
             $username = api_strtolower($username);
             $email = true;
@@ -843,21 +850,23 @@ class Login
         }
 
         $tbl_user = Database::get_main_table(TABLE_MAIN_USER);
+        $tbl_accessurl_user = Database::get_main_table(TABLE_MAIN_ACCESS_URL_REL_USER);
         $query = "SELECT
-                    user_id AS uid,
-		            lastname AS lastName,
-		            firstname AS firstName,
-		            username AS loginName,
-		            password,
-		            email,
-                    status AS status,
-                    official_code,
-                    phone,
-                    picture_uri,
-                    creator_id,
-                    auth_source
-				 FROM $tbl_user
-				 WHERE ( $condition AND active = 1) ";
+                    u.user_id AS uid,
+		            u.lastname AS lastName,
+		            u.firstname AS firstName,
+		            u.username AS loginName,
+		            u.password,
+		            u.email,
+                    u.status AS status,
+                    u.official_code,
+                    u.phone,
+                    u.picture_uri,
+                    u.creator_id,
+                    u.auth_source
+				 FROM $tbl_user u
+                 LEFT JOIN $tbl_accessurl_user au on  u.id = au.user_id
+				 WHERE ( $condition AND u.active = 1 AND au.access_url_id = $access_url_id) ORDER BY registration_date DESC";
         $result = Database::query($query);
         $num_rows = Database::num_rows($result);
         if ($result && $num_rows > 0) {

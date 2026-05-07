@@ -269,48 +269,6 @@
                         </div>
                     </div>
                 </div>
-                {% if course_data.coaches %}
-                    <div class="col-md-4">
-                        <div class="panel panel-default">
-                            <div class="panel-body">
-                                <div class="panel-teachers">
-                                    <h3 class="sub-title">{{ "Coaches"|get_lang }}</h3>
-                                    {% for coach in course_data.coaches %}
-                                        <div class="coach-information">
-                                            <div class="coach-header">
-                                                <div class="coach-avatar">
-                                                    <img class="img-circle img-responsive" src="{{ coach.image }}"
-                                                         alt="{{ coach.complete_name }}">
-                                                </div>
-                                                <div class="coach-title">
-                                                    <h4>{{ coach.complete_name }}</h4>
-                                                    {% if coach.diploma %}
-                                                        <p>{{ coach.diploma }}</p>
-                                                    {% endif %}
-                                                </div>
-                                            </div>
-                                            {% if coach.openarea %}
-                                                <div class="open-area {{ course_data.coaches | length >= 2 ? 'open-more' : ' ' }}">
-                                                    <p>{{ coach.openarea }}</p>
-                                                </div>
-                                            {% endif %}
-                                            {% for coach_extra_field in coach.extra_fields %}
-                                                {% set coach_field = coach_extra_field.value.field %}
-                                                {% set coach_field_value = coach_extra_field.value.value %}
-                                                {% if not coach_field_value is empty %}
-                                                    <dl class="coach-extrafield">
-                                                        <dt class="extrafield_dt dt_{{ coach_field.variable }}">{{ coach_field.displayText }}</dt>
-                                                        <dd class="extrafield_dd dd_{{ coach_field.variable }}">{{ coach_extra_field.value.value }}</dd>
-                                                    </dl>
-                                                {% endif %}
-                                            {% endfor %}
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                {% endif %}
             </div>
         </section>
     {% endfor %}

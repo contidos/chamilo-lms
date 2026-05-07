@@ -432,13 +432,13 @@ $LatestVersionIs = "La última versión es";
 $YourVersionNotUpToDate = "Su versión no está actualizada";
 $Hotpotatoes = "Hotpotatoes";
 $ZeroMeansNoQuestionWillBeSelectedMinusOneMeansThatAllQuestionsWillBeSelected = "-1 = Todas las preguntas serán seleccionadas. 0 = Ninguna pregunta será seleccionada.";
-$EmailNotificationTemplateDescription = "Puede modificar el correo enviado a los usuarios al terminar el ejercicio. Puede usar los siguientes términos: 
+$EmailNotificationTemplateDescription = "Puede modificar el correo enviado a los usuarios al terminar el ejercicio. Puede usar los siguientes términos:
 
 {{ student.username }}
-{{ student.firstname }} 
+{{ student.firstname }}
 {{ student.lastname }}
-{{ student.official_code }} 
-{{ exercise.title }} 
+{{ student.official_code }}
+{{ exercise.title }}
 {{ exercise.start_time }}
 {{ exercise.end_time }}
 {{ course.title }}
@@ -5923,8 +5923,7 @@ $LowerCaseUser = "usuario";
 $GenerateCertificates = "Generar certificados";
 $ExportAllCertificatesToPDF = "Exportar todos los certificados a PDF";
 $DeleteAllCertificates = "Eliminar todos los certificados";
-$ClickToShowGraphs = "Haga clic para ver los gráficos";
-$QuarterlyReport = "Reporte trimestral";
+$ThereAreUsersUsingThisLanguageYouWantToDisableThisLanguageAndSetUsersWithTheDefaultPortalLanguage = "Existen usuarios usando este idioma. ¿Desea deshabilitar este idioma y actualizar estos usuarios con el idioma por defecto de la plataforma?";
 $dateFormatLongNoDay = "%d de %B de %Y";
 $dateFormatOnlyDayName = "%A";
 $ReturnToCourseList = "Regreso a lista de cursos";
@@ -6158,7 +6157,7 @@ $LastConnexionDate = "Fecha de la última conexión";
 $ToolVideoconference = "Videoconferencia";
 $BigBlueButtonEnableTitle = "Herramienta de videoconferencia BigBlueButton";
 $BigBlueButtonEnableComment = "Seleccione si desea habilitar la herramienta de videoconferencia BigBlueButton. Una vez activada, se mostrará como una herramienta en la página principal todos los curso. Los profesores podrán lanzar una videoconferencia en cualquier momento, pero los estudiantes sólo podrán unirse a una ya lanzada.
-Si no dispone de un servidor BigBlueButton, pruebe a 
+Si no dispone de un servidor BigBlueButton, pruebe a
 <a href=\"http://bigbluebutton.org/\" target=\"_blank\">configurar uno</a> o pida ayuda a los <a href=\"http://www.chamilo.org/en/providers\" target=\"_blank\">proveedores oficiales de Chamilo</a>.
 BigBlueButton es libre, pero su instalación requiere ciertas habilidades técnicas que no todo el mundo posee. Puede instalarlo por su cuenta o buscar ayuda profesional con el consiguiente costo. En la lógica del software libre, nosotros le ofrecemos las herramientas para hacer más fácil su trabajo y le recomendamos profesionales (los proveedores oficiales de Chamilo) que serán capaces de ayudarle.";
 $BigBlueButtonHostTitle = "Servidor BigBlueButton";
@@ -6176,7 +6175,7 @@ La carpeta de los usuarios y las carpetas que contiene de cada uno de ellos, se 
 
 Si se hace visible la carpeta de los usuarios y la carpeta de uno o más alumnos, el resto de los alumnos podrán ver todo su contenido. En este caso, el alumno propietario de la carpeta también podrá desde la herramienta documentos (sólo dentro de su carpeta): crear y editar documentos web, convertir un documento web en una plantilla para uso personal, crear y editar dibujos SVG y PNG, grabar archivos de audio en formato WAV, convertir texto en audio en formato MP3, realizar capturas a través de su webcam, enviar documentos, crear carpetas, mover carpetas y archivos, borrar carpetas y archivos, y descargar copias de seguridad de su carpeta.
 
-Por otra parte, la herramienta documentos se sincroniza con el gestor de archivos del editor web, así que los cambios en la gestión de los documentos realizados en una u otra afectarán a ambas. 
+Por otra parte, la herramienta documentos se sincroniza con el gestor de archivos del editor web, así que los cambios en la gestión de los documentos realizados en una u otra afectarán a ambas.
 
 Así pues, la carpeta de usuario no sólo es un lugar para depositar los archivos, sino que se convierte en un completo gestor de los documentos que los estudiantes utilizan durante el curso. Además, recuerde que cualquier usuario podrá copiar un archivo, que sea visible, de cualquier carpeta de la herramienta documentos (sea o no la suya) a su portafolios o área personal de documentos de la red social, donde estará disponible para que lo pueda usar en otros cursos.";
 $HelpFolderChat = "INFORMACIÓN SOLO VISIBLE POR EL PROFESORADO:\nEsta carpeta contiene todas las sesiones que se han realizado en el chat. Aunque muchas veces las sesiones en el chat pueden ser triviales, en otras pueden ser dignas de ser tratadas como un documento más de trabajo. Para ello, sin cambiar la visibilidad de esta carpeta, haga visible el archivo y enlácelo donde considere oportuno. No se recomienda hacer visible esta carpeta.";
@@ -6890,7 +6889,7 @@ $ExamsReporting = "Informes de exámenes";
 $MyReporting = "Mis informes";
 $SearchSkills = "Buscar competencias";
 $SaveThisSearch = "Guardar esta búsqueda";
-$SkillLevelProfiles = "Perfiles de niveles de competencia";
+$SkillProfiles = "Perfiles de competencias guardados";
 $Matches = "Correspondencias";
 $WelcomeUserXToTheSiteX = "%s, bienvenido al portal %s";
 $CheckUsersWithId = "Usar el ID de usuario del archivo para el registro";
@@ -7135,7 +7134,7 @@ $ActivateEmailTemplateComment = "Use plantillas de correos para ciertos eventos 
 $SystemManagement = "Administración del sistema";
 $RemoveOldDatabaseMessage = "Eliminar base de datos antigua";
 $RemoveOldTables = "Eliminar tablas antiguas";
-$TotalSpaceUsedByPortalXLimitIsYMB = "Espacio total usado por el portal: %s (limite configurado a %sMB)";
+$TotalSpaceUsedByPortalXLimitIsYMB = "Espacio total usado por el portal %s limite es de %s MB";
 $EventMessageManagement = "Administración de los eventos";
 $ToBeWarnedUserList = "Lista de usuarios por ser alertados por email";
 $YouHaveSomeUnsavedChanges = "Tiene algunos cambios no guardados. ¿Desea abandonarlos?";
@@ -7203,7 +7202,7 @@ $ShowUsersNotAddedInTheURL = "Mostrar usuarios no añadidos a la URL";
 $UserNotAddedInURL = "Usuarios no añadidos a la URL";
 $UsersRegisteredInNoSession = "Usuarios no registrados en ninguna sesión";
 $CommandLineInterpreter = "Intérprete de comandos en línea (CLI)";
-$PleaseVisitOurWebsite = "Visite nuestro sitio web https://chamilo.org/download";
+$PleaseVisitOurWebsite = "Visite nuestro sitio web http://www.chamilo.org";
 $SpaceUsedOnSystemCannotBeMeasuredOnWindows = "El espacio usado en el disco no puede ser medido en sistemas basados en Windows";
 $XOldTablesDeleted = "%d tablas antiguas eliminadas";
 $XOldDatabasesDeleted = "%d bases de datos antiguas eliminadas";
@@ -7317,7 +7316,7 @@ $CourseCreationUsesTemplateComment = "Configure este parámetro para usar el mis
 $EnablePasswordStrengthCheckerText = "Validar complejidad de contraseña";
 $EnablePasswordStrengthCheckerComment = "Al activar esta opción, aparecerá un indicador de complejidad de contraseña cuando el usuario cambie su contraseña. Esto *NO* prohíbe el ingreso de una mala contraseña. Solamente actúa como una ayuda visual.";
 $EnableCaptchaText = "CAPTCHA";
-$EnableCaptchaComment = "Al activar esta opción, aparecerá un CAPTCHA en los formularios de ingreso, inscripcion y contraseña perdida para evitar los intentos de ingreso por fuerza bruta";
+$EnableCaptchaComment = "Al activar esta opción, aparecerá un CAPTCHA en el formulario de ingreso, para evitar los intentos de ingreso por fuerza bruta";
 $CaptchaNumberOfMistakesBeforeBlockingAccountText = "Margen de errores en CAPTCHA";
 $CaptchaNumberOfMistakesBeforeBlockingAccountComment = "Cuantas veces uno se puede equivocar al ingresar su usuario y contraseña con el CAPTCHA antes de que su cuenta quede congelada por un tiempo.";
 $CaptchaTimeAccountIsLockedText = "Tiempo bloqueo CAPTCHA";
@@ -8807,11 +8806,9 @@ $QuizRemindSubject = "Tienes un nuevo mensaje de %s";
 $QuizFirstRemindBody = "Hola \%s,<br /><br /> Un nuevo ejercicio %s ha sido agregado en el curso %s.<br /><br />Curso: %s <br />Ejercicio: %s <br />";
 $QuizLastRemindBody = "Visitar el ejercicio en <a href=\"%s\">%s</a><br />";
 $QuizDhrRemindBody = "Hola %s,<br /><br />Como padre, estan recibiendo este correo para avisarle que %s tiene un nuevo ejercicio %s en el curso %s.<br /><br />Estudiante: %s<br /> Curso: %s<br />Ejercicio: %s<br />";
-$QuizRemindDuration = "Duración del ejercicio: %s <br />";
+$QuizRemindDuration = "Duration del ejercicio: %s <br />";
 $QuizRemindStartDate = "Fecha de inicio del ejercicio: %s <br />";
 $QuizRemindEndDate = "Fecha de fin del ejercicio: %s <br />";
-$CareerDiagramLegend = "Leyenda del diagrama de carrera";
-$CareerDiagramDisclaimer = "Descargo de responsabilidad del diagrama de carrera";
 $SuccessfulAttempt = "Intento exitoso";
 $FailedAttempt = "Intento fallido";
 $StudentWithSuccessfulAttempt = "Estudiantes con intento exitoso";
@@ -9058,43 +9055,30 @@ $HideCareersHierarchy = "Ocultar jerarquías";
 $ShowCareersHierarchy = "Mostrar jerarquías";
 $ParentCareer = "Carrera padre";
 $CareerCannotBeDeletedAsItHasChildren = "Esta carrera no puede ser eliminada hasta que las carreras hijas a ésta sean eliminadas o movidas a otra carrera.";
-$EmailUsedTwiceInImportFile = "Este correo electrónico ya está usado por otro usuario en el mismo archivo.";
-$NotificationInYourForums = "Hay nuevos posts en los foros siguientes de tus cursos.";
-$ExtraFieldIdComment = "Este identificador es interno al sistema y no debe contener espacios ni caracteres especiales. Podrá ser usado también por plugins para filtrar entre los elementos que lo usan.";
-$IncludeLastLogin = "Incluir último login";
-$DuplicatedUsersByMail = "Usuarios duplicados por e-mail";
-$ThisReportOnlyListsUsersThatHaveTheSameEmail = "Este reporte solo lista usuarios que tienen el mismo e-mail.";
-$CancelNotifyMe = "Dejar de notificarme";
-$EmptyExpirationDate = "La fecha de expiración no puede ser vacía.";
-$MailingTestNotSent = "El correo de prueba no ha podido ser enviado. Puede que la dirección introducida sea incorrecta, que pertenezca a un usuario inactivo, o que su servidor de correos no esté bien configurado (ver archivo mail.conf.php).";
-$PasswordExpiredPleaseSetNewPassword = "Su contraseña se ha vencido. Por favor, defina una nueva contraseña antes de seguir.";
-$CopyIframeCodeToIncludeExercise = "Copie el código del iframe a continuación para incluir el ejercicio:";
-$MyMissingSignatures = "Mis firmas faltantes";
-$OnlyShowActiveUsers = "Mostrar solo usuarios activos";
-$UpdateCourseListXMLCSV = "Actualizar la lista de cursos";
-$CodeIsRequired = "Se necesita un código";
-$CourseCodeDoesNotExist = "Este codigo de curso no existe";
-$DuplicateCode = "Código duplicado";
-$CoursesUpdatedSuccessfully = "Cursos actualizados exitósamente";
-$UpdateFailedForCourses = "La actualización falló para los cursos siguientes";
-$HoursMinutesSeconds = "%02d h %02d m %02d s";
-$IfYourLPsAreScormsYouShouldSelectThemFromTheScorms = "Si sus lecciones de aprendizaje son paquetes scorm, debe seleccionar la carpeta correspondiente en la parte SCORM";
-$QuestionsWithNoAutomaticCorrection = "Preguntas sin corrección automática";
-$UsersReportByCourseInSessions = "Reporte de progreso de usuarios por curso, en todas las sesiones";
-$UsersReport = "Reporte de usuarios";
-$SelectAllUsers = "Seleccionar todos los usuarios";
-$SelectUsers = "Seleccionar usuarios";
-$ValidationDate = "Fecha de validación";
-$LearningpathName = "Nombre de lección";
-$StartingAccessDate = "Fecha de inicio de acceso";
-$EndingAccessDate = "Fecha de finalización del acceso";
-$TimeReport = "Informe de tiempo de accesso";
-$BillingReport = "Informe de facturación";
-$ExportToMoodle = "Exportar para Moodle";
-$ExportToMoodleInfo = "Exportar los contenidos del curso en el formato .mbz de Moodle, listo para importar en un portal Moodle";
-$MoodleExportCreated = "Exportación Moodle creada";
-$AdminID = "ID de administrador";
-$MoodleVersion = "Versión de Moodle";
-$CreateExport = "Crear archivo de exporte";
-$MoodleExportAdminIDComment = "Moodle requiere la indentificación de algún usuario para almacenarla dentro de los archivos XML del formato .mbz. Por favor indique un número de ID interno (entero) del usuario quien está exportando este curso, o el ID interno del usuario en Moodle para el usuario quien será propietario de los recursos importados. Si tiene duda, puede simplemente marcar '1' y algunos datos falsos para seguir.";
+$YourAccountNameRemember = "Le recordamos que su nombre de usuario para el acceso es %s";
+$InstructionsLostPassword = "Nota: Si no recuerda su contraseña, haga clic en <a href=\"%s\">\"¿Ha olvidado su contraseña?\"</a>, introduzca su usuario y siga las instrucciones";
+$CodeAlreadyExists = "Código ya en uso";
+$CifEmpresa="CIF empresa";
+$PersonaDeContacto="Persona de contacto";
+$AceptaRgpd="Acepta RGPD";
+$ActividadCursoDeInter="Curso solicitado";
+$Puesto="Puesto";
+$Genero="Género";
+$DueToInactivityTheSessionIsGoingToCloseJS = "Debido a la inactividad, la sesión se cerrará en";
+$KeepGoingJS = "Continuar";
+$SessionExpiredAtJS = "Sesión caducada el";
+$SessionIsClosingJS = "La sesión se está cerrando por inactividad...";
+$DuplicatedFieldAt = "Valor duplicado en %s";
+$TheValueEntered  = "El valor introducido en el campo %s ya existe";
+$Learners = "ASISTENTES";
+$ExistingUserWithSameExtraFieldValue = "Se encontró el mismo %s con un usuario existente (ID %d), se procederá a matricularlo en lugar de crear uno nuevo.";
+$SelectExtraField = "Seleccione el campo extra para buscar";
+$WhatToDoWithUnifiedUsers = "Que hacer con los usuarios unificados";
+$ExtraFieldNotFound = "Campo extra no encontrado";
+$NoDuplicatesFound = "No se encontraron duplicados";
+$UnifyToThisUser = "Unificar a este usuario";
+$Unify = "Unificar";
+$AreYouSureToUnify = "Estas seguro de unificar";
+$FinalUser = "Usuario final";
+$WillMergeNUsers = "Fusionará {n} usuarios";
 ?>

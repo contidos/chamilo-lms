@@ -255,27 +255,23 @@
                     'style',
                     'width:100%; overflow:auto; position:auto; -webkit-overflow-scrolling:touch !important;'
                 );
-
-                {% if ios_hide_open_in_new_window == false %}
-                    $('<a>')
-                        .attr({
-                            'id': 'btn-content-new-tab',
-                            'target': '_blank',
-                            'href': '{{ iframe_src }}'
-                        })
-                        .css({
-                            'position': 'absolute',
-                            'right': '5px',
-                            'top': '5px',
-                            'z-index': '9999',
-                            'font-weight': 'bold'
-                        })
-                        .addClass('btn btn-default btn-sm')
-                        .text('{{ 'OpenContentInNewTab'|get_lang|escape('js') }}')
-                        .prependTo('#wrapper-iframe');
-                    $('#wrapper-iframe').css('position', 'relative');
-                {% endif %}
-
+                $('<a>')
+                    .attr({
+                        'id': 'btn-content-new-tab',
+                        'target': '_blank',
+                        'href': '{{ iframe_src }}'
+                    })
+                    .css({
+                        'position': 'absolute',
+                        'right': '5px',
+                        'top': '5px',
+                        'z-index': '9999',
+                        'font-weight': 'bold'
+                    })
+                    .addClass('btn btn-default btn-sm')
+                    .text('{{ 'OpenContentInNewTab'|get_lang|escape('js') }}')
+                    .prependTo('#wrapper-iframe');
+                $('#wrapper-iframe').css('position', 'relative');
                 // Fix another issue whereby buttons do not react to click below
                 // second screen in learning paths on Apple devices
                 document.getElementById('content_id').setAttribute('style', 'overflow: auto;');

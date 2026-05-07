@@ -1710,11 +1710,6 @@ class Exercise
             if (api_get_setting('search_enabled') === 'true') {
                 $this->search_engine_edit();
             }
-            Event::addEvent(
-                LOG_EXERCISE_UPDATE,
-                LOG_EXERCISE_ID,
-                $id
-            );
         } else {
             // Creates a new exercise
             // In this case of new exercise, we don't do the api_get_utc_datetime()
@@ -1821,11 +1816,6 @@ class Exercise
                 if (api_get_setting('search_enabled') === 'true' && extension_loaded('xapian')) {
                     $this->search_engine_save();
                 }
-                Event::addEvent(
-                    LOG_EXERCISE_CREATE,
-                    LOG_EXERCISE_ID,
-                    $this->iid
-                );
             }
         }
 
@@ -2024,11 +2014,6 @@ class Exercise
                 WHERE iid = ".$this->iid;
             Database::query($sql);
         }
-        Event::addEvent(
-            LOG_EXERCISE_DELETE,
-            LOG_EXERCISE_ID,
-            $this->iid
-        );
 
         return true;
     }
@@ -9413,6 +9398,9 @@ class Exercise
                         $filterByAttemptCondition
                     ORDER BY title
                     LIMIT $from , $limit";
+
+
+
         } else {
             // Only for students
             if (empty($sessionId)) {
@@ -9489,6 +9477,9 @@ class Exercise
 
         $result = Database::query($sql);
         $result_total = Database::query($total_sql);
+
+
+
 
         $total_exercises = 0;
         if (Database::num_rows($result_total)) {
@@ -9672,6 +9663,10 @@ class Exercise
                             if ($visibility == 0) {
                                 if (!$visibilitySetting) {
                                     if ($exercise->exercise_was_added_in_lp == true) {
+
+                                        error_log(
+                                            'Hiding exercise '.$my_exercise_id.' in session '.$sessionId
+                                        );
                                         continue;
                                     }
                                 }
@@ -9795,7 +9790,7 @@ class Exercise
                                     'class' => 'ajax',
                                     'data-title' => get_lang('EmbedExerciseLink'),
                                     'title' => get_lang('EmbedExerciseLink'),
-                                    'data-content' => get_lang('CopyUrlToIncludeInIframe').'<br>'.$urlEmbed.'<br><br>'.get_lang('CopyIframeCodeToIncludeExercise').'<br><textarea rows=&quot;5&quot; cols=&quot;70&quot;>&lt;iframe width=&quot;840&quot; height=&quot;472&quot; src=&quot;'.$urlEmbed.'&quot; title=&quot;Chamilo exercise&quot;&gt;&lt;/iframe&gt;</textarea>',
+                                    'data-content' => get_lang('CopyUrlToIncludeInIframe').'<br>'.$urlEmbed,
                                     'href' => 'javascript:void(0);',
                                 ]
                             );
@@ -9909,15 +9904,29 @@ class Exercise
                                 );
                             } else {
                                 if ($row['active'] == 0 || $visibility == 0) {
-                                    $visibility = Display::url(
-                                        Display::return_icon(
-                                            'invisible.png',
-                                            get_lang('Activate'),
-                                            '',
-                                            ICON_SIZE_SMALL
-                                        ),
-                                        'exercise.php?'.api_get_cidreq().'&choice=enable&sec_token='.$token.'&exerciseId='.$row['iid']
+                                    $visibleOnBaseCourse = api_get_item_visibility(
+                                        $courseInfo,
+                                        TOOL_QUIZ,
+                                        $my_exercise_id,
+                                        0
                                     );
+
+                                    if ($visibleOnBaseCourse) {
+                                        $visibility = Display::url(
+                                            Display::return_icon(
+                                                'invisible.png',
+                                                get_lang('Activate'),
+                                                '',
+                                                ICON_SIZE_SMALL
+                                            ),
+                                            'exercise.php?'.api_get_cidreq().'&choice=enable&sec_token='.$token.'&exerciseId='.$row['iid']
+                                        );
+                                    } else {
+                                        $visibility = Display::return_icon(
+                                            'invisible.png',
+                                            get_lang('Activate')
+                                        );
+                                    }
                                 } else {
                                     // else if not active
                                     $visibility = Display::url(
@@ -10859,9 +10868,6 @@ class Exercise
                         case FILL_IN_BLANKS:
                         case FILL_IN_BLANKS_COMBINATION:
                             $option['answer'] = $this->fill_in_blank_answer_to_string($option['answer']);
-                            if ($option['answer'] === "0") {
-                                $option['answer'] = "there is 0 as answer so we do not want to consider it empty";
-                            }
                             break;
                     }
                 }

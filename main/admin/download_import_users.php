@@ -25,6 +25,7 @@ function readImportedUsersArchives(string $path = '', string $parentFile = null,
     if (empty($path)) {
         $path = api_get_path(SYS_ARCHIVE_PATH).'backup/import_users/'.api_get_user_id();
     }
+    
     foreach (scandir($path) as $dir) {
         // exclude ".", ".." and ".htaccess"
         if (in_array($dir, ['.', '..', '.htaccess'])) {
@@ -42,7 +43,7 @@ function readImportedUsersArchives(string $path = '', string $parentFile = null,
                 $filename = substr($_GET['download'], -strlen($dir));
                 $time = (string) (int) substr($_GET['download'], 0, -strlen($dir));
                 // Clean against hacks
-                if ($filename == $dir) {
+                if ($filename == $dir && $parentFile == $time) {
                     if (!Security::check_abs_path($path.DIRECTORY_SEPARATOR.$filename, $path)) {
                         continue;
                     }

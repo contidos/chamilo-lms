@@ -1850,6 +1850,8 @@ class CourseHome
      */
     public static function getToolVisibility($toolName, $courseId, $sessionId = 0)
     {
+	 $visibility = false;
+
         $allowEditionInSession = api_get_configuration_value('allow_edit_tool_visibility_in_session');
 
         $toolLink = self::getToolLinks($toolName);

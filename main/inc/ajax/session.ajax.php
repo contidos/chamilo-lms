@@ -259,8 +259,14 @@ switch ($action) {
             break;
         }
 
-        if (!api_is_platform_admin(true) || $session->getSessionAdminId() != $currentUserId) {
+        /*if (!api_is_platform_admin(true) || $session->getSessionAdminId() != $currentUserId) {
             break;
+        }*/
+
+        if (!api_is_platform_admin(true)) {
+            if ($session->getSessionAdminId() != $currentUserId) {
+                break;
+            }  
         }
 
         $folderName = '/basic-course-documents__'.$session->getId().'__0';
