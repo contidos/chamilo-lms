@@ -37,28 +37,25 @@ class Login
 
         if ($reset) {
             if ($by_username) {
-                $secret_word = self::get_secret_word($user['email']);
+                $token = self::generate_reset_token($user['uid']);
                 if ($reset) {
-                    $reset_link = $portal_url."main/auth/lostPassword.php?reset=".$secret_word."&id=".$user['uid'];
+                    $reset_link = $portal_url."main/auth/lostPassword.php?reset=".$token."&id=".$user['uid'];
                     $reset_link = Display::url($reset_link, $reset_link);
                 } else {
                     $reset_link = get_lang('Pass')." : $user[password]";
-                    // elimina posibles espacios en blanco izquierda y derecha de reset_link
-                    $reset_link = trim($reset_link)."\n";
-
                 }
                 $user_account_list = get_lang('YourRegistrationData')." : \n".
                     get_lang('UserName').' : '.$user['loginName']."\n".
-                    get_lang('ResetLink').' : '.$reset_link;
+                    get_lang('ResetLink').' : '.trim($reset_link);
 
                 if ($user_account_list) {
                     $user_account_list = "\n-----------------------------------------------\n".$user_account_list;
                 }
             } else {
                 foreach ($user as $this_user) {
-                    $secret_word = self::get_secret_word($this_user['email']);
+                    $token = self::generate_reset_token($this_user['uid']);
                     if ($reset) {
-                        $reset_link = $portal_url."main/auth/lostPassword.php?reset=".$secret_word."&id=".$this_user['uid'];
+                        $reset_link = $portal_url."main/auth/lostPassword.php?reset=".$token."&id=".$this_user['uid'];
                         $reset_link = Display::url($reset_link, $reset_link);
                     } else {
                         $reset_link = get_lang('Pass')." : $this_user[password]";
@@ -66,7 +63,7 @@ class Login
                     $user_account_list[] =
                         get_lang('YourRegistrationData')." : \n".
                         get_lang('UserName').' : '.$this_user['loginName']."\n".
-                        get_lang('ResetLink').' : '.$reset_link;
+                        get_lang('ResetLink').' : '.trim($reset_link);
                 }
                 if ($user_account_list) {
                     $user_account_list = implode("\n-----------------------------------------------\n", $user_account_list);
@@ -77,12 +74,10 @@ class Login
                 $user = $user[0];
             }
             $reset_link = get_lang('Pass')." : $user[password]";
-                    // elimina posibles espacios en blanco izquierda y derecha de reset_link
-                    $reset_link = trim($reset_link)."\n";
             $user_account_list =
                 get_lang('YourRegistrationData')." : \n".
                 get_lang('UserName').' : '.$user['loginName']."\n".
-                $reset_link.'';
+                trim($reset_link).'';
         }
 
         return $user_account_list;
@@ -232,10 +227,11 @@ class Login
         Database::getManager()->flush();
 
         $url = api_get_path(WEB_CODE_PATH).'auth/reset.php?token='.$uniqueId;
+        $link = "<a href=\"$url\">$url</a>";
         $mailSubject = get_lang('ResetPasswordInstructions');
         $mailBody = sprintf(
             get_lang('ResetPasswordCommentWithUrl'),
-            $url
+            $link
         );
 
         api_mail_html(
@@ -252,9 +248,36 @@ class Login
      *
      * @author Olivier Cauberghe <olivier.cauberghe@UGent.be>, Ghent University
      */
+    /**
+     * Generate a cryptographically random reset token for the given user,
+     * store it (with a timestamp) in the database, and return it.
+     *
+     * @param int $userId
+     *
+     * @return string The hex token
+     */
+    public static function generate_reset_token($userId)
+    {
+        $token = bin2hex(random_bytes(32));
+        $em = Database::getManager();
+        /** @var User $user */
+        $user = $em->find('ChamiloUserBundle:User', (int) $userId);
+        if ($user) {
+            $user->setConfirmationToken($token);
+            $user->setPasswordRequestedAt(new \DateTime());
+            $em->persist($user);
+            $em->flush();
+        }
+
+        return $token;
+    }
+
+    /**
+     * @deprecated Use generate_reset_token() instead.
+     */
     public static function get_secret_word($add)
     {
-        return $secret_word = sha1($add);
+        return sha1($add);
     }
 
     /**
@@ -289,15 +312,51 @@ class Login
             return get_lang('CouldNotResetPassword');
         }
 
-        if (self::get_secret_word($user['email']) == $secret) {
-            // OK, secret word is good. Now change password and mail it.
-            $user['password'] = api_generate_password();
-            UserManager::updatePassword($id, $user['password']);
+        // Validate token against the stored confirmation_token.
+        $em = Database::getManager();
+        /** @var User $dbUser */
+        $dbUser = $em->find('ChamiloUserBundle:User', $id);
 
-            return self::send_password_to_user($user, $by_username);
+        if (!$dbUser) {
+            return get_lang('CouldNotResetPassword');
         }
 
-        return get_lang('NotAllowed');
+        $storedToken = $dbUser->getConfirmationToken();
+        $requestedAt = $dbUser->getPasswordRequestedAt();
+
+        // Token must exist (a reset must have been requested first).
+        if (empty($storedToken) || empty($requestedAt)) {
+            return get_lang('NotAllowed');
+        }
+
+        // Token expires after 1 hour.
+        $expiresAt = clone $requestedAt;
+        $expiresAt->modify('+1 hour');
+        if (new \DateTime() > $expiresAt) {
+            // Clear expired token.
+            $dbUser->setConfirmationToken(null);
+            $dbUser->setPasswordRequestedAt(null);
+            $em->persist($dbUser);
+            $em->flush();
+
+            return get_lang('NotAllowed');
+        }
+
+        // Timing-safe comparison.
+        if (!hash_equals($storedToken, $secret)) {
+            return get_lang('NotAllowed');
+        }
+
+        // Token is valid — change the password and clear the token.
+        $user['password'] = api_generate_password();
+        UserManager::updatePassword($id, $user['password']);
+
+        $dbUser->setConfirmationToken(null);
+        $dbUser->setPasswordRequestedAt(null);
+        $em->persist($dbUser);
+        $em->flush();
+
+        return self::send_password_to_user($user, $by_username);
     }
 
     /**
@@ -825,7 +884,7 @@ class Login
 
     /**
      * Returns the users that correspond to this username or email if exist else false.
-     * If many users correspond to this email or username the users as ordered by registration_date desc
+     * If many users correspond to this email or username the users as ordered by registration_date desc.
      *
      * @param string $username (email or username)
      *
@@ -833,8 +892,6 @@ class Login
      */
     public static function get_user_accounts_by_username($username)
     {
-        $access_url_id = api_get_current_access_url_id();
-
         if (strpos($username, '@')) {
             $username = api_strtolower($username);
             $email = true;
@@ -850,23 +907,22 @@ class Login
         }
 
         $tbl_user = Database::get_main_table(TABLE_MAIN_USER);
-        $tbl_accessurl_user = Database::get_main_table(TABLE_MAIN_ACCESS_URL_REL_USER);
         $query = "SELECT
-                    u.user_id AS uid,
-		            u.lastname AS lastName,
-		            u.firstname AS firstName,
-		            u.username AS loginName,
-		            u.password,
-		            u.email,
-                    u.status AS status,
-                    u.official_code,
-                    u.phone,
-                    u.picture_uri,
-                    u.creator_id,
-                    u.auth_source
-				 FROM $tbl_user u
-                 LEFT JOIN $tbl_accessurl_user au on  u.id = au.user_id
-				 WHERE ( $condition AND u.active = 1 AND au.access_url_id = $access_url_id) ORDER BY registration_date DESC";
+                    user_id AS uid,
+		            lastname AS lastName,
+		            firstname AS firstName,
+		            username AS loginName,
+		            password,
+		            email,
+                    status AS status,
+                    official_code,
+                    phone,
+                    picture_uri,
+                    creator_id,
+                    auth_source
+				 FROM $tbl_user
+				 WHERE ( $condition AND active = 1)
+				 ORDER BY registration_date DESC";
         $result = Database::query($query);
         $num_rows = Database::num_rows($result);
         if ($result && $num_rows > 0) {

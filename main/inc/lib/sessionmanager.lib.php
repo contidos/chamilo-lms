@@ -3304,8 +3304,8 @@ class SessionManager
         $course_table = Database::get_main_table(TABLE_MAIN_COURSE);
         $urlId = empty($urlId) ? api_get_current_access_url_id() : (int) $urlId;
         $return_array = [];
-        $courseFrom ="LEFT JOIN " . $session_course_table . " sco ON (sco.session_id = s.id)
-				INNER JOIN " . $course_table . " c ON sco.c_id = c.id";
+        $courseFrom = "LEFT JOIN ".$session_course_table." sco ON (sco.session_id = s.id)
+                INNER JOIN ".$course_table." c ON sco.c_id = c.id";
 
         if ($includeSessionWithNoCourse) {
             $courseFrom = "";
@@ -4627,7 +4627,7 @@ class SessionManager
         }
 
         $extraFieldValue = new ExtraFieldValue('session');
-        $extraFieldsValues = $extraFieldValue->getAllValuesByItem($id, false);
+        $extraFieldsValues = $extraFieldValue->getAllValuesByItem($id);
         $extraFieldsValuesToCopy = [];
         if (!empty($extraFieldsValues)) {
             foreach ($extraFieldsValues as $extraFieldValue) {
@@ -4792,83 +4792,7 @@ class SessionManager
             }
         }
 
-        // Copy scheduled announcements (if feature enabled)
-        self::copyScheduledAnnouncements($id, $sid);
-
         return $sid;
-    }
-
-    /**
-     * Duplicate scheduled announcements (with extra fields/attachments) from one session to another.
-     */
-    protected static function copyScheduledAnnouncements(int $sourceSessionId, int $targetSessionId): void
-    {
-        if (!api_get_configuration_value('allow_scheduled_announcements')) {
-            return;
-        }
-
-        $scheduledAnnouncementModel = new ScheduledAnnouncement();
-        $items = $scheduledAnnouncementModel->get_all([
-            'session_id = ?' => $sourceSessionId,
-        ]);
-
-        if (empty($items)) {
-            return;
-        }
-
-        $extraFieldValue = new ExtraFieldValue('scheduled_announcement');
-
-        foreach ($items as $item) {
-            $newDate = ScheduledAnnouncement::shiftDateForCopy($item['date']);
-            $params = $item;
-            unset($params['id']);
-            $params['session_id'] = $targetSessionId;
-            $params['sent'] = 0; // always pending on new session
-            $params['date'] = $newDate;
-
-            $newId = $scheduledAnnouncementModel->save($params);
-            if (!$newId) {
-                continue;
-            }
-
-            $extraValues = $extraFieldValue->getAllValuesByItem($item['id'], false);
-            if (!empty($extraValues)) {
-                $payload = ['item_id' => $newId];
-                foreach ($extraValues as $field) {
-                    $payload['extra_'.$field['variable']] = $field['value'];
-                }
-
-                // Duplicate attachment file if exists
-                if (!empty($payload['extra_attachment'])) {
-                    $payload['extra_attachment'] = self::duplicateScheduledAttachment($payload['extra_attachment']);
-                }
-
-                $extraFieldValue->saveFieldValues($payload, false, false, [], [], true);
-            }
-        }
-    }
-
-    /**
-     * Copy attachment file for scheduled announcements.
-     */
-    protected static function duplicateScheduledAttachment($value)
-    {
-        if (empty($value)) {
-            return $value;
-        }
-
-        $sourcePath = api_get_path(SYS_UPLOAD_PATH).$value;
-        if (!file_exists($sourcePath)) {
-            return $value;
-        }
-
-        $pathInfo = pathinfo($sourcePath);
-        $newName = $pathInfo['filename'].'_copy_'.uniqid().'.'.$pathInfo['extension'];
-        $targetRelPath = 'scheduled_announcement/'.$newName;
-        $targetPath = api_get_path(SYS_UPLOAD_PATH).$targetRelPath;
-        FileManager::copy_file($sourcePath, $targetPath);
-
-        return $targetRelPath;
     }
 
     /**
@@ -6085,9 +6009,9 @@ class SessionManager
      * @param int $sessionId
      * @param int $courseId
      *
-     * @return array
+     * @return array<int, int>
      */
-    public static function getCoachesByCourseSession($sessionId, $courseId)
+    public static function getCoachesByCourseSession($sessionId, $courseId): array
     {
         $table = Database::get_main_table(TABLE_MAIN_SESSION_COURSE_USER);
         $sessionId = (int) $sessionId;
@@ -6103,7 +6027,7 @@ class SessionManager
         $coaches = [];
         if (Database::num_rows($result) > 0) {
             while ($row = Database::fetch_array($result)) {
-                $coaches[] = $row['user_id'];
+                $coaches[] = (int) $row['user_id'];
             }
         }
 
@@ -10149,10 +10073,8 @@ class SessionManager
         $row2[] = (new DateTime($sessionInfo['access_start_date']))->format('d/m/Y');
         $row2[] = (new DateTime($sessionInfo['access_end_date']))->format('d/m/Y');
 
-        // Cargar TODOS los campos extra de sesión, incluyendo los que tienen filter=0
-        // Esto permite incluir en la exportación campos que no se muestran como filtro en el listado
         $extraValuesObj = new ExtraFieldValue('session');
-        $sessionExtra = $extraValuesObj->getAllValuesByItem($sessionId, false);
+        $sessionExtra = $extraValuesObj->getAllValuesByItem($sessionId);
         $sessionExtraMap = array_column($sessionExtra, 'value', 'variable');
 
         foreach ($sessionFields as $entry) {
@@ -10209,9 +10131,8 @@ class SessionManager
                 $row = [];
                 $row[] = get_lang('Learners');
 
-                // Cargar TODOS los campos extra de usuario, incluyendo los que tienen filter=0
                 $userExtraObj = new ExtraFieldValue('user');
-                $userExtra = $userExtraObj->getAllValuesByItem($userId, false);
+                $userExtra = $userExtraObj->getAllValuesByItem($userId);
                 $userExtraMap = array_column($userExtra, 'value', 'variable');
 
                 foreach ($userFieldsBefore as $entry) {

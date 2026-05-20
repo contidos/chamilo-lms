@@ -2366,7 +2366,7 @@ class learnpathItem
 
                                         // For one and first attempt.
                                         if ($this->prevent_reinit == 1) {
-                                            // 2. Check the results in the DB of the quiz.
+                                            // 2. Always check the results in the DB of the quiz (previously checked only if status was completed)
                                             $checkLastScoreAttempt = api_get_configuration_value('lp_prerequisite_use_last_attempt_only');
                                             $orderBy = ($checkLastScoreAttempt ? 'ORDER BY exe_date DESC' : 'ORDER BY (exe_result/exe_weighting) DESC');
                                             $sql = 'SELECT exe_result, exe_weighting
@@ -2385,13 +2385,18 @@ class learnpathItem
                                                 /** @var learnpathItem $myItemToCheck */
                                                 $myItemToCheck = $items[$refs_list[$this->get_id()]];
                                                 $minScore = $myItemToCheck->getPrerequisiteMinScore();
-                                                $maxScore = $myItemToCheck->getPrerequisiteMaxScore();
+                                                if (empty($minScore)) {
+                                                    // Try with mastery_score
+                                                    $masteryScoreAsMin = $myItemToCheck->get_mastery_score();
+                                                    if (!empty($masteryScoreAsMin)) {
+                                                        $minScore = $masteryScoreAsMin;
+                                                    }
+                                                }
 
-                                                if (isset($minScore) && isset($minScore)) {
+                                                if (!empty($minScore)) {
                                                     // Taking min/max prerequisites values see BT#5776
-                                                    if ($quiz['exe_result'] >= $minScore &&
-                                                        $quiz['exe_result'] <= $maxScore
-                                                    ) {
+                                                    if ($quiz['exe_result'] >= $minScore) {
+                                                        $this->prereq_alert = '';
                                                         $returnstatus = true;
                                                     } else {
                                                         $explanation = sprintf(
@@ -2406,6 +2411,7 @@ class learnpathItem
                                                     if ($quiz['exe_result'] >=
                                                         $items[$refs_list[$prereqs_string]]->get_mastery_score()
                                                     ) {
+                                                        $this->prereq_alert = '';
                                                         $returnstatus = true;
                                                     } else {
                                                         $explanation = sprintf(
@@ -2438,7 +2444,6 @@ class learnpathItem
                                                     /** @var learnpathItem $myItemToCheck */
                                                     $myItemToCheck = $items[$refs_list[$this->get_id()]];
                                                     $minScore = $myItemToCheck->getPrerequisiteMinScore();
-                                                    $maxScore = $myItemToCheck->getPrerequisiteMaxScore();
 
                                                     if (empty($minScore)) {
                                                         // Try with mastery_score
@@ -2447,11 +2452,9 @@ class learnpathItem
                                                             $minScore = $masteryScoreAsMin;
                                                         }
                                                     }
-                                                    if (isset($minScore) && isset($minScore)) {
+                                                    if (!empty($minScore)) {
                                                         // Taking min/max prerequisites values see BT#5776
-                                                        if ($quiz['exe_result'] >= $minScore &&
-                                                            $quiz['exe_result'] <= $maxScore
-                                                        ) {
+                                                        if ($quiz['exe_result'] >= $minScore) {
                                                             $returnstatus = true;
                                                             break;
                                                         } else {
@@ -3627,9 +3630,10 @@ class learnpathItem
 
     public function isLpItemsCompleted()
     {
-        $lp = new Learnpath(api_get_course_id(), $this->lp_id, api_get_user_id());
+        $lp = new learnpath(api_get_course_id(), $this->lp_id, api_get_user_id());
         $count = $lp->getTotalItemsCountWithoutDirs([TOOL_LP_FINAL_ITEM]);
-        $completed = $lp->get_complete_items_count(true, [TOOL_LP_FINAL_ITEM]);
+        $excludeFailedStatus = !(true === api_get_configuration_value('lp_prerequisit_on_quiz_unblock_if_max_attempt_reached'));
+        $completed = $lp->get_complete_items_count($excludeFailedStatus, [TOOL_LP_FINAL_ITEM]);
         $isCompleted = ($count - $completed == 0);
 
         return $isCompleted;
@@ -3637,7 +3641,7 @@ class learnpathItem
 
     public function getLpFinalItem()
     {
-        $lp = new Learnpath(api_get_course_id(), $this->lp_id, api_get_user_id());
+        $lp = new learnpath(api_get_course_id(), $this->lp_id, api_get_user_id());
 
         return $lp->getFinalItem();
     }

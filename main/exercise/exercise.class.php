@@ -51,6 +51,7 @@ class Exercise
     public $review_answers;
     public $randomByCat;
     public $text_when_finished;
+    public $text_when_finished_failure;
     public $display_category_name;
     public $pass_percentage;
     public $edit_exercise_in_lp = false;
@@ -127,6 +128,7 @@ class Exercise
         $this->review_answers = false;
         $this->randomByCat = 0;
         $this->text_when_finished = '';
+        $this->text_when_finished_failure = '';
         $this->display_category_name = 0;
         $this->pass_percentage = 0;
         $this->modelType = 1;
@@ -204,6 +206,7 @@ class Exercise
             $this->saveCorrectAnswers = $object->save_correct_answers;
             $this->randomByCat = $object->random_by_category;
             $this->text_when_finished = $object->text_when_finished;
+            $this->text_when_finished_failure = isset($object->text_when_finished_failure) ? $object->text_when_finished_failure : null;
             $this->display_category_name = $object->display_category_name;
             $this->pass_percentage = $object->pass_percentage;
             $this->is_gradebook_locked = api_resource_is_locked_by_gradebook($id, LINK_EXERCISE);
@@ -454,6 +457,28 @@ class Exercise
     public function updateTextWhenFinished($text)
     {
         $this->text_when_finished = $text;
+    }
+
+    /**
+     * Get the text to display when the user has failed the test.
+     *
+     * @return string html text : the text to display ay the end of the test
+     */
+    public function getTextWhenFinishedFailure(): string
+    {
+        if (empty($this->text_when_finished_failure)) {
+            return '';
+        }
+
+        return $this->text_when_finished_failure;
+    }
+
+    /**
+     * Set the text to display when the user has succeeded in the test.
+     */
+    public function setTextWhenFinishedFailure(string $text): void
+    {
+        $this->text_when_finished_failure = $text;
     }
 
     /**
@@ -1441,56 +1466,6 @@ class Exercise
     }
 
     /**
-     * changes the exercise sound file.
-     *
-     * @author Olivier Brouckaert
-     *
-     * @param string $sound  - exercise sound file
-     * @param string $delete - ask to delete the file
-     */
-    public function updateSound($sound, $delete)
-    {
-        global $audioPath, $documentPath;
-        $TBL_DOCUMENT = Database::get_course_table(TABLE_DOCUMENT);
-
-        if ($sound['size'] && (strstr($sound['type'], 'audio') || strstr($sound['type'], 'video'))) {
-            $this->sound = $sound['name'];
-
-            if (@move_uploaded_file($sound['tmp_name'], $audioPath.'/'.$this->sound)) {
-                $sql = "SELECT 1 FROM $TBL_DOCUMENT
-                        WHERE
-                            c_id = ".$this->course_id." AND
-                            path = '".str_replace($documentPath, '', $audioPath).'/'.$this->sound."'";
-                $result = Database::query($sql);
-
-                if (!Database::num_rows($result)) {
-                    $id = add_document(
-                        $this->course,
-                        str_replace($documentPath, '', $audioPath).'/'.$this->sound,
-                        'file',
-                        $sound['size'],
-                        $sound['name']
-                    );
-                    api_item_property_update(
-                        $this->course,
-                        TOOL_DOCUMENT,
-                        $id,
-                        'DocumentAdded',
-                        api_get_user_id()
-                    );
-                    item_property_update_on_folder(
-                        $this->course,
-                        str_replace($documentPath, '', $audioPath),
-                        api_get_user_id()
-                    );
-                }
-            }
-        } elseif ($delete && is_file($audioPath.'/'.$this->sound)) {
-            $this->sound = '';
-        }
-    }
-
-    /**
      * changes the exercise type.
      *
      * @author Olivier Brouckaert
@@ -1599,6 +1574,7 @@ class Exercise
         $review_answers = isset($this->review_answers) && $this->review_answers ? 1 : 0;
         $randomByCat = (int) $this->randomByCat;
         $text_when_finished = $this->text_when_finished;
+        $text_when_finished_failure = $this->text_when_finished_failure;
         $display_category_name = (int) $this->display_category_name;
         $pass_percentage = (int) $this->pass_percentage;
         $session_id = $this->sessionId;
@@ -1653,6 +1629,10 @@ class Exercise
                     'question_selection_type' => $this->getQuestionSelectionType(),
                     'hide_question_title' => $this->getHideQuestionTitle(),
                 ];
+
+                if (true === api_get_configuration_value('exercise_text_when_finished_failure')) {
+                    $paramsExtra['text_when_finished_failure'] = $text_when_finished_failure;
+                }
 
                 $allow = api_get_configuration_value('allow_quiz_show_previous_button_setting');
                 if ($allow === true) {
@@ -1710,6 +1690,11 @@ class Exercise
             if (api_get_setting('search_enabled') === 'true') {
                 $this->search_engine_edit();
             }
+            Event::addEvent(
+                LOG_EXERCISE_UPDATE,
+                LOG_EXERCISE_ID,
+                $id
+            );
         } else {
             // Creates a new exercise
             // In this case of new exercise, we don't do the api_get_utc_datetime()
@@ -1752,6 +1737,10 @@ class Exercise
                 'propagate_neg' => $propagate_neg,
                 'hide_question_title' => $this->getHideQuestionTitle(),
             ];
+
+            if (true === api_get_configuration_value('exercise_text_when_finished_failure')) {
+                $params['text_when_finished_failure'] = $text_when_finished_failure;
+            }
 
             $allow = api_get_configuration_value('allow_exercise_categories');
             if (true === $allow) {
@@ -1816,6 +1805,11 @@ class Exercise
                 if (api_get_setting('search_enabled') === 'true' && extension_loaded('xapian')) {
                     $this->search_engine_save();
                 }
+                Event::addEvent(
+                    LOG_EXERCISE_CREATE,
+                    LOG_EXERCISE_ID,
+                    $this->iid
+                );
             }
         }
 
@@ -2014,6 +2008,11 @@ class Exercise
                 WHERE iid = ".$this->iid;
             Database::query($sql);
         }
+        Event::addEvent(
+            LOG_EXERCISE_DELETE,
+            LOG_EXERCISE_ID,
+            $this->iid
+        );
 
         return true;
     }
@@ -2263,6 +2262,12 @@ class Exercise
                         null,
                         get_lang('HideCorrectAnsweredQuestions')
                     ),
+                    $form->createElement(
+                        'checkbox',
+                        'hide_comment',
+                        null,
+                        get_lang('HideComment')
+                    ),
                 ];
                 $form->addGroup($group, null, get_lang('ResultsConfigurationPage'));
             }
@@ -2490,6 +2495,16 @@ class Exercise
                 $editor_config
             );
 
+            if (true === api_get_configuration_value('exercise_text_when_finished_failure')) {
+                $form->addHtmlEditor(
+                    'text_when_finished_failure',
+                    get_lang('TextAppearingAtTheEndOfTheTestWhenTheUserHasFailed'),
+                    false,
+                    false,
+                    $editor_config
+                );
+            }
+
             $allow = api_get_configuration_value('allow_notification_setting_per_exercise');
             if ($allow === true) {
                 $settings = ExerciseLib::getNotificationSettings();
@@ -2557,6 +2572,7 @@ class Exercise
                     'notifications',
                     'remedialcourselist',
                     'advancedcourselist',
+                    'subscribe_session_when_finished_failure',
                 ], //exclude
                 false, // filter
                 false, // tag as select
@@ -2617,6 +2633,25 @@ class Exercise
                 }
             }
 
+            if (true === api_get_configuration_value('exercise_subscribe_session_when_finished_failure')) {
+                $optionSessionWhenFailure = [];
+
+                if ($failureSession = ExerciseLib::getSessionWhenFinishedFailure($this->iid)) {
+                    $defaults['subscribe_session_when_finished_failure'] = $failureSession->getId();
+                    $optionSessionWhenFailure[$failureSession->getId()] = $failureSession->getName();
+                }
+
+                $form->addSelectAjax(
+                    'extra_subscribe_session_when_finished_failure',
+                    get_lang('SubscribeSessionWhenFinishedFailure'),
+                    $optionSessionWhenFailure,
+                    [
+                        'url' => api_get_path(WEB_AJAX_PATH).'session.ajax.php?'
+                            .http_build_query(['a' => 'search_session']),
+                    ]
+                );
+            }
+
             $settings = api_get_configuration_value('exercise_finished_notification_settings');
             if (!empty($settings)) {
                 $options = [];
@@ -2672,6 +2707,10 @@ class Exercise
                 $defaults['exercise_category_id'] = $this->getExerciseCategoryId();
                 $defaults['prevent_backwards'] = $this->getPreventBackwards();
 
+                if (true === api_get_configuration_value('exercise_text_when_finished_failure')) {
+                    $defaults['text_when_finished_failure'] = $this->getTextWhenFinishedFailure();
+                }
+
                 if (!empty($this->start_time)) {
                     $defaults['activate_start_date_check'] = 1;
                 }
@@ -2700,6 +2739,11 @@ class Exercise
                 $defaults['results_disabled'] = 0;
                 $defaults['randomByCat'] = 0;
                 $defaults['text_when_finished'] = '';
+
+                if (true === api_get_configuration_value('exercise_text_when_finished_failure')) {
+                    $defaults['text_when_finished_failure'] = '';
+                }
+
                 $defaults['start_time'] = date('Y-m-d 12:00:00');
                 $defaults['display_category_name'] = 1;
                 $defaults['end_time'] = date('Y-m-d 12:00:00', time() + 84600);
@@ -2871,6 +2915,11 @@ class Exercise
         $this->updateSaveCorrectAnswers($form->getSubmitValue('save_correct_answers'));
         $this->updateRandomByCat($form->getSubmitValue('randomByCat'));
         $this->updateTextWhenFinished($form->getSubmitValue('text_when_finished'));
+
+        if (true === api_get_configuration_value('exercise_text_when_finished_failure')) {
+            $this->setTextWhenFinishedFailure($form->getSubmitValue('text_when_finished_failure'));
+        }
+
         $this->updateDisplayCategoryName($form->getSubmitValue('display_category_name'));
         $this->updateReviewAnswers($form->getSubmitValue('review_answers'));
         $this->updatePassPercentage($form->getSubmitValue('pass_percentage'));
@@ -3857,15 +3906,16 @@ class Exercise
 
         if ($answerType == MULTIPLE_ANSWER_TRUE_FALSE_DEGREE_CERTAINTY) {
             $choiceTmp = $choice;
-            $choice = isset($choiceTmp['choice']) ? $choiceTmp['choice'] : '';
-            $choiceDegreeCertainty = isset($choiceTmp['choiceDegreeCertainty']) ? $choiceTmp['choiceDegreeCertainty'] : '';
+            $choice = $choiceTmp['choice'] ?? '';
+            $choiceDegreeCertainty = $choiceTmp['choiceDegreeCertainty'] ?? '';
         }
 
         if ($answerType == FREE_ANSWER ||
             $answerType == ORAL_EXPRESSION ||
             $answerType == CALCULATED_ANSWER ||
             $answerType == ANNOTATION ||
-            $answerType == UPLOAD_ANSWER
+            $answerType == UPLOAD_ANSWER ||
+            $answerType == ANSWER_IN_OFFICE_DOC
         ) {
             $nbrAnswers = 1;
         }
@@ -3873,12 +3923,12 @@ class Exercise
         $generatedFile = '';
         if ($answerType == ORAL_EXPRESSION) {
             $exe_info = Event::get_exercise_results_by_attempt($exeId);
-            $exe_info = isset($exe_info[$exeId]) ? $exe_info[$exeId] : null;
+            $exe_info = $exe_info[$exeId] ?? null;
             $objQuestionTmp->initFile(
                 api_get_session_id(),
-                isset($exe_info['exe_user_id']) ? $exe_info['exe_user_id'] : api_get_user_id(),
-                isset($exe_info['exe_exo_id']) ? $exe_info['exe_exo_id'] : $this->iid,
-                isset($exe_info['exe_id']) ? $exe_info['exe_id'] : $exeId
+                $exe_info['exe_user_id'] ?? api_get_user_id(),
+                $exe_info['exe_exo_id'] ?? $this->iid,
+                $exe_info['exe_id'] ?? $exeId
             );
 
             // Probably this attempt came in an exercise all question by page
@@ -3988,7 +4038,12 @@ class Exercise
         $matchingCorrectAnswers = [];
         for ($answerId = 1; $answerId <= $nbrAnswers; $answerId++) {
             $answer = $objAnswerTmp->selectAnswer($answerId);
-            $answerComment = $objAnswerTmp->selectComment($answerId);
+            $hideComment = (int) $this->getPageConfigurationAttribute('hide_comment');
+            if (1 === $hideComment) {
+                $answerComment = null;
+            } else {
+                $answerComment = $objAnswerTmp->selectComment($answerId);
+            }
             $answerCorrect = $objAnswerTmp->isCorrect($answerId);
             $answerWeighting = (float) $objAnswerTmp->selectWeighting($answerId);
             $answerAutoId = $objAnswerTmp->selectId($answerId);
@@ -4053,7 +4108,7 @@ class Exercise
                         $userAnsweredQuestion = !empty($choice);
                     }
 
-                    $studentChoice = isset($choice[$answerAutoId]) ? $choice[$answerAutoId] : null;
+                    $studentChoice = $choice[$answerAutoId] ?? null;
                     if (isset($studentChoice)) {
                         $correctAnswerId[] = $answerAutoId;
                         if ($studentChoice == $answerCorrect) {
@@ -4095,8 +4150,8 @@ class Exercise
                         }
                     }
 
-                    $studentChoice = isset($choice[$answerAutoId]) ? $choice[$answerAutoId] : null;
-                    $studentChoiceDegree = isset($choiceDegreeCertainty[$answerAutoId]) ? $choiceDegreeCertainty[$answerAutoId] : null;
+                    $studentChoice = $choice[$answerAutoId] ?? null;
+                    $studentChoiceDegree = $choiceDegreeCertainty[$answerAutoId] ?? null;
 
                     // student score update
                     if (!empty($studentChoice)) {
@@ -4135,14 +4190,14 @@ class Exercise
                             $choice[$row['answer']] = 1;
                         }
 
-                        $studentChoice = isset($choice[$answerAutoId]) ? $choice[$answerAutoId] : null;
+                        $studentChoice = $choice[$answerAutoId] ?? null;
                         $real_answers[$answerId] = (bool) $studentChoice;
 
                         if ($studentChoice) {
                             $questionScore += $answerWeighting;
                         }
                     } else {
-                        $studentChoice = isset($choice[$answerAutoId]) ? $choice[$answerAutoId] : null;
+                        $studentChoice = $choice[$answerAutoId] ?? null;
                         $real_answers[$answerId] = (bool) $studentChoice;
 
                         if (isset($studentChoice)
@@ -4163,13 +4218,13 @@ class Exercise
                         while ($row = Database::fetch_array($resultans)) {
                             $choice[$row['answer']] = 1;
                         }
-                        $studentChoice = isset($choice[$answerAutoId]) ? $choice[$answerAutoId] : null;
+                        $studentChoice = $choice[$answerAutoId] ?? null;
                         $real_answers[$answerId] = (bool) $studentChoice;
                         if ($studentChoice) {
                             $questionScore += $answerWeighting;
                         }
                     } else {
-                        $studentChoice = isset($choice[$answerAutoId]) ? $choice[$answerAutoId] : null;
+                        $studentChoice = $choice[$answerAutoId] ?? null;
                         if (isset($studentChoice)) {
                             $questionScore += $answerWeighting;
                         }
@@ -4194,13 +4249,13 @@ class Exercise
                                 $choice[$my_answer_id] = $option;
                             }
                         }
-                        $studentChoice = isset($choice[$answerAutoId]) ? $choice[$answerAutoId] : '';
+                        $studentChoice = $choice[$answerAutoId] ?? '';
                         $real_answers[$answerId] = false;
                         if ($answerCorrect == $studentChoice) {
                             $real_answers[$answerId] = true;
                         }
                     } else {
-                        $studentChoice = isset($choice[$answerAutoId]) ? $choice[$answerAutoId] : '';
+                        $studentChoice = $choice[$answerAutoId] ?? '';
                         $real_answers[$answerId] = false;
                         if ($answerCorrect == $studentChoice) {
                             $real_answers[$answerId] = true;
@@ -4217,7 +4272,7 @@ class Exercise
                             $choice[$row['answer']] = 1;
                         }
 
-                        $studentChoice = isset($choice[$answerAutoId]) ? $choice[$answerAutoId] : null;
+                        $studentChoice = $choice[$answerAutoId] ?? null;
                         if (1 == $answerCorrect) {
                             $real_answers[$answerId] = false;
                             if ($studentChoice) {
@@ -4230,7 +4285,7 @@ class Exercise
                             }
                         }
                     } else {
-                        $studentChoice = isset($choice[$answerAutoId]) ? $choice[$answerAutoId] : null;
+                        $studentChoice = $choice[$answerAutoId] ?? null;
                         if (1 == $answerCorrect) {
                             $real_answers[$answerId] = false;
                             if ($studentChoice) {
@@ -4411,7 +4466,7 @@ class Exercise
                         if (!$switchableAnswerSet) {
                             // not switchable answer, must be in the same place than teacher order
                             for ($i = 0; $i < count($listCorrectAnswers['words']); $i++) {
-                                $studentAnswer = isset($choice[$i]) ? $choice[$i] : '';
+                                $studentAnswer = $choice[$i] ?? '';
                                 $correctAnswer = $listCorrectAnswers['words'][$i];
 
                                 if ($debug) {
@@ -4422,16 +4477,16 @@ class Exercise
                                 // This value is the user input, not escaped while correct answer is escaped by ckeditor
                                 // Works with cyrillic alphabet and when using ">" chars see #7718 #7610 #7618
                                 // ENT_QUOTES is used in order to transform ' to &#039;
-                                if (!$from_database) {
-                                    $studentAnswer = FillBlanks::clearStudentAnswer($studentAnswer);
-                                    if ($debug) {
-                                        error_log('Student answer cleaned:');
-                                        error_log($studentAnswer);
-                                    }
+                                //if (!$from_database) {
+                                $studentAnswer = FillBlanks::clearStudentAnswer($studentAnswer);
+                                if ($debug) {
+                                    error_log('Student answer cleaned:');
+                                    error_log($studentAnswer);
                                 }
+                                //}
 
                                 $isAnswerCorrect = 0;
-                                if (FillBlanks::isStudentAnswerGood($studentAnswer, $correctAnswer, $from_database)) {
+                                if (FillBlanks::isStudentAnswerGood($studentAnswer, $correctAnswer, $from_database, true)) {
                                     // gives the related weighting to the student
                                     $questionScore += $answerWeighting[$i];
                                     // increments total score
@@ -4489,7 +4544,7 @@ class Exercise
 
                                 $found = false;
                                 for ($j = 0; $j < count($listTeacherAnswerTemp); $j++) {
-                                    $correctAnswer = isset($listTeacherAnswerTemp[$j]) ? $listTeacherAnswerTemp[$j] : '';
+                                    $correctAnswer = $listTeacherAnswerTemp[$j] ?? '';
                                     if (is_array($listTeacherAnswerTemp)) {
                                         $correctAnswer = implode('||', $listTeacherAnswerTemp);
                                     }
@@ -4669,6 +4724,7 @@ class Exercise
                     break;
                 case UPLOAD_ANSWER:
                 case FREE_ANSWER:
+                case ANSWER_IN_OFFICE_DOC:
                     if ($from_database) {
                         $sql = "SELECT answer, marks FROM $TBL_TRACK_ATTEMPT
                                  WHERE
@@ -4889,7 +4945,7 @@ class Exercise
                                 if (false === $this->showExpectedChoice() &&
                                     false === $showTotalScoreAndUserChoicesInLastAttempt
                                 ) {
-                                    $user_answer = '';
+                                    $this->hideExpectedAnswer = true;
                                 }
                                 switch ($answerType) {
                                     case MATCHING:
@@ -4951,9 +5007,6 @@ class Exercise
                                         echo '</tr>';
                                         break;
                                     case DRAGGABLE:
-                                        if (false == $showTotalScoreAndUserChoicesInLastAttempt) {
-                                            $s_answer_label = '';
-                                        }
                                         if (RESULT_DISABLE_SHOW_SCORE_ATTEMPT_SHOW_ANSWERS_LAST_ATTEMPT_NO_FEEDBACK == $this->results_disabled) {
                                             if (false === $showTotalScoreAndUserChoicesInLastAttempt && empty($s_user_answer)) {
                                                 break;
@@ -4961,35 +5014,15 @@ class Exercise
                                         }
 
                                         echo '<tr>';
-                                        if ($this->showExpectedChoice()) {
-                                            if (!in_array($this->results_disabled, [
-                                                RESULT_DISABLE_SHOW_ONLY_IN_CORRECT_ANSWER,
-                                                //RESULT_DISABLE_SHOW_SCORE_AND_EXPECTED_ANSWERS_AND_RANKING,
-                                            ])
-                                            ) {
-                                                echo '<td>'.$user_answer.'</td>';
-                                            } else {
-                                                $status = Display::label(get_lang('Correct'), 'success');
-                                            }
+                                        if ($this->showExpectedChoice() || $this->showExpectedChoiceColumn()) {
                                             echo '<td>'.$s_answer_label.'</td>';
+                                            echo '<td>'.$user_answer.'</td>';
+                                            echo '<td>'.$real_list[$i_answer_correct_answer].'</td>';
                                             echo '<td>'.$status.'</td>';
                                         } else {
                                             echo '<td>'.$s_answer_label.'</td>';
                                             echo '<td>'.$user_answer.'</td>';
-                                            echo '<td>'.$counterAnswer.'</td>';
                                             echo '<td>'.$status.'</td>';
-                                            echo '<td>';
-                                            if (in_array($answerType, [MATCHING, MATCHING_COMBINATION, MATCHING_DRAGGABLE, MATCHING_DRAGGABLE_COMBINATION])) {
-                                                if (isset($real_list[$i_answer_correct_answer]) &&
-                                                    $showTotalScoreAndUserChoicesInLastAttempt === true
-                                                ) {
-                                                    echo Display::span(
-                                                        $real_list[$i_answer_correct_answer],
-                                                        ['style' => 'color: #008000; font-weight: bold;']
-                                                    );
-                                                }
-                                            }
-                                            echo '</td>';
                                         }
                                         echo '</tr>';
                                         break;
@@ -5329,6 +5362,18 @@ class Exercise
                                 $questionId,
                                 $questionScore,
                                 $results_disabled
+                            );
+                        } elseif ($answerType == ANSWER_IN_OFFICE_DOC) {
+                            $exe_info = Event::get_exercise_results_by_attempt($exeId);
+                            $exe_info = $exe_info[$exeId] ?? null;
+                            ExerciseShowFunctions::displayOnlyOfficeAnswer(
+                                $feedback_type,
+                                $exeId,
+                                $exe_info['exe_user_id'] ?? api_get_user_id(),
+                                $this->iid,
+                                $questionId,
+                                $questionScore,
+                                true
                             );
                         } elseif ($answerType == ORAL_EXPRESSION) {
                             // to store the details of open questions in an array to be used in mail
@@ -5728,9 +5773,21 @@ class Exercise
                                 $results_disabled
                             );
                             break;
+                        case ANSWER_IN_OFFICE_DOC:
+                            $exe_info = Event::get_exercise_results_by_attempt($exeId);
+                            $exe_info = $exe_info[$exeId] ?? null;
+                            ExerciseShowFunctions::displayOnlyOfficeAnswer(
+                                $feedback_type,
+                                $exeId,
+                                $exe_info['exe_user_id'] ?? api_get_user_id(),
+                                $this->iid,
+                                $questionId,
+                                $questionScore
+                            );
+                            break;
                         case ORAL_EXPRESSION:
                             echo '<tr>
-                                <td valign="top">'.
+                                <td>'.
                                 ExerciseShowFunctions::display_oral_expression_answer(
                                     $feedback_type,
                                     $choice,
@@ -6369,6 +6426,24 @@ class Exercise
                     $this->iid,
                     false,
                     $questionDuration
+                );
+            } elseif ($answerType == ANSWER_IN_OFFICE_DOC) {
+                $answer = $choice;
+                $exerciseId = $this->iid;
+                $questionId = $quesId;
+                $originalFilePath = $objQuestionTmp->getFileUrl();
+                $originalExtension = !empty($originalFilePath) ? pathinfo($originalFilePath, PATHINFO_EXTENSION) : 'docx';
+                $fileName = "response_{$exeId}.{$originalExtension}";
+                Event::saveQuestionAttempt(
+                    $questionScore,
+                    $answer,
+                    $questionId,
+                    $exeId,
+                    0,
+                    $exerciseId,
+                    false,
+                    $questionDuration,
+                    $fileName
                 );
             } elseif ($answerType == ORAL_EXPRESSION) {
                 $answer = $choice;
@@ -8801,6 +8876,7 @@ class Exercise
                 'hide_total_score' => $values['hide_total_score'] ?? '',
                 'hide_category_table' => $values['hide_category_table'] ?? '',
                 'hide_correct_answered_questions' => $values['hide_correct_answered_questions'] ?? '',
+                'hide_comment' => $values['hide_comment'] ?? '',
             ];
             $type = Type::getType('array');
             $platform = Database::getManager()->getConnection()->getDatabasePlatform();
@@ -9398,9 +9474,6 @@ class Exercise
                         $filterByAttemptCondition
                     ORDER BY title
                     LIMIT $from , $limit";
-
-
-
         } else {
             // Only for students
             if (empty($sessionId)) {
@@ -9477,9 +9550,6 @@ class Exercise
 
         $result = Database::query($sql);
         $result_total = Database::query($total_sql);
-
-
-
 
         $total_exercises = 0;
         if (Database::num_rows($result_total)) {
@@ -9663,10 +9733,6 @@ class Exercise
                             if ($visibility == 0) {
                                 if (!$visibilitySetting) {
                                     if ($exercise->exercise_was_added_in_lp == true) {
-
-                                        error_log(
-                                            'Hiding exercise '.$my_exercise_id.' in session '.$sessionId
-                                        );
                                         continue;
                                     }
                                 }
@@ -9790,7 +9856,7 @@ class Exercise
                                     'class' => 'ajax',
                                     'data-title' => get_lang('EmbedExerciseLink'),
                                     'title' => get_lang('EmbedExerciseLink'),
-                                    'data-content' => get_lang('CopyUrlToIncludeInIframe').'<br>'.$urlEmbed,
+                                    'data-content' => get_lang('CopyUrlToIncludeInIframe').'<br>'.$urlEmbed.'<br><br>'.get_lang('CopyIframeCodeToIncludeExercise').'<br><textarea rows=&quot;5&quot; cols=&quot;70&quot;>&lt;iframe width=&quot;840&quot; height=&quot;472&quot; src=&quot;'.$urlEmbed.'&quot; title=&quot;Chamilo exercise&quot;&gt;&lt;/iframe&gt;</textarea>',
                                     'href' => 'javascript:void(0);',
                                 ]
                             );
@@ -9907,7 +9973,7 @@ class Exercise
                                     $visibleOnBaseCourse = api_get_item_visibility(
                                         $courseInfo,
                                         TOOL_QUIZ,
-                                        $my_exercise_id,
+                                        $row['iid'],
                                         0
                                     );
 
@@ -9924,7 +9990,9 @@ class Exercise
                                     } else {
                                         $visibility = Display::return_icon(
                                             'invisible.png',
-                                            get_lang('Activate')
+                                            get_lang('Activate'),
+                                            '',
+                                            ICON_SIZE_SMALL
                                         );
                                     }
                                 } else {
@@ -10868,6 +10936,9 @@ class Exercise
                         case FILL_IN_BLANKS:
                         case FILL_IN_BLANKS_COMBINATION:
                             $option['answer'] = $this->fill_in_blank_answer_to_string($option['answer']);
+                            if ($option['answer'] === "0") {
+                                $option['answer'] = "there is 0 as answer so we do not want to consider it empty";
+                            }
                             break;
                     }
                 }
@@ -11763,6 +11834,34 @@ class Exercise
         }
 
         return $result;
+    }
+
+    /**
+     * Return the text to display, based on the score and the max score.
+     *
+     * @param int|float $score
+     * @param int|float $maxScore
+     */
+    public function getFinishText($score, $maxScore): string
+    {
+        if (true !== api_get_configuration_value('exercise_text_when_finished_failure')) {
+            return $this->getTextWhenFinished();
+        }
+
+        $passPercentage = $this->selectPassPercentage();
+
+        if (!empty($passPercentage)) {
+            $percentage = float_format(
+                ($score / (0 != $maxScore ? $maxScore : 1)) * 100,
+                1
+            );
+
+            if ($percentage < $passPercentage) {
+                return $this->getTextWhenFinishedFailure();
+            }
+        }
+
+        return $this->getTextWhenFinished();
     }
 
     /**

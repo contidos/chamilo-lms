@@ -89,18 +89,25 @@ if ($form->validate()) {
     $user = Login::get_user_accounts_by_username($values['user']);
 
     if (!$user) {
-        $messageText = get_lang('NoUserAccountWithThisEmailAddress');
-        if (CustomPages::enabled() && CustomPages::exists(CustomPages::LOST_PASSWORD)) {
+        // Always return the same neutral response regardless of whether the
+        // username/email exists. Revealing "no account with this email" allows
+        // user enumeration by observing the differing redirect destination or
+        // message. Using the same message and redirect as the success path
+        // prevents that information leak.
+        $messageText = get_lang('AnEmailToResetYourPasswordHasBeenSent');
+
+        if (CustomPages::enabled() && CustomPages::exists(CustomPages::INDEX_UNLOGGED)) {
             CustomPages::display(
-                CustomPages::LOST_PASSWORD,
+                CustomPages::INDEX_UNLOGGED,
                 ['info' => $messageText]
             );
             exit;
         }
+
         Display::addFlash(
-            Display::return_message($messageText, 'error', false)
+            Display::return_message($messageText, 'info', false)
         );
-        header('Location: '.api_get_self());
+        header('Location: '.api_get_path(WEB_PATH));
         exit;
     }
 
@@ -108,7 +115,26 @@ if ($form->validate()) {
         WhispeakAuthPlugin::deleteEnrollment($user['uid']);
     }
 
-    // Verificar si es LDAP
+    $passwordEncryption = api_get_configuration_value('password_encryption');
+
+    if ($passwordEncryption === 'none') {
+        $messageText = Login::send_password_to_user($user, true);
+
+        if (CustomPages::enabled() && CustomPages::exists(CustomPages::INDEX_UNLOGGED)) {
+            CustomPages::display(
+                CustomPages::INDEX_UNLOGGED,
+                ['info' => $messageText]
+            );
+            exit;
+        }
+
+        Display::addFlash(
+            Display::return_message($messageText, 'info', false)
+        );
+        header('Location: '.api_get_path(WEB_PATH));
+        exit;
+    }
+
     if ($user['auth_source'] == 'extldap') {
         Display::addFlash(
             Display::return_message(get_lang('CouldNotResetPasswordBecauseLDAP'), 'info', false)
@@ -117,15 +143,25 @@ if ($form->validate()) {
         exit;
     }
 
-    // CAMBIO PRINCIPAL: Generar y enviar nueva contraseña directamente
-    $newPassword = api_generate_password();
-    UserManager::updatePassword($user['uid'], $newPassword);
+    $userResetPasswordSetting = api_get_setting('user_reset_password');
 
-    // Actualizar el array del usuario con la nueva contraseña
-    $user['password'] = $newPassword;
+    if ($userResetPasswordSetting === 'true') {
+        $userObj = api_get_user_entity($user['uid']);
+        Login::sendResetEmail($userObj);
 
-    // Enviar el correo con la nueva contraseña
-    $messageText = Login::send_password_to_user($user, true);
+        if (CustomPages::enabled() && CustomPages::exists(CustomPages::INDEX_UNLOGGED)) {
+            CustomPages::display(
+                CustomPages::INDEX_UNLOGGED,
+                ['info' => get_lang('CheckYourEmailAndFollowInstructions')]
+            );
+            exit;
+        }
+
+        header('Location: '.api_get_path(WEB_PATH));
+        exit;
+    }
+
+    $messageText = Login::handle_encrypted_password($user, true);
 
     if (CustomPages::enabled() && CustomPages::exists(CustomPages::INDEX_UNLOGGED)) {
         CustomPages::display(
@@ -139,6 +175,14 @@ if ($form->validate()) {
         Display::return_message($messageText, 'info', false)
     );
     header('Location: '.api_get_path(WEB_PATH));
+    exit;
+}
+
+if (CustomPages::enabled() && CustomPages::exists(CustomPages::LOST_PASSWORD)) {
+    CustomPages::display(
+        CustomPages::LOST_PASSWORD,
+        ['form' => $form->returnForm()]
+    );
     exit;
 }
 

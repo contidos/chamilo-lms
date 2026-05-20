@@ -13,26 +13,37 @@ require_once __DIR__.'/../inc/global.inc.php';
 
 api_protect_admin_script();
 
+// CSRF protection
+if (!isset($_REQUEST['sec_token']) || !Security::check_token('request')) {
+    exit;
+}
+
 $new_language = Security::remove_XSS($_REQUEST['new_language']);
-$language_variable = Security::remove_XSS($_REQUEST['variable_language']);
+$language_variable = ltrim(
+    Security::remove_XSS($_REQUEST['variable_language']),
+    '$'
+);
 $file_id = intval($_REQUEST['file_id']);
 
-if (isset($new_language) && isset($language_variable) && isset($file_id)) {
+$variableIsValid = SubLanguageManager::isValidLanguageVariable($language_variable);
+
+if (isset($new_language) && $variableIsValid && isset($file_id)) {
     $file_language = $language_files_to_load[$file_id].'.inc.php';
     $id_language = intval($_REQUEST['id']);
     $sub_language_id = intval($_REQUEST['sub']);
     $all_data_of_language = SubLanguageManager::get_all_information_of_sub_language($id_language, $sub_language_id);
 
+    if (empty($all_data_of_language) ||
+        !SubLanguageManager::isValidLanguageFolderName($all_data_of_language['dokeos_folder'])
+    ) {
+        exit;
+    }
+
     $path_folder = api_get_path(SYS_LANG_PATH).$all_data_of_language['dokeos_folder'].'/'.$file_language;
     $all_file_of_directory = SubLanguageManager::get_all_language_variable_in_file($path_folder);
     $return_value = SubLanguageManager::add_file_in_language_directory($path_folder);
 
-    //update variable language
-    // Replace double quotes to avoid parse errors
-    $new_language = str_replace('"', '\"', $new_language);
-    // Replace new line signs to avoid parse errors - see #6773
-    $new_language = str_replace("\n", "\\n", $new_language);
-    $all_file_of_directory[$language_variable] = "\"".$new_language."\";";
+    $all_file_of_directory[$language_variable] = $new_language;
     $result_array = [];
 
     foreach ($all_file_of_directory as $key_value => $value_info) {

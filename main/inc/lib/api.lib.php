@@ -20,7 +20,7 @@ use Symfony\Component\Finder\Finder;
  */
 
 // PHP version requirement.
-define('REQUIRED_PHP_VERSION', '7.1');
+define('REQUIRED_PHP_VERSION', '7.4');
 define('REQUIRED_MIN_MEMORY_LIMIT', '128');
 define('REQUIRED_MIN_UPLOAD_MAX_FILESIZE', '10');
 define('REQUIRED_MIN_POST_MAX_SIZE', '10');
@@ -544,6 +544,7 @@ define('HOT_SPOT_COMBINATION', 26);
 define('FILL_IN_BLANKS_COMBINATION', 27);
 define('MULTIPLE_ANSWER_DROPDOWN_COMBINATION', 28);
 define('MULTIPLE_ANSWER_DROPDOWN', 29);
+define('ANSWER_IN_OFFICE_DOC', 30);
 
 define('EXERCISE_CATEGORY_RANDOM_SHUFFLED', 1);
 define('EXERCISE_CATEGORY_RANDOM_ORDERED', 2);
@@ -591,6 +592,7 @@ define(
     MULTIPLE_ANSWER_TRUE_FALSE.':'.
     MULTIPLE_ANSWER_COMBINATION_TRUE_FALSE.':'.
     ORAL_EXPRESSION.':'.
+    ANSWER_IN_OFFICE_DOC.':'.
     GLOBAL_MULTIPLE_ANSWER.':'.
     MEDIA_QUESTION.':'.
     CALCULATED_ANSWER.':'.
@@ -917,7 +919,7 @@ function api_get_path($path = '', $configuration = [])
         // Initialization of a table that contains common-purpose paths.
         $paths[$root_web][REL_PATH] = $root_rel;
         $paths[$root_web][REL_COURSE_PATH] = $root_rel.$course_folder;
-        $paths[$root_web][REL_CODE_PATH] = $root_rel.$code_folder;
+        $paths[$root_web][REL_CODE_PATH] = $root_rel.preg_replace('#^/#', '', $code_folder);
         $paths[$root_web][REL_DEFAULT_COURSE_DOCUMENT_PATH] = $paths[$root_web][REL_PATH].'main/default_course_document/';
 
         $paths[$root_web][WEB_PATH] = $slashed_root_web;
@@ -941,7 +943,7 @@ function api_get_path($path = '', $configuration = [])
         $paths[$root_web][WEB_HOME_PATH] = $paths[$root_web][WEB_PATH].$paths[$root_web][REL_HOME_PATH];
 
         $paths[$root_web][SYS_PATH] = $root_sys;
-        $paths[$root_web][SYS_CODE_PATH] = $root_sys.$code_folder;
+        $paths[$root_web][SYS_CODE_PATH] = $root_sys.preg_replace('#^/#', '', $code_folder);
         $paths[$root_web][SYS_TEST_PATH] = $paths[$root_web][SYS_PATH].$paths[$root_web][SYS_TEST_PATH];
         $paths[$root_web][SYS_TEMPLATE_PATH] = $paths[$root_web][SYS_CODE_PATH].$paths[$root_web][SYS_TEMPLATE_PATH];
         $paths[$root_web][SYS_PUBLIC_PATH] = $paths[$root_web][SYS_PATH].$paths[$root_web][SYS_PUBLIC_PATH];
@@ -1449,7 +1451,7 @@ function api_protect_teacher_script()
 function api_block_anonymous_users($printHeaders = true)
 {
     $user = api_get_user_info();
-    if (!(isset($user['user_id']) && $user['user_id']) || api_is_anonymous($user['user_id'], true)) {
+    if (empty($user['user_id']) || api_is_anonymous($user['user_id'], true)) {
         api_not_allowed($printHeaders);
 
         return false;
@@ -2026,42 +2028,6 @@ function api_get_user_info_from_email($email = '')
     if (Database::num_rows($result) > 0) {
         $resultArray = Database::fetch_array($result);
 
-        return _api_format_user($resultArray);
-    }
-
-    return false;
-}
-
-/**
- * Get first user with an email and optionally filter by access URL.
- *
- * @param string $email
- * @param int    $urlId Optional access URL ID to filter by
- *
- * @return array|bool
- */
-function api_get_user_info_from_email_with_url($email = '', $urlId = 0)
-{
-    if (empty($email)) {
-        return false;
-    }
-
-    $sql = "SELECT u.* FROM ".Database::get_main_table(TABLE_MAIN_USER)." u";
-    
-    if ($urlId > 0) {
-        $sql .= " INNER JOIN ".Database::get_main_table(TABLE_MAIN_ACCESS_URL_REL_USER)." url 
-                 ON u.user_id = url.user_id 
-                 WHERE u.email = '".Database::escape_string($email)."' 
-                 AND url.access_url_id = ".intval($urlId);
-    } else {
-        $sql .= " WHERE u.email = '".Database::escape_string($email)."'";
-    }
-    
-    $sql .= " LIMIT 1";
-    
-    $result = Database::query($sql);
-    if (Database::num_rows($result) > 0) {
-        $resultArray = Database::fetch_array($result);
         return _api_format_user($resultArray);
     }
 
@@ -4066,11 +4032,9 @@ function api_not_allowed(
 
     global $this_section;
 
-    if (CustomPages::enabled() && !isset($user_id)) {
-        if (empty($user_id)) {
-            // Why the CustomPages::enabled() need to be to set the request_uri
-            $_SESSION['request_uri'] = $_SERVER['REQUEST_URI'];
-        }
+    if (CustomPages::enabled() && (empty($user_id) || api_is_anonymous())) {
+        // Why the CustomPages::enabled() need to be to set the request_uri
+        $_SESSION['request_uri'] = $_SERVER['REQUEST_URI'];
         CustomPages::display(CustomPages::INDEX_UNLOGGED);
     }
 
@@ -4374,6 +4338,11 @@ function api_get_item_visibility(
         $groupCondition = " AND to_group_id = '$group_id' ";
     }
 
+    $lpVisibilityCondition = '';
+    if ($tool === 'learnpath') {
+        $lpVisibilityCondition = " AND lastedit_type != 'LearnpathSubscription' ";
+    }
+
     $sql = "SELECT visibility
             FROM $TABLE_ITEMPROPERTY
             WHERE
@@ -4381,7 +4350,7 @@ function api_get_item_visibility(
                 tool = '$tool' AND
                 ref = $id AND
                 (session_id = $session OR session_id = 0 OR session_id IS NULL)
-                $userCondition $typeCondition $groupCondition
+                $userCondition $typeCondition $groupCondition $lpVisibilityCondition
             ORDER BY session_id DESC, lastedit_date DESC
             LIMIT 1";
 
@@ -5027,7 +4996,7 @@ function api_get_item_property_info($course_id, $tool, $ref, $session_id = 0, $g
  *
  * @return array with all fields from c_item_property, empty array if not found or false if course could not be found
  */
-function api_get_last_item_property_info(int $courseId, string $tool, int $ref, int $sessionId = null, int $groupId = null): array
+function api_get_last_item_property_info(int $courseId, string $tool, int $ref, ?int $sessionId = null, ?int $groupId = null): array
 {
     $tool = Database::escape_string($tool);
     // Definition of tables.
@@ -7199,6 +7168,22 @@ function api_is_xml_http_request()
  */
 function api_getimagesize($path)
 {
+    $path = str_replace(
+        [
+            api_get_path(WEB_COURSE_PATH),
+            api_get_path(WEB_UPLOAD_PATH),
+            api_get_path(WEB_CODE_PATH),
+            api_get_path(WEB_PATH),
+        ],
+        [
+            api_get_path(SYS_COURSE_PATH),
+            api_get_path(SYS_UPLOAD_PATH),
+            api_get_path(SYS_CODE_PATH),
+            api_get_path(SYS_PATH),
+        ],
+        $path
+    );
+
     $image = new Image($path);
 
     return $image->get_image_size();
@@ -8991,6 +8976,10 @@ function api_can_login_as($loginAsUserId, $userId = null)
     $userInfo = api_get_user_info($loginAsUserId);
     $isDrh = function () use ($loginAsUserId) {
         if (api_is_drh()) {
+            if (true === api_get_configuration_value('disallow_hrm_login_as')) {
+                return false;
+            }
+
             if (api_drh_can_access_all_session_content()) {
                 $users = SessionManager::getAllUsersFromCoursesFromAllSessionFromStatus(
                     'drh_all',
@@ -9017,14 +9006,26 @@ function api_can_login_as($loginAsUserId, $userId = null)
         return false;
     };
 
-    $loginAsStatusForSessionAdmins = [STUDENT];
+    $allowSessionAdmin = function () use ($userInfo) {
+        if (!api_is_session_admin()) {
+            return false;
+        }
 
-    if (api_get_configuration_value('allow_session_admin_login_as_teacher')) {
-        $loginAsStatusForSessionAdmins[] = COURSEMANAGER;
-    }
+        if (true === api_get_configuration_value('disallow_session_admin_login_as')) {
+            return false;
+        }
+
+        $loginAsStatusForSessionAdmins = [STUDENT];
+
+        if (api_get_configuration_value('allow_session_admin_login_as_teacher')) {
+            $loginAsStatusForSessionAdmins[] = COURSEMANAGER;
+        }
+
+        return in_array($userInfo['status'], $loginAsStatusForSessionAdmins);
+    };
 
     return api_is_platform_admin() ||
-        (api_is_session_admin() && in_array($userInfo['status'], $loginAsStatusForSessionAdmins)) ||
+        $allowSessionAdmin() ||
         $isDrh();
 }
 
@@ -9500,6 +9501,8 @@ function api_format_time($time, $originFormat = 'php')
 
     if ($originFormat == 'js') {
         $formattedTime = trim(sprintf("%02d : %02d : %02d", $hours, $mins, $secs));
+    } elseif ($originFormat == 'lang') {
+        $formattedTime = trim(sprintf(get_lang('HoursMinutesSeconds'), $hours, $mins, $secs));
     } else {
         $formattedTime = trim(sprintf("%02d$h%02d'%02d\"", $hours, $mins, $secs));
     }
@@ -10268,11 +10271,11 @@ function api_unserialize_content($type, $serialized, $ignoreErrors = false)
             $allowedClasses = [
                 learnpath::class,
                 learnpathItem::class,
-                aicc::class,
-                aiccBlock::class,
-                aiccItem::class,
-                aiccObjective::class,
-                aiccResource::class,
+                //aicc::class,
+                //aiccBlock::class,
+                //aiccItem::class,
+                //aiccObjective::class,
+                //aiccResource::class,
                 scorm::class,
                 scormItem::class,
                 scormMetadata::class,
@@ -10734,96 +10737,386 @@ function api_encrypt_hash($data, $secret)
     return base64_encode($iv).base64_encode($encrypted.$tag);
 }
 
-
 /**
- * Check existence of a user extra field with a specific value
+ * Replace a specific term by another in all course-related text elements in the database.
+ * Does not rename directories or replace content of files on disk. Check tests/scripts/replace_course_code.php if
+ * you are looking for this.
+ * The replacement can replace bits in larger strings, requiring the search string to be very specific to avoid
+ * excess replacements.
  *
- * @param string $extraField       The name of the extra field to check.
- * @param string $extraFieldValue  The value of the extra field to validate against.
- *
- * @return bool True if the extra field with the specified value exists, false otherwise.
+ * @return array The number of changes executed in each table
  */
-function api_user_extra_field_validation_old($extraField, $extraFieldValue, $userId = null) {
-    $fieldValue = new ExtraFieldValue('user');
-    $result = $fieldValue->get_item_id_from_field_variable_and_field_value($extraField, $extraFieldValue, false, false, true);
+function api_replace_terms_in_content(string $search, string $replace): array
+{
+    $replacements = [
+        Database::get_course_table(TABLE_QUIZ_TEST) => [
+            'iid' => ['title', 'description', 'sound'],
+        ],
+        Database::get_course_table(TABLE_QUIZ_QUESTION) => [
+            'iid' => ['question', 'description'],
+        ],
+        Database::get_course_table(TABLE_QUIZ_ANSWER) => [
+            'iid' => ['answer', 'comment'],
+        ],
+        Database::get_course_table(TABLE_ANNOUNCEMENT) => [
+            'iid' => ['title', 'content'],
+        ],
+        Database::get_course_table(TABLE_ANNOUNCEMENT_ATTACHMENT) => [
+            'iid' => ['path', 'comment'],
+        ],
+        Database::get_course_table(TABLE_ATTENDANCE) => [
+            'iid' => ['name', 'description', 'attendance_qualify_title'],
+        ],
+        Database::get_course_table(TABLE_BLOGS) => [
+            'iid' => ['blog_name', 'blog_subtitle'],
+        ],
+        Database::get_course_table(TABLE_BLOGS_ATTACHMENT) => [
+            'iid' => ['path', 'comment'],
+        ],
+        Database::get_course_table(TABLE_BLOGS_COMMENTS) => [
+            'iid' => ['title', 'comment'],
+        ],
+        Database::get_course_table(TABLE_BLOGS_POSTS) => [
+            'iid' => ['title', 'full_text'],
+        ],
+        Database::get_course_table(TABLE_BLOGS_TASKS) => [
+            'iid' => ['title', 'description'],
+        ],
+        Database::get_course_table(TABLE_AGENDA) => [
+            'iid' => ['title', 'content', 'comment'],
+        ],
+        Database::get_course_table(TABLE_AGENDA_ATTACHMENT) => [
+            'iid' => ['path', 'comment', 'filename'],
+        ],
+        Database::get_course_table(TABLE_COURSE_DESCRIPTION) => [
+            'iid' => ['title', 'content'],
+        ],
+        Database::get_course_table(TABLE_DOCUMENT) => [
+            'iid' => ['path', 'comment'],
+        ],
+        Database::get_course_table(TABLE_DROPBOX_FEEDBACK) => [
+            'iid' => ['feedback'],
+        ],
+        Database::get_course_table(TABLE_DROPBOX_FILE) => [
+            'iid' => ['title', 'description'],
+        ],
+        Database::get_course_table(TABLE_DROPBOX_POST) => [
+            'iid' => ['feedback'],
+        ],
+        Database::get_course_table(TABLE_FORUM_ATTACHMENT) => [
+            'iid' => ['path', 'comment', 'filename'],
+        ],
+        Database::get_course_table(TABLE_FORUM_CATEGORY) => [
+            'iid' => ['cat_title', 'cat_comment'],
+        ],
+        Database::get_course_table(TABLE_FORUM) => [
+            'iid' => ['forum_title', 'forum_comment', 'forum_image'],
+        ],
+        Database::get_course_table(TABLE_FORUM_POST) => [
+            'iid' => ['post_title', 'post_text', 'poster_name'],
+        ],
+        Database::get_course_table(TABLE_FORUM_THREAD) => [
+            'iid' => ['thread_title', 'thread_poster_name', 'thread_title_qualify'],
+        ],
+        Database::get_course_table(TABLE_GLOSSARY) => [
+            'iid' => ['name', 'description'],
+        ],
+        Database::get_course_table(TABLE_GROUP_CATEGORY) => [
+            'iid' => ['title', 'description'],
+        ],
+        Database::get_course_table(TABLE_GROUP) => [
+            'iid' => ['name', 'description', 'secret_directory'],
+        ],
+        Database::get_course_table(TABLE_LINK) => [
+            'iid' => ['description'],
+        ],
+        Database::get_course_table(TABLE_LINK_CATEGORY) => [
+            'iid' => ['category_title', 'description'],
+        ],
+        Database::get_course_table(TABLE_LP_MAIN) => [
+            'iid' => ['name', 'ref', 'description', 'path', 'content_license', 'preview_image', 'theme'],
+        ],
+        Database::get_course_table(TABLE_LP_CATEGORY) => [
+            'iid' => ['name'],
+        ],
+        Database::get_course_table(TABLE_LP_ITEM) => [
+            'iid' => ['prerequisite', 'description', 'title', 'parameters', 'launch_data', 'terms'],
+        ],
+        Database::get_course_table(TABLE_LP_ITEM_VIEW) => [
+            'iid' => ['suspend_data', 'lesson_location'],
+        ],
+        Database::get_course_table(TABLE_NOTEBOOK) => [
+            'iid' => ['title', 'description'],
+        ],
+        Database::get_course_table(TABLE_ONLINE_LINK) => [
+            'iid' => ['name'],
+        ],
+        Database::get_course_table(TABLE_QUIZ_QUESTION_CATEGORY) => [
+            'iid' => ['title', 'description'],
+        ],
+        Database::get_course_table(TABLE_ROLE) => [
+            'iid' => ['role_name', 'role_comment'],
+        ],
+        Database::get_course_table(TABLE_STUDENT_PUBLICATION) => [
+            'iid' => ['title', 'title_correction', 'description'],
+        ],
+        Database::get_course_table(TABLE_STUDENT_PUBLICATION_ASSIGNMENT_COMMENT) => [
+            'iid' => ['comment', 'file'],
+        ],
+        Database::get_course_table(TABLE_SURVEY) => [
+            'iid' => ['title', 'subtitle', 'surveythanks', 'invite_mail', 'reminder_mail', 'mail_subject', 'access_condition', 'form_fields'],
+        ],
+        Database::get_course_table(TABLE_SURVEY_QUESTION_GROUP) => [
+            'iid' => ['name', 'description'],
+        ],
+        Database::get_course_table(TABLE_SURVEY_QUESTION) => [
+            'iid' => ['survey_question', 'survey_question_comment'],
+        ],
+        Database::get_course_table(TABLE_SURVEY_QUESTION_OPTION) => [
+            'iid' => ['option_text'],
+        ],
+        Database::get_course_table(TABLE_THEMATIC) => [
+            'iid' => ['content', 'title'],
+        ],
+        Database::get_course_table(TABLE_THEMATIC_ADVANCE) => [
+            'iid' => ['content'],
+        ],
+        Database::get_course_table(TABLE_THEMATIC_PLAN) => [
+            'iid' => ['description'],
+        ],
+        Database::get_course_table(TABLE_TOOL_LIST) => [
+            'iid' => ['description'],
+        ],
+        Database::get_course_table(TABLE_TOOL_INTRO) => [
+            'iid' => ['intro_text'],
+        ],
+        Database::get_course_table(TABLE_USER_INFO_DEF) => [
+            'iid' => ['comment'],
+        ],
+        Database::get_course_table(TABLE_WIKI) => [
+            'iid' => ['title', 'content', 'comment', 'progress', 'linksto'],
+        ],
+        Database::get_course_table(TABLE_WIKI_CONF) => [
+            'iid' => ['feedback1', 'feedback2', 'feedback3'],
+        ],
+        Database::get_course_table(TABLE_WIKI_DISCUSS) => [
+            'iid' => ['comment'],
+        ],
+        Database::get_main_table(TABLE_CAREER) => [
+            'id' => ['name', 'description'],
+        ],
+        Database::get_main_table(TABLE_MAIN_CHAT) => [
+            'id' => ['message'],
+        ],
+        Database::get_main_table(TABLE_MAIN_CLASS) => [
+            'id' => ['name'],
+        ],
+        Database::get_main_table(TABLE_MAIN_COURSE_REQUEST) => [
+            'id' => ['description', 'title', 'objetives', 'target_audience'],
+        ],
+        'course_type' => [
+            'id' => ['description'],
+        ],
+        Database::get_main_table(TABLE_EVENT_EMAIL_TEMPLATE) => [
+            'id' => ['message', 'subject', 'event_type_name'],
+        ],
+        Database::get_main_table(TABLE_GRADE_MODEL) => [
+            'id' => ['name', 'description'],
+        ],
+        Database::get_main_table(TABLE_MAIN_GRADEBOOK_CATEGORY) => [
+            'id' => ['name', 'description'],
+        ],
+        Database::get_main_table(TABLE_MAIN_GRADEBOOK_CERTIFICATE) => [
+            'id' => ['path_certificate'],
+        ],
+        Database::get_main_table(TABLE_MAIN_GRADEBOOK_EVALUATION) => [
+            'id' => ['description', 'name'],
+        ],
+        Database::get_main_table(TABLE_MAIN_GRADEBOOK_LINKEVAL_LOG) => [
+            'id' => ['name', 'description'],
+        ],
+        Database::get_main_table(TABLE_MAIN_LEGAL) => [
+            'id' => ['content', 'changes'],
+        ],
+        Database::get_main_table(TABLE_MESSAGE) => [
+            'id' => ['content'],
+        ],
+        Database::get_main_table(TABLE_MESSAGE_ATTACHMENT) => [
+            'id' => ['path', 'comment', 'filename'],
+        ],
+        Database::get_main_table(TABLE_NOTIFICATION) => [
+            'id' => ['content'],
+        ],
+        Database::get_main_table(TABLE_PERSONAL_AGENDA) => [
+            'id' => ['title', 'text'],
+        ],
+        Database::get_main_table(TABLE_PROMOTION) => [
+            'id' => ['description'],
+        ],
+        'room' => [
+            'id' => ['description'],
+        ],
+        'sequence_condition' => [
+            'id' => ['description'],
+        ],
+        'sequence_method' => [
+            'id' => ['description', 'formula'],
+        ],
+        'sequence_rule' => [
+            'id' => ['description'],
+        ],
+        'sequence_type_entity' => [
+            'id' => ['description'],
+        ],
+        'sequence_variable' => [
+            'id' => ['description'],
+        ],
+        Database::get_main_table(TABLE_MAIN_SESSION) => [
+            'id' => ['description'],
+        ],
+        Database::get_main_table(TABLE_MAIN_SHARED_SURVEY) => [
+            'survey_id' => ['subtitle', 'surveythanks', 'intro'],
+        ],
+        Database::get_main_table(TABLE_MAIN_SHARED_SURVEY_QUESTION) => [
+            'question_id' => ['survey_question', 'survey_question_comment'],
+        ],
+        Database::get_main_table(TABLE_MAIN_SHARED_SURVEY_QUESTION_OPTION) => [
+            'question_option_id' => ['option_text'],
+        ],
+        Database::get_main_table(TABLE_MAIN_SKILL) => [
+            'id' => ['name', 'description', 'criteria'],
+        ],
+        Database::get_main_table(TABLE_MAIN_SKILL_PROFILE) => [
+            'id' => ['description'],
+        ],
+        Database::get_main_table(TABLE_MAIN_SKILL_REL_USER) => [
+            'id' => ['argumentation'],
+        ],
+        'skill_rel_user_comment' => [
+            'id' => ['feedback_text'],
+        ],
+        Database::get_main_table(TABLE_MAIN_SYSTEM_ANNOUNCEMENTS) => [
+            'id' => ['content'],
+        ],
+        Database::get_main_table(TABLE_MAIN_SYSTEM_CALENDAR) => [
+            'id' => ['content'],
+        ],
+        Database::get_main_table(TABLE_MAIN_SYSTEM_TEMPLATE) => [
+            'id' => ['comment', 'content'],
+        ],
+        Database::get_main_table(TABLE_MAIN_TEMPLATES) => [
+            'id' => ['description', 'image'],
+        ],
+        Database::get_main_table(TABLE_TICKET_CATEGORY) => [
+            'id' => ['description'],
+        ],
+        Database::get_main_table(TABLE_TICKET_MESSAGE) => [
+            'id' => ['message'],
+        ],
+        Database::get_main_table(TABLE_TICKET_MESSAGE_ATTACHMENTS) => [
+            'id' => ['filename', 'path'],
+        ],
+        Database::get_main_table(TABLE_TICKET_PRIORITY) => [
+            'id' => ['description'],
+        ],
+        Database::get_main_table(TABLE_TICKET_PROJECT) => [
+            'id' => ['description'],
+        ],
+        Database::get_main_table(TABLE_TICKET_STATUS) => [
+            'id' => ['description'],
+        ],
+        Database::get_main_table(TABLE_TICKET_TICKET) => [
+            'id' => ['message'],
+        ],
+        Database::get_main_table(TABLE_STATISTIC_TRACK_E_ATTEMPT) => [
+            'id' => ['answer', 'teacher_comment', 'filename'],
+        ],
+        Database::get_main_table(TABLE_STATISTIC_TRACK_E_ATTEMPT_RECORDING) => [
+            'id' => ['teacher_comment'],
+        ],
+        Database::get_main_table(TABLE_STATISTIC_TRACK_E_DEFAULT) => [
+            'default_id' => ['default_value'],
+        ],
+        Database::get_main_table(TABLE_STATISTIC_TRACK_E_EXERCISES) => [
+            'exe_id' => ['data_tracking', 'questions_to_check'],
+        ],
+        Database::get_main_table(TABLE_STATISTIC_TRACK_E_ITEM_PROPERTY) => [
+            'id' => ['content'],
+        ],
+        'track_e_open' => [
+            'open_id' => ['open_remote_host', 'open_agent', 'open_referer'],
+        ],
+        Database::get_main_table(TABLE_TRACK_STORED_VALUES) => [
+            'id' => ['sv_value'],
+        ],
+        Database::get_main_table(TABLE_TRACK_STORED_VALUES_STACK) => [
+            'id' => ['sv_value'],
+        ],
+        Database::get_main_table(TABLE_MAIN_USER_API_KEY) => [
+            'id' => ['description'],
+        ],
+        Database::get_main_table(TABLE_USERGROUP) => [
+            'id' => ['name', 'description', 'picture', 'url'],
+        ],
+        Database::get_main_table(TABLE_MAIN_BLOCK) => [
+            'id' => ['name', 'description', 'path'],
+        ],
+    ];
 
-    if ($userId) {
-        foreach ($result as $data) {
-            if ($data['item_id'] === $userId) {
-                return false;
+    if (api_get_configuration_value('attendance_allow_comments')) {
+        $replacements['c_attendance_result_comment'] = [
+            'iid' => ['comment'],
+        ];
+    }
+
+    if (api_get_configuration_value('exercise_text_when_finished_failure')) {
+        $replacements[Database::get_course_table(TABLE_QUIZ_TEST)]['iid'][] = 'text_when_finished_failure';
+    }
+
+    $changes = array_map(
+        fn ($table) => 0,
+        $replacements
+    );
+
+    foreach ($replacements as $table => $replacement) {
+        foreach ($replacement as $idColumn => $columns) {
+            $keys = array_map(fn ($column) => "$column LIKE %?%", $columns);
+            $values = array_fill(0, count($columns), $search);
+
+            $result = Database::select(
+                [$idColumn, ...$columns],
+                $table,
+                [
+                    'where' => [
+                        implode(' OR ', $keys) => $values,
+                    ],
+                    'order' => "$idColumn ASC",
+                ]
+            );
+
+            foreach ($result as $row) {
+                $attributes = array_combine(
+                    $columns,
+                    array_map(
+                        fn ($column) => preg_replace('#'.$search.'#', $replace, $row[$column]),
+                        $columns
+                    )
+                );
+
+                try {
+                    Database::update(
+                        $table,
+                        $attributes,
+                        ["$idColumn = ?" => $row[$idColumn]]
+                    );
+                } catch (Exception $e) {
+                    Database::handleError($e);
+                }
+
+                $changes[$table]++;
             }
         }
     }
 
-    if ($result) {
-        return true;
-    }
-    return false;
-}
-
-function api_user_extra_field_validation($extraField, $extraFieldValue, $userId = null) {
-    $fieldValue = new ExtraFieldValue('user');
-    $result = $fieldValue->get_item_id_from_field_variable_and_field_value($extraField, $extraFieldValue, false, false, true);
-
-    $accessUrlId = api_get_current_access_url_id();
-
-    if ($userId) {
-        foreach ($result as $data) {
-            if ($data['item_id'] === $userId) {
-                return false;
-            }
-        }
-    }
-
-    foreach ($result as $data) {
-        $userFoundId = $data['item_id'];
-        $userInSite = UrlManager::relation_url_user_exist($userFoundId, $accessUrlId);
-
-        if ($userInSite) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-/**
- * Searches user by extraFieldValue
- *
- * @param string $dni extraField name
- * @param string $dni extraField value
- * @param int $siteId access_url id
- *
- * @return array|bool User info|false
- */
-function api_find_user_by_extra_field($extraField, $extraFieldValue, $siteId = null) {
-    if (empty($extraField)) {
-        return false;
-    }
-
-    if (empty($siteId)) {
-        $siteId = api_get_current_access_url_id();
-    }
-
-    $fieldValue = new ExtraFieldValue('user');
-    $result = $fieldValue->get_item_id_from_field_variable_and_field_value($extraField, $extraFieldValue, false, false, true);
-
-    if (empty($result)) {
-        return false;
-    }
-
-    foreach ($result as $data) {
-        $userId = $data['item_id'];
-
-        $userInSite = UrlManager::relation_url_user_exist($userId, $siteId);
-
-        if ($userInSite) {
-            $userInfo = api_get_user_info($userId);
-            if (!empty($userInfo)) {
-                return $userInfo;
-            }
-        }
-    }
-
-    return false;
+    return $changes;
 }

@@ -17,16 +17,29 @@ switch ($action) {
         echo api_get_language_translate_html();
         break;
     case 'translate_portfolio_category':
+        // Only platform admins may write to language files
+        if (!api_is_platform_admin()) {
+            api_not_allowed(true);
+            exit;
+        }
         if (false === Security::check_token('get')) {
             exit;
         }
         Security::clear_token();
         if (isset($_REQUEST['new_language']) && isset($_REQUEST['variable_language']) && isset($_REQUEST['category_id'])) {
             $newLanguage = Security::remove_XSS($_REQUEST['new_language']);
-            $langVariable = Security::remove_XSS($_REQUEST['variable_language']);
+            $langVariable = ltrim(
+                Security::remove_XSS($_REQUEST['variable_language']),
+                '$'
+            );
             $categoryId = (int) $_REQUEST['category_id'];
             $languageId = (int) $_REQUEST['id'];
             $subLanguageId = (int) $_REQUEST['sub'];
+
+            // Validate variable name is a safe PHP identifier
+            if (!SubLanguageManager::isValidLanguageVariable($langVariable)) {
+                exit;
+            }
 
             $langFilesToLoad = SubLanguageManager::get_lang_folder_files_list(
                 api_get_path(SYS_LANG_PATH).'english',
@@ -36,15 +49,18 @@ switch ($action) {
             $fileLanguage = $langFilesToLoad[0].'.inc.php';
             $allDataOfLanguage = SubLanguageManager::get_all_information_of_sub_language($languageId, $subLanguageId);
 
+            if (empty($allDataOfLanguage) ||
+                !SubLanguageManager::isValidLanguageFolderName($allDataOfLanguage['dokeos_folder'])
+            ) {
+                exit;
+            }
+
             $pathFolder = api_get_path(SYS_LANG_PATH).$allDataOfLanguage['dokeos_folder'].'/'.$fileLanguage;
             $allFileOfDirectory = SubLanguageManager::get_all_language_variable_in_file($pathFolder);
             $returnValue = SubLanguageManager::add_file_in_language_directory($pathFolder);
 
             //update variable language
-            // Replace double quotes to avoid parse errors
-            $newLanguage = str_replace('"', '\"', $newLanguage);
-            $newLanguage = str_replace("\n", "\\n", $newLanguage);
-            $allFileOfDirectory[$langVariable] = "\"".$newLanguage."\";";
+            $allFileOfDirectory[$langVariable] = $newLanguage;
 
             $resultArray = [];
             foreach ($allFileOfDirectory as $key => $value) {

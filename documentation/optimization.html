@@ -257,6 +257,7 @@ ALTER TABLE c_lp_item_view ADD INDEX idx_clpiv_c_i_v (c_id, id, view_count);
         ALTER TABLE c_chat_connected ADD INDEX idx_course_group(c_id, to_group_id);
         -- For big online exams, this index reduces the load considerably
         ALTER TABLE c_quiz_question ADD INDEX idx_cqq_cidid (c_id, id);
+        ALTER TABLE c_quiz_question ADD INDEX  idx_cqq_type (type);
         -- If you have many messages with attachments
         ALTER TABLE message_attachment ADD index idx_msgat_msgid (message_id);
         -- If you query audit logs from track_e_default on huge tables
@@ -505,10 +506,10 @@ RewriteRule (\.(html|gif|jpg|jpeg|png|js|pdf|ico|icon|css|swf|avi|mp3|ogg|wav|tt
 <p>
 Since version 1.11.10, the .htaccess has been modified to do this by default with media files, and a change post-1.11.10 also does it for documents that are not in a SCORM folder. These changes will improve speed considerably but will lower the security on media files, as a direct link could be used to open the file with no validation. As such, you can comment those lines with media files to ensure increased security, at the cost of performance. These are the two lines (followed by their more wide-ranging rule) that have to be present in .htaccess for maximum efficiency.
 <pre>
-RewriteRule ^courses/([^/]+)/scorm/(.*([\.js|\.css|\.png|\.jpg|\.jpeg|\.gif]))$ app/courses/$1/scorm/$2 [QSA,L]
+RewriteRule ^courses/([^/]+)/scorm/(.*\.(js|css|png|jpg|jpeg|gif))$ app/courses/$1/scorm/$2 [QSA,L]
 RewriteRule ^courses/([^/]+)/scorm/(.*)$ main/document/download_scorm.php?doc_url=/$2&cDir=$1 [QSA,L]
 [...]
-RewriteRule ^courses/([^/]+)/document/(.*([\.js|\.css|\.png|\.jpg|\.jpeg|\.gif|\.mp4|\.webm|\.avi|\.mpeg|\.mp3|\.wav|\.ogg]))$ app/courses/$1/document/$2 [QSA,L]
+RewriteRule ^courses/([^/]+)/document/(.*\.(js|css|png|jpg|jpeg|gif|mp4|webm|avi|mpeg|mp3|wav|ogg]))$ app/courses/$1/document/$2 [QSA,L]
 RewriteRule ^courses/([^/]+)/document/(.*)$ main/document/download.php?doc_url=/$2&cDir=$1 [QSA,L]
 </pre>
 </p>

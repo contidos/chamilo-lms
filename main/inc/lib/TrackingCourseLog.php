@@ -284,6 +284,8 @@ class TrackingCourseLog
                     $row[4] = $ip;
                 }
 
+                $row[5] = Security::remove_XSS($row[5]);
+
                 $resources[] = $row;
             }
         }
@@ -1002,6 +1004,10 @@ class TrackingCourseLog
             }
             if (!in_array('quiz_finalization_date', $excludedFields)) {
                 $userRow['quiz_finalization_date'] = $user['quiz_finalization_date'];
+            }
+
+            if (api_get_setting('show_email_addresses') === 'true') {
+                $userRow['email'] = $user['col4'];
             }
 
             // we need to display an additional profile field

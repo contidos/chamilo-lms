@@ -963,12 +963,9 @@ class ExtraFieldValue extends Model
     }
 
     /**
-     * @param int  $itemId
-     * @param bool $applyFilter If true, only returns fields with filter=1. If false, returns all fields.
-     *
-     * @return array
+     * Return extra fields details for an item if the extra field is marked as filter.
      */
-    public function getAllValuesByItem($itemId, $applyFilter = true)
+    public function getAllValuesByItem(int $itemId): array
     {
         $itemId = (int) $itemId;
         $extraFieldType = $this->getExtraField()->getExtraFieldType();
@@ -984,9 +981,9 @@ class ExtraFieldValue extends Model
 
         $result = Database::query($sql);
         $idList = [];
+        $finalResult = [];
         if (Database::num_rows($result)) {
             $result = Database::store_result($result, 'ASSOC');
-            $finalResult = [];
             foreach ($result as $item) {
                 $finalResult[$item['id']] = $item;
             }
@@ -996,10 +993,7 @@ class ExtraFieldValue extends Model
         $em = Database::getManager();
 
         $extraField = new ExtraField($this->type);
-        // Si $applyFilter es true, solo carga campos con filter=1
-        // Si es false, carga todos los campos
-        $conditions = $applyFilter ? ['filter = ?' => 1] : [];
-        $allData = $extraField->get_all($conditions);
+        $allData = $extraField->get_all(['filter = ?' => 1]);
         $allResults = [];
         foreach ($allData as $field) {
             if (in_array($field['id'], $idList)) {
@@ -1226,5 +1220,26 @@ class ExtraFieldValue extends Model
         }
 
         return true;
+    }
+
+    /**
+     * @return array<int, array<string, string>>
+     */
+    public static function formatValues(array $extraInfo): array
+    {
+        $formatted = [];
+
+        foreach ($extraInfo as $extra) {
+            /** @var ExtraFieldValues $extraValue */
+            $extraValue = $extra['value'];
+
+            $formatted[] = [
+                'variable' => $extraValue->getField()->getVariable(),
+                'display_text' => $extraValue->getField()->getDisplayText(),
+                'value' => $extraValue->getValue(),
+            ];
+        }
+
+        return $formatted;
     }
 }
