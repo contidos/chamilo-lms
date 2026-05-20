@@ -8364,6 +8364,7 @@ SQL;
         return empty($row);
     }
 
+    /**
      * @return EncoderFactory
      */
     private static function getEncoderFactory()

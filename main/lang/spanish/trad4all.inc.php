@@ -9150,7 +9150,6 @@ $TimeSpentInCoursesLastWeek = "Tiempo dedicado en los cursos la semana pasada";
 $ProgressionInSessions = "Progreso en las sesiones";
 $synthesis = "Síntesis";
 $WeeklyTimeSummary = "Resumen de tiempo dedicado por semana";
->>>>>>> a16ec7949ec77bf2a4ae24452ecf52d149052597
 $ExistingUserWithSameExtraFieldValue = "Se encontró el mismo %s con un usuario existente (ID %d), se procederá a matricularlo en lugar de crear uno nuevo.";
 $SelectExtraField = "Seleccione el campo extra para buscar";
 $WhatToDoWithUnifiedUsers = "Que hacer con los usuarios unificados";
