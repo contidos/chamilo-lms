@@ -4792,7 +4792,47 @@ class SessionManager
             }
         }
 
+        // Copy scheduled announcements (if feature enabled)
+        self::copyScheduledAnnouncements($id, $sid);
+
         return $sid;
+    }
+
+    /**
+     * Duplicate scheduled announcements (with extra fields/attachments) from one session to another.
+     */
+    protected static function copyScheduledAnnouncements(int $sourceSessionId, int $targetSessionId): void
+    {
+        if (!api_get_configuration_value('allow_scheduled_announcements')) {
+            return;
+        }
+
+        $scheduledAnnouncementModel = new ScheduledAnnouncement();
+        $items = $scheduledAnnouncementModel->get_all([
+            'session_id = ?' => $sourceSessionId,
+        ]);
+
+        if (empty($items)) {
+            return;
+        }
+
+        $extraFieldValue = new ExtraFieldValue('scheduled_announcement');
+
+        foreach ($items as $item) {
+            $newDate = ScheduledAnnouncement::shiftDateForCopy($item['date']);
+            $params = $item;
+            unset($params['id']);
+            $params['session_id'] = $targetSessionId;
+            $params['sent'] = 0; // always pending on new session
+            $params['date'] = $newDate;
+
+            $newId = $scheduledAnnouncementModel->save($params);
+            if (!$newId) {
+                continue;
+            }
+
+            $extraFieldValue->copy($item['id'], $newId);
+        }
     }
 
     /**
