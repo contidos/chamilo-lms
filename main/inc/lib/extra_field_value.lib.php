@@ -963,9 +963,11 @@ class ExtraFieldValue extends Model
     }
 
     /**
-     * Return extra fields details for an item if the extra field is marked as filter.
+     * Return extra fields details for an item.
+     * If $applyFilter is true (default), only returns fields with filter=1.
+     * If false, returns all fields regardless of filter value.
      */
-    public function getAllValuesByItem(int $itemId): array
+    public function getAllValuesByItem(int $itemId, bool $applyFilter = true): array
     {
         $itemId = (int) $itemId;
         $extraFieldType = $this->getExtraField()->getExtraFieldType();
@@ -993,7 +995,8 @@ class ExtraFieldValue extends Model
         $em = Database::getManager();
 
         $extraField = new ExtraField($this->type);
-        $allData = $extraField->get_all(['filter = ?' => 1]);
+        $conditions = $applyFilter ? ['filter = ?' => 1] : [];
+        $allData = $extraField->get_all($conditions);
         $allResults = [];
         foreach ($allData as $field) {
             if (in_array($field['id'], $idList)) {

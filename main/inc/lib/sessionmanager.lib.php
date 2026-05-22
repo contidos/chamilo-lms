@@ -4627,7 +4627,7 @@ class SessionManager
         }
 
         $extraFieldValue = new ExtraFieldValue('session');
-        $extraFieldsValues = $extraFieldValue->getAllValuesByItem($id);
+        $extraFieldsValues = $extraFieldValue->getAllValuesByItem($id, false);
         $extraFieldsValuesToCopy = [];
         if (!empty($extraFieldsValues)) {
             foreach ($extraFieldsValues as $extraFieldValue) {
