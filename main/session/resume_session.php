@@ -414,6 +414,10 @@ if (!empty($userList)) {
     }
 
     usort($userList, function ($a, $b) use ($sortColumn, $sortOrder) {
+        if ($a['relation_type'] !== $b['relation_type']) {
+            return $a['relation_type'] <=> $b['relation_type'];
+        }
+
         if ($sortColumn === 'user') {
             $valueA = strtolower(api_get_user_info($a['user_id'])['complete_name_with_username']);
             $valueB = strtolower(api_get_user_info($b['user_id'])['complete_name_with_username']);
