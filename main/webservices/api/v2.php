@@ -802,6 +802,11 @@ try {
             Event::addEvent(LOG_WS.$action, 'course_id', $data['id']);
             $restResponse->setData($data);
             break;
+        case Rest::UPDATE_COURSE:
+            $data = $restApi->updateCourse($httpRequest->request);
+            Event::addEvent(LOG_WS.$action, 'course_id', $data['id']);
+            $restResponse->setData($data);
+            break;
         case Rest::DELETE_COURSE:
             if (!api_is_platform_admin()) {
                 throw new Exception(get_lang('NotAllowed'));
@@ -868,6 +873,12 @@ try {
         case Rest::UPDATE_SESSION:
             $data = $restApi->updateSession($_POST);
             Event::addEvent(LOG_WS.$action, 'session_id', $data['id_session']);
+            $restResponse->setData($data);
+            break;
+        case Rest::DELETE_SESSION:
+            $sessionId = (int) ($_REQUEST['session_id'] ?? 0);
+            $data = $restApi->deleteSession($sessionId);
+            Event::addEvent(LOG_WS.$action, 'session_id', $sessionId);
             $restResponse->setData($data);
             break;
         case Rest::SUBSCRIBE_USER_TO_COURSE:
