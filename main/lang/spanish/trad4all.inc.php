@@ -9156,4 +9156,5 @@ $MinTime = "Tiempo mínimo que el usuario debe pasar en el curso para certificac
 $TimeInCourse = "Hola %s, tu tiempo en el curso es:";
 $BaseProgress = "Envío en base al progreso en el curso";
 $ProgressLessEqual = "Progreso menor o igual";
+$UserWithSameFieldAlreadyExistsInPortal = "Ya existe un usuario con el mismo %s en este portal";
 ?>
