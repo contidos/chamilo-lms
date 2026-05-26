@@ -405,8 +405,8 @@ $userList = SessionManager::get_users_by_session($sessionId);
 
 if (!empty($userList)) {
     $sessionId = isset($_GET['id_session']) ? (int) $_GET['id_session'] : null;
-    $sortColumn = isset($_GET['sort']) ? Security::remove_XSS($_GET['sort']) : 'registration_date';
-    $sortOrder = isset($_GET['order']) && Security::remove_XSS($_GET['order']) === 'ASC' ? SORT_ASC : SORT_DESC;
+    $sortColumn = isset($_GET['sort']) ? Security::remove_XSS($_GET['sort']) : 'user';
+    $sortOrder = isset($_GET['order']) && Security::remove_XSS($_GET['order']) === 'DESC' ? SORT_DESC : SORT_ASC;
 
     $allowedColumns = ['user', 'registration_date'];
     if (!in_array($sortColumn, $allowedColumns, true)) {
