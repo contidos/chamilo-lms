@@ -112,12 +112,14 @@ class Rest extends WebService
     public const GET_COURSES = 'get_courses';
     public const GET_COURSES_FROM_EXTRA_FIELD = 'get_courses_from_extra_field';
     public const SAVE_COURSE = 'save_course';
+    public const UPDATE_COURSE = 'update_course';
     public const DELETE_COURSE = 'delete_course';
     public const GET_SESSION_FROM_EXTRA_FIELD = 'get_session_from_extra_field';
     public const GET_SESSION_INFO_FROM_EXTRA_FIELD = 'get_session_info_from_extra_field';
     public const SAVE_SESSION = 'save_session';
     public const CREATE_SESSION_FROM_MODEL = 'create_session_from_model';
     public const UPDATE_SESSION = 'update_session';
+    public const DELETE_SESSION = 'delete_session';
     public const GET_SESSIONS = 'get_sessions';
 
     public const SUBSCRIBE_USER_TO_COURSE = 'subscribe_user_to_course';
@@ -1915,6 +1917,118 @@ class Rest extends WebService
     }
 
     /**
+     * @throws Exception
+     */
+    public function updateCourse(ParameterBag $request): array
+    {
+        self::protectAdminEndpoint();
+
+        $courseId = $request->getInt('course_id');
+        $courseCode = $request->get('course_code');
+
+        if (!empty($courseCode)) {
+            $courseInfo = api_get_course_info($courseCode);
+        } elseif (!empty($courseId)) {
+            $courseInfo = api_get_course_info_by_id($courseId);
+        } else {
+            throw new Exception(get_lang('NoData'));
+        }
+
+        if (empty($courseInfo)) {
+            throw new Exception(get_lang('NoCourse'));
+        }
+
+        $realId = $courseInfo['real_id'];
+        $table = Database::get_main_table(TABLE_MAIN_COURSE);
+        $params = [];
+
+        $title = $request->get('title');
+
+        if (!is_null($title)) {
+            $params['title'] = $title;
+        }
+
+        $language = $request->get('language');
+
+        if (!is_null($language)) {
+            $params['course_language'] = $language;
+        }
+
+        $visibility = $request->get('visibility');
+
+        if (!is_null($visibility)) {
+            if (!isset(Course::getStatusList()[(int) $visibility])) {
+                throw new Exception(get_lang('VisibilityCannotBeChanged'));
+            }
+
+            $params['visibility'] = (int) $visibility;
+        }
+
+        $diskQuota = $request->get('disk_quota');
+
+        if (!is_null($diskQuota)) {
+            $params['disk_quota'] = (int) $diskQuota;
+        }
+
+        $categoryCode = $request->get('category_code');
+
+        if (!is_null($categoryCode)) {
+            $params['category_code'] = $categoryCode;
+        }
+
+        $departmentName = $request->get('department_name');
+
+        if (!is_null($departmentName)) {
+            $params['department_name'] = $departmentName;
+        }
+
+        $departmentUrl = $request->get('department_url');
+
+        if (!is_null($departmentUrl)) {
+            $params['department_url'] = $departmentUrl;
+        }
+
+        $subscribe = $request->get('subscribe');
+
+        if (!is_null($subscribe)) {
+            $params['subscribe'] = (int) $subscribe;
+        }
+
+        $unsubscribe = $request->get('unsubscribe');
+
+        if (!is_null($unsubscribe)) {
+            $params['unsubscribe'] = (int) $unsubscribe;
+        }
+
+        if (!empty($params)) {
+            Database::update($table, $params, ['id = ?' => $realId]);
+        }
+
+        $extraFields = array_filter(
+            $request->all(),
+            function ($key) {
+                return substr($key, 0, 6) === 'extra_';
+            },
+            ARRAY_FILTER_USE_KEY
+        );
+
+        if (!empty($extraFields)) {
+            $extraFields['item_id'] = $realId;
+            $courseFieldValue = new ExtraFieldValue('course');
+            $courseFieldValue->saveFieldValues($extraFields);
+        }
+
+        $updatedCourse = api_get_course_info_by_id($realId);
+
+        return [
+            'message' => get_lang('Updated'),
+            'id' => $realId,
+            'course_code' => $updatedCourse['code'],
+            'course_title' => $updatedCourse['title'],
+        ];
+    }
+
+    /**
      * @param $userParam
      *
      * @throws Exception
@@ -3138,6 +3252,29 @@ class Rest extends WebService
             'status' => true,
             'message' => get_lang('Updated'),
             'id_session' => $id,
+        ];
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function deleteSession(int $sessionId): array
+    {
+        if (!SessionManager::cantEditSession($sessionId)) {
+            self::throwNotAllowedException();
+        }
+
+        $sessionInfo = api_get_session_info($sessionId);
+
+        if (empty($sessionInfo)) {
+            throw new Exception(get_lang('NoData'));
+        }
+
+        $result = SessionManager::delete($sessionId);
+
+        return [
+            'status' => $result,
+            'message' => $result ? get_lang('Deleted').': '.$sessionInfo['name'] : get_lang('Error'),
         ];
     }
 
