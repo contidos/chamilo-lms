@@ -11120,3 +11120,29 @@ function api_replace_terms_in_content(string $search, string $replace): array
 
     return $changes;
 }
+
+function api_user_extra_field_validation($extraField, $extraFieldValue, $userId = null) {
+    $fieldValue = new ExtraFieldValue('user');
+    $result = $fieldValue->get_item_id_from_field_variable_and_field_value($extraField, $extraFieldValue, false, false, true);
+
+    $accessUrlId = api_get_current_access_url_id();
+
+    if ($userId) {
+        foreach ($result as $data) {
+            if ($data['item_id'] === $userId) {
+                return false;
+            }
+        }
+    }
+
+    foreach ($result as $data) {
+        $userFoundId = $data['item_id'];
+        $userInSite = UrlManager::relation_url_user_exist($userFoundId, $accessUrlId);
+
+        if ($userInSite) {
+            return true;
+        }
+    }
+
+    return false;
+}
