@@ -831,9 +831,10 @@ class ExtraField extends Model
         // Determine if we’re editing an existing user (item_id present) or creating a new one
         $currentUserId = $form->getElementValue('item_id') ?: null;
 
-        // Always mark the unique extra field as required on user forms
+        // Always mark the unique extra field as required on user forms (not when used as a filter)
         if (
-            $this->type === 'user'
+            ($this->type === 'user' || $this->type === 'session')
+            && !$filter
             && !empty($uniqueField)
             && !in_array($uniqueField, $requiredFields, true)
         ) {
