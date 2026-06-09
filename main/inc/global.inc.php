@@ -35,6 +35,12 @@ $alreadyInstalled = false;
 if (file_exists($kernel->getConfigurationFile())) {
     require_once $kernel->getConfigurationFile();
     $alreadyInstalled = true;
+    // If require_once was a no-op (already loaded, e.g. when this file is included
+    // from inside a class method via CustomPages::display), $_configuration is in
+    // global scope but not visible here. Recover it.
+    if (!isset($_configuration) && isset($GLOBALS['_configuration'])) {
+        $_configuration = $GLOBALS['_configuration'];
+    }
     // Recalculate a system absolute path symlinks insensible.
     $includePath = $_configuration['root_sys'].'main/inc/';
 } else {
