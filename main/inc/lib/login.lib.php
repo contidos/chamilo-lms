@@ -113,7 +113,7 @@ class Login
             }
         }
 
-        $email_body = get_lang('YourAccountParam')." ".$portal_url."\n\n$user_account_list";
+        $email_body = get_lang('YourAccountParam')." ".$portal_url."\n\n$user_account_list\n";
         // SEND MESSAGE
         $sender_name = api_get_person_name(
             api_get_setting('administratorName'),
