@@ -907,28 +907,36 @@ class Login
         }
 
         if ($email) {
-            $condition = "LOWER(email) = '".Database::escape_string($username)."' ";
+            $condition = "LOWER(u.email) = '".Database::escape_string($username)."' ";
         } else {
-            $condition = "LOWER(username) = '".Database::escape_string($username)."'";
+            $condition = "LOWER(u.username) = '".Database::escape_string($username)."'";
         }
 
         $tbl_user = Database::get_main_table(TABLE_MAIN_USER);
+        $urlJoin = '';
+        $urlCondition = '';
+        if (api_is_multiple_url_enabled()) {
+            $tbl_url_rel_user = Database::get_main_table(TABLE_MAIN_ACCESS_URL_REL_USER);
+            $urlJoin = "INNER JOIN $tbl_url_rel_user url_rel_user ON (u.user_id = url_rel_user.user_id)";
+            $urlCondition = " AND url_rel_user.access_url_id = ".api_get_current_access_url_id();
+        }
         $query = "SELECT
-                    user_id AS uid,
-		            lastname AS lastName,
-		            firstname AS firstName,
-		            username AS loginName,
-		            password,
-		            email,
-                    status AS status,
-                    official_code,
-                    phone,
-                    picture_uri,
-                    creator_id,
-                    auth_source
-				 FROM $tbl_user
-				 WHERE ( $condition AND active = 1)
-				 ORDER BY registration_date DESC";
+                    u.user_id AS uid,
+		            u.lastname AS lastName,
+		            u.firstname AS firstName,
+		            u.username AS loginName,
+		            u.password,
+		            u.email,
+                    u.status AS status,
+                    u.official_code,
+                    u.phone,
+                    u.picture_uri,
+                    u.creator_id,
+                    u.auth_source
+				 FROM $tbl_user u
+				 $urlJoin
+				 WHERE ( $condition AND u.active = 1 $urlCondition)
+				 ORDER BY u.registration_date DESC";
         $result = Database::query($query);
         $num_rows = Database::num_rows($result);
         if ($result && $num_rows > 0) {
