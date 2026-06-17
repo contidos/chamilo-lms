@@ -11,11 +11,13 @@ require_once __DIR__.'/language.php';
 $template = new Template(get_lang('LostPassword'), false, false, false, false, true, true);
 
 $error = null;
+$info = null;
 
 if (isset($content['info']) && !empty($content['info'])) {
-    $error = $content['info'];
+    $info = $content['info'];
 }
-$template->assign('error');
+$template->assign('error', $error);
+$template->assign('info', $info);
 $template->assign('form', $content['form']);
 $layout = $template->get_template('custompage/lostpassword.tpl');
 $content = $template->fetch($layout);

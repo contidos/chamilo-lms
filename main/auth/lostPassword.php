@@ -120,10 +120,10 @@ if ($form->validate()) {
     if ($passwordEncryption === 'none') {
         $messageText = Login::send_password_to_user($user, true);
 
-        if (CustomPages::enabled() && CustomPages::exists(CustomPages::INDEX_UNLOGGED)) {
+        if (CustomPages::enabled() && CustomPages::exists(CustomPages::LOST_PASSWORD)) {
             CustomPages::display(
-                CustomPages::INDEX_UNLOGGED,
-                ['info' => $messageText]
+                CustomPages::LOST_PASSWORD,
+                ['info' => $messageText, 'form' => '']
             );
             exit;
         }
@@ -146,27 +146,37 @@ if ($form->validate()) {
     $userResetPasswordSetting = api_get_setting('user_reset_password');
 
     if ($userResetPasswordSetting === 'true') {
-        $userObj = api_get_user_entity($user['uid']);
-        Login::sendResetEmail($userObj);
+        // Generar nueva contraseña directamente
+        $newPassword = api_generate_password();
+        UserManager::updatePassword($user['uid'], $newPassword);
 
-        if (CustomPages::enabled() && CustomPages::exists(CustomPages::INDEX_UNLOGGED)) {
+        // Actualizar el array de usuario con la nueva contraseña
+        $user['password'] = $newPassword;
+
+        // Enviar correo con la contraseña directamente
+        $messageText = Login::send_password_to_user($user, true);
+
+        if (CustomPages::enabled() && CustomPages::exists(CustomPages::LOST_PASSWORD)) {
             CustomPages::display(
-                CustomPages::INDEX_UNLOGGED,
-                ['info' => get_lang('CheckYourEmailAndFollowInstructions')]
+                CustomPages::LOST_PASSWORD,
+                ['info' => $messageText, 'form' => '']
             );
             exit;
         }
 
+        Display::addFlash(
+            Display::return_message($messageText, 'info', false)
+        );
         header('Location: '.api_get_path(WEB_PATH));
         exit;
     }
 
     $messageText = Login::handle_encrypted_password($user, true);
 
-    if (CustomPages::enabled() && CustomPages::exists(CustomPages::INDEX_UNLOGGED)) {
+    if (CustomPages::enabled() && CustomPages::exists(CustomPages::LOST_PASSWORD)) {
         CustomPages::display(
-            CustomPages::INDEX_UNLOGGED,
-            ['info' => $messageText]
+            CustomPages::LOST_PASSWORD,
+            ['info' => $messageText, 'form' => '']
         );
         exit;
     }
