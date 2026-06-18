@@ -791,18 +791,24 @@ function checkSessionTime()
 }
 
 function extendSession() {
-    $.getJSON(_p.web_ajax + 'online.ajax.php')
-    .done(function (data) {
-        console.log('Session extended');
+    $.ajax({
+        url: _p.web_ajax + 'online.ajax.php?a=get_users_online',
+        success: function () {
+            console.log('Session extended');
+            clearInterval(sessionCounterInterval);
+            sessionClosing = false;
 
-        clearInterval(sessionCounterInterval);
+            var counterOverlay = document.getElementById('session-count-overlay');
+            if (counterOverlay) {
+                counterOverlay.remove();
+            }
 
-        var counterOverlay = document.getElementById('session-count-overlay');
-        if (counterOverlay) {
-            counterOverlay.remove();
+            setTimeout(checkSessionTime, 60000);
+        },
+        error: function (jqXHR, textStatus) {
+            console.error('Error extending session:', textStatus);
         }
-    })
-    .fail(function (jqXHR, textStatus) { console.error('Error:', textStatus) });
+    });
 }
 
 function updateSessionTimeCounter() {
