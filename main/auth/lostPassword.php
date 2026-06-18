@@ -143,25 +143,10 @@ if ($form->validate()) {
         exit;
     }
 
-    $userResetPasswordSetting = api_get_setting('user_reset_password');
-
-    if ($userResetPasswordSetting === 'true') {
-        $userObj = api_get_user_entity($user['uid']);
-        Login::sendResetEmail($userObj);
-
-        if (CustomPages::enabled() && CustomPages::exists(CustomPages::INDEX_UNLOGGED)) {
-            CustomPages::display(
-                CustomPages::INDEX_UNLOGGED,
-                ['info' => get_lang('CheckYourEmailAndFollowInstructions')]
-            );
-            exit;
-        }
-
-        header('Location: '.api_get_path(WEB_PATH));
-        exit;
-    }
-
-    $messageText = Login::handle_encrypted_password($user, true);
+    // Generate a new password immediately and send it directly (one-step flow).
+    $user['password'] = api_generate_password();
+    UserManager::updatePassword($user['uid'], $user['password']);
+    $messageText = Login::send_password_to_user($user, true);
 
     if (CustomPages::enabled() && CustomPages::exists(CustomPages::INDEX_UNLOGGED)) {
         CustomPages::display(
