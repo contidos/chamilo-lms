@@ -75,8 +75,7 @@ class Login
             }
             $reset_link = get_lang('Pass')." : $user[password]";
             $user_account_list =
-                get_lang('YourRegistrationData')." : \n".
-                get_lang('UserName').' : '.$user['loginName']."\n".
+                "Usuario : ".$user['loginName']."\n".
                 trim($reset_link).'';
         }
 
@@ -113,7 +112,8 @@ class Login
             }
         }
 
-        $email_body = get_lang('YourAccountParam')." ".$portal_url."\n\n$user_account_list";
+        $portal_link = '<a href="'.$portal_url.'">'.$portal_url.'</a>';
+        $email_body = "Estos son sus datos para acceder a ".$portal_link."\n\n$user_account_list";
         // SEND MESSAGE
         $sender_name = api_get_person_name(
             api_get_setting('administratorName'),
