@@ -97,10 +97,8 @@ if ($form->validate()) {
         $messageText = get_lang('AnEmailToResetYourPasswordHasBeenSent');
 
         if (CustomPages::enabled() && CustomPages::exists(CustomPages::INDEX_UNLOGGED)) {
-            CustomPages::display(
-                CustomPages::INDEX_UNLOGGED,
-                ['info' => $messageText]
-            );
+            $_SESSION['lostpassword_success'] = $messageText;
+            header('Location: '.api_get_path(WEB_PATH));
             exit;
         }
 
@@ -121,10 +119,8 @@ if ($form->validate()) {
         $messageText = Login::send_password_to_user($user, true);
 
         if (CustomPages::enabled() && CustomPages::exists(CustomPages::INDEX_UNLOGGED)) {
-            CustomPages::display(
-                CustomPages::INDEX_UNLOGGED,
-                ['info' => $messageText]
-            );
+            $_SESSION['lostpassword_success'] = $messageText;
+            header('Location: '.api_get_path(WEB_PATH));
             exit;
         }
 
@@ -149,10 +145,8 @@ if ($form->validate()) {
     $messageText = Login::send_password_to_user($user, true);
 
     if (CustomPages::enabled() && CustomPages::exists(CustomPages::INDEX_UNLOGGED)) {
-        CustomPages::display(
-            CustomPages::INDEX_UNLOGGED,
-            ['info' => $messageText]
-        );
+        $_SESSION['lostpassword_success'] = $messageText;
+        header('Location: '.api_get_path(WEB_PATH));
         exit;
     }
 
