@@ -1,7 +1,7 @@
 <p>{{ 'Dear'|get_lang }} {{ complete_name }},</p>
 {{ username ? '<p>' ~ username ~ '</p>' }}
 <p>{{ 'YouAreRegisterToSessionX'|get_lang|format(session_name) }}</p>
-<p>{{ 'Address'|get_lang }}  {{ _s.site_name }} {{ 'Is'|get_lang }} : {{ _p.web }}</p>
+<p>{{ 'Address'|get_lang }}  {{ _s.site_name }} {{ 'Is'|get_lang }} : <a href="{{ _p.web }}">{{ _p.web }}</a></p>
 {{ lostPassword ? '<p>' ~ lostPassword ~ '</p>' }}
 <p>{{ 'Problem'|get_lang }}</p>
 <p>{{ 'SignatureFormula'|get_lang }}</p>
