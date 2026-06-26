@@ -243,8 +243,10 @@ function prepare_user_sql_query($getCount)
             }
         }
 
-        if (!empty($extraFieldHasData)) {
+        if (!empty($extraFieldHasData) && !empty($extraFieldResult)) {
             $sql .= " AND (u.id IN ('".implode("','", $extraFieldResult)."')) ";
+        } elseif (!empty($extraFieldHasData) && empty($extraFieldResult)) {
+            $sql .= ' AND (1 = 0) ';
         }
     }
 
