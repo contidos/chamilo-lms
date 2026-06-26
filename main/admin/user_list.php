@@ -53,9 +53,13 @@ $urlSession = api_get_path(WEB_AJAX_PATH).'session.ajax.php?a=get_user_sessions'
 $extraField = new ExtraField('user');
 $variables = $extraField->get_all_extra_field_by_type(ExtraField::FIELD_TYPE_TAG);
 $variablesSelect = $extraField->get_all_extra_field_by_type(ExtraField::FIELD_TYPE_SELECT);
+$variablesText = $extraField->get_all_extra_field_by_type(ExtraField::FIELD_TYPE_TEXT);
 
 if (!empty($variablesSelect)) {
     $variables = array_merge($variables, $variablesSelect);
+}
+if (!empty($variablesText)) {
+    $variables = array_merge($variables, $variablesText);
 }
 $variablesToShow = [];
 if ($variables) {
