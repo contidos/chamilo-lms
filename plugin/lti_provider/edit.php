@@ -12,6 +12,33 @@ require_once __DIR__.'/LtiProviderPlugin.php';
 
 api_protect_admin_script();
 
+$htmlHeadXtra[] = '<script>
+function selectToolProvider(tool) {
+    $(".sbox-tool").each(function() {
+        if ($(this).hasClass("select2-hidden-accessible")) {
+            $(this).select2("destroy");
+        }
+    });
+    $(".sbox-tool").attr("disabled", "disabled");
+    $(".select-tool").hide();
+    $("#select-" + tool).show();
+    var $select = $("#sbox-tool-" + tool);
+    $select.removeAttr("disabled");
+    if ($.fn.select2) {
+        $select.select2({ width: "100%" });
+    }
+}
+$(function() {
+    var $radios = $("input[name=\'tool_type\']");
+    if ($radios.length > 0) {
+        selectToolProvider($radios.filter(":checked").val() || "quiz");
+        $radios.on("change", function() {
+            selectToolProvider($(this).val());
+        });
+    }
+});
+</script>';
+
 if (!isset($_REQUEST['id'])) {
     api_not_allowed(true);
 }
