@@ -313,6 +313,7 @@ function save_data(array $users, bool $sendMail = false, ?string $targetFolder =
                 if (!empty($user['UserName'])) {
                     $userName = $user['UserName'];
                 }
+                $user['UserName'] = $userName;
                 $changePassMethod = 0;
                 $password = null;
                 $authSource = $userInfo['auth_source'];
