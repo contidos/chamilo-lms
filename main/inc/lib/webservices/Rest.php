@@ -160,6 +160,7 @@ class Rest extends WebService
     public const SUBSCRIBE_COURSE_TO_SESSION_FROM_EXTRA_FIELD = 'subscribe_course_to_session_from_extra_field';
     public const SUBSCRIBE_USER_TO_SESSION_FROM_EXTRA_FIELD = 'subscribe_user_to_session_from_extra_field';
     public const UPDATE_SESSION_FROM_EXTRA_FIELD = 'update_session_from_extra_field';
+    public const GET_USER_COURSE_REGISTRATION = 'get_user_course_registration';
 
     /**
      * @var Session
@@ -4914,5 +4915,61 @@ class Rest extends WebService
         }
 
         return $rows;
+    }
+
+    public function GetUserCourseRegistration(string $startDate, string $endDate): array
+    {
+        $resultArray = [];
+
+        $username = $this->user->getUsername();
+        $users = api_get_configuration_value('webservice_user_registered_courses_stats');
+
+        if ($users) {
+            $coursesConfig = $users[$username];
+            $coursesIn = implode(',', $coursesConfig);
+
+            $startDate = Database::escape_string($startDate);
+            $endDate = Database::escape_string($endDate);
+
+            $tableSession = Database::get_main_table(TABLE_MAIN_SESSION);
+            $tableSessionRelCourse = Database::get_main_table(TABLE_MAIN_SESSION_COURSE);
+            $tableCourse = Database::get_main_table(TABLE_MAIN_COURSE);
+            $tableSessionRelUser = Database::get_main_table(TABLE_MAIN_SESSION_USER);
+            $tableUser = Database::get_main_table(TABLE_MAIN_USER);
+
+            $query = "
+                SELECT s.id AS session_id, s.name AS session_name, src.c_id,
+                    c.title AS course_name, c.code AS course_code,
+                    sru.user_id, u.username AS user_name, sru.registered_at AS date
+                FROM $tableSession s
+                LEFT JOIN $tableSessionRelCourse src ON s.id = src.session_id
+                LEFT JOIN $tableCourse c ON src.c_id = c.id
+                LEFT JOIN $tableSessionRelUser sru ON s.id = sru.session_id
+                LEFT JOIN $tableUser u ON sru.user_id = u.id
+                WHERE c.id IN ($coursesIn)
+                AND sru.registered_at BETWEEN '$startDate 00:00:00' AND '$endDate 23:59:59'
+                AND (u.id <> s.session_admin_id OR s.session_admin_id IS NULL)
+                AND u.status = 5
+            ";
+
+            $result = Database::query($query);
+
+            if (Database::num_rows($result) > 0) {
+                while ($row = Database::fetch_assoc($result)) {
+                    $resultArray[] = [
+                        'session_id' => $row['session_id'],
+                        'session_name' => $row['session_name'],
+                        'course_id' => $row['c_id'],
+                        'course_name' => $row['course_name'],
+                        'course_code' => $row['course_code'],
+                        'user_id' => $row['user_id'],
+                        'user_name' => $row['user_name'],
+                        'date' => $row['date'],
+                    ];
+                }
+            }
+        }
+
+        return $resultArray;
     }
 }
