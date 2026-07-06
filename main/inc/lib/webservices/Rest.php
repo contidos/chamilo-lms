@@ -160,6 +160,7 @@ class Rest extends WebService
     public const SUBSCRIBE_COURSE_TO_SESSION_FROM_EXTRA_FIELD = 'subscribe_course_to_session_from_extra_field';
     public const SUBSCRIBE_USER_TO_SESSION_FROM_EXTRA_FIELD = 'subscribe_user_to_session_from_extra_field';
     public const UPDATE_SESSION_FROM_EXTRA_FIELD = 'update_session_from_extra_field';
+    public const GET_USER_COURSE_REGISTRATION = 'get_user_course_registration';
 
     /**
      * @var Session
@@ -4893,6 +4894,65 @@ class Rest extends WebService
         }
 
         return $result;
+    }
+
+    public function getUserCourseRegistration(string $startDate, string $endDate): array
+    {
+        self::protectAdminEndpoint();
+
+        $tableSessionUser = Database::get_main_table(TABLE_MAIN_SESSION_USER);
+        $tableSession = Database::get_main_table(TABLE_MAIN_SESSION);
+        $tableSessionCourse = Database::get_main_table(TABLE_MAIN_SESSION_COURSE);
+        $tableCourse = Database::get_main_table(TABLE_MAIN_COURSE);
+        $tableUser = Database::get_main_table(TABLE_MAIN_USER);
+        $tableUrlUser = Database::get_main_table(TABLE_MAIN_ACCESS_URL_REL_USER);
+
+        $urlId = (int) api_get_current_access_url_id();
+        $startDate = Database::escape_string($startDate);
+        $endDate = Database::escape_string($endDate);
+
+        $sql = "SELECT
+                    u.id AS user_id,
+                    u.username,
+                    u.firstname,
+                    u.lastname,
+                    u.email,
+                    s.id AS session_id,
+                    s.name AS session_name,
+                    c.id AS course_id,
+                    c.code AS course_code,
+                    c.title AS course_title,
+                    su.registered_at
+                FROM $tableSessionUser su
+                INNER JOIN $tableUser u ON su.user_id = u.id
+                INNER JOIN $tableSession s ON su.session_id = s.id
+                INNER JOIN $tableSessionCourse src ON src.session_id = su.session_id
+                INNER JOIN $tableCourse c ON src.c_id = c.id
+                INNER JOIN $tableUrlUser aur ON (aur.user_id = u.id AND aur.access_url_id = $urlId)
+                WHERE su.relation_type = 0
+                AND su.registered_at >= '$startDate 00:00:00'
+                AND su.registered_at <= '$endDate 23:59:59'
+                ORDER BY su.registered_at DESC";
+
+        $result = Database::query($sql);
+        $data = [];
+        while ($row = Database::fetch_array($result, 'ASSOC')) {
+            $data[] = [
+                'user_id' => (int) $row['user_id'],
+                'username' => $row['username'],
+                'firstname' => $row['firstname'],
+                'lastname' => $row['lastname'],
+                'email' => $row['email'],
+                'session_id' => (int) $row['session_id'],
+                'session_name' => $row['session_name'],
+                'course_id' => (int) $row['course_id'],
+                'course_code' => $row['course_code'],
+                'course_title' => $row['course_title'],
+                'registered_at' => $row['registered_at'],
+            ];
+        }
+
+        return $data;
     }
 
     private function formatGradebookRows(array $headers, FlatViewDataGenerator $dataGen): array

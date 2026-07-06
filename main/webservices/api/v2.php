@@ -1230,6 +1230,15 @@ try {
                 $restResponse->setData($result['data']);
             }
             break;
+        case Rest::GET_USER_COURSE_REGISTRATION:
+            $startDate = trim($httpRequest->request->get('start_date', ''));
+            $endDate = trim($httpRequest->request->get('end_date', ''));
+            if (empty($startDate) || empty($endDate)) {
+                throw new Exception(get_lang('NoData'));
+            }
+            Event::addEvent(LOG_WS.$action, 'start_date-end_date', $startDate.':'.$endDate);
+            $restResponse->setData($restApi->getUserCourseRegistration($startDate, $endDate));
+            break;
         default:
             throw new Exception(get_lang('InvalidAction'));
     }
