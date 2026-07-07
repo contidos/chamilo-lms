@@ -6170,15 +6170,16 @@ class UserManager
             $category_id = $row['cat_id'];
             $cat = Category::load($category_id);
             $displayscore = ScoreDisplay::instance();
-            // Always use SCORE_DIV_PERCENT with color disabled for certificates.
-            // SCORE_DIV_PERCENT_WITH_CUSTOM wraps the division in a <div> that gets
-            // stripped by strip_tags in print_certificate.php, leaving only the percent visible.
-            $grade = $displayscore->display_score(
-                [$score, $cat[0]->get_weight()],
-                SCORE_DIV_PERCENT,
-                SCORE_BOTH,
-                true
-            );
+            if (isset($cat) && $displayscore->is_custom()) {
+                $grade = $displayscore->display_score(
+                    [$score, $cat[0]->get_weight()],
+                    SCORE_DIV_PERCENT_WITH_CUSTOM
+                );
+            } else {
+                $grade = $displayscore->display_score(
+                    [$score, $cat[0]->get_weight()]
+                );
+            }
             $row['grade'] = $grade;
 
             return $row;
