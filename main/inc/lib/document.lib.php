@@ -2169,7 +2169,7 @@ class DocumentManager
             $date_short_no_time,
             $courseCode,
             $course_info['name'],
-            isset($info_grade_certificate['grade']) ? $info_grade_certificate['grade'] : '',
+            isset($info_grade_certificate['grade']) ? trim(preg_replace('/\s+/', ' ', strip_tags($info_grade_certificate['grade']))) : '',
             $url,
             '<a href="'.$url.'" target="_blank">'.get_lang('CertificateOnlineLink').'</a>',
             '((certificate_barcode))',
