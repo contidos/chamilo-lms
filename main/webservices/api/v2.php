@@ -802,6 +802,11 @@ try {
             Event::addEvent(LOG_WS.$action, 'course_id', $data['id']);
             $restResponse->setData($data);
             break;
+        case Rest::UPDATE_COURSE:
+            $data = $restApi->updateCourse($httpRequest->request);
+            Event::addEvent(LOG_WS.$action, 'course_id', $data['id']);
+            $restResponse->setData($data);
+            break;
         case Rest::DELETE_COURSE:
             if (!api_is_platform_admin()) {
                 throw new Exception(get_lang('NotAllowed'));
@@ -826,6 +831,13 @@ try {
             $result = CourseManager::delete_course($course['code']);
             Event::addEvent(LOG_WS.$action, 'course_id', $courseId);
             $restResponse->setData(['status' => $result]);
+            break;
+        case Rest::GET_SESSION_INFO:
+            $sessionInfo = $restApi->getSessionInfo();
+
+            Event::addEvent(LOG_WS.$action, 'course_id', $sessionInfo['id']);
+
+            $restResponse->setData($sessionInfo);
             break;
         case Rest::GET_SESSION_FROM_EXTRA_FIELD:
             $fieldName = trim($httpRequest->request->get('field_name'));
@@ -870,6 +882,12 @@ try {
             Event::addEvent(LOG_WS.$action, 'session_id', $data['id_session']);
             $restResponse->setData($data);
             break;
+        case Rest::DELETE_SESSION:
+            $sessionId = (int) ($_REQUEST['session_id'] ?? 0);
+            $data = $restApi->deleteSession($sessionId);
+            Event::addEvent(LOG_WS.$action, 'session_id', $sessionId);
+            $restResponse->setData($data);
+            break;
         case Rest::SUBSCRIBE_USER_TO_COURSE:
             $data = $restApi->subscribeUserToCourse($_POST);
             Event::addEvent(LOG_WS.$action, 'course_id-user_id', (int) $_POST['course_id'].':'.(int) $_POST['user_id']);
@@ -905,6 +923,13 @@ try {
             Event::addEvent(LOG_WS.$action, 'id_campus', $campusId);
             $data = $restApi->getSessionsCampus($campusId, $getExtraFields);
             $restResponse->setData($data);
+            break;
+        case Rest::GET_COURSE_SESSIONS:
+            Event::addEvent(LOG_WS.$action, 'course', $course);
+
+            $restResponse->setData(
+                $restApi->getSessionsByCourse()
+            );
             break;
         case Rest::ADD_COURSES_SESSION:
             $data = $restApi->addCoursesSession($_POST);
