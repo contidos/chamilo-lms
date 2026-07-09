@@ -685,6 +685,23 @@ $formValid = $form->validate();
 if ($formValid) {
     $values = $form->getSubmitValues(1);
 
+    // Security rule: if teacher registration is disabled, force learner status.
+    $allowTeacherRegistration = api_get_setting('allow_registration_as_teacher') !== 'false';
+    if (!$allowTeacherRegistration) {
+        $values['status'] = STUDENT;
+    }
+
+    // Security rule: server-side allow-list on submitted status to prevent
+    // privilege mass-assignment (CWE-915). The UI only offers STUDENT/COURSEMANAGER;
+    // any other value (e.g. SESSIONADMIN, DRH, COURSEMANAGERLOWSECURITY) coming
+    // from a tampered POST must be downgraded to STUDENT.
+    $allowedSelfRegistrationStatus = $allowTeacherRegistration
+        ? [STUDENT, COURSEMANAGER]
+        : [STUDENT];
+    if (!in_array((int) ($values['status'] ?? STUDENT), $allowedSelfRegistrationStatus, true)) {
+        $values['status'] = STUDENT;
+    }
+
     $extraFields = api_get_configuration_value('extra_fields_to_validate_on_user_registration');
     if (!empty($extraFields) && isset($extraFields['extra_fields'])) {
         $extraFieldList = $extraFields['extra_fields'];
