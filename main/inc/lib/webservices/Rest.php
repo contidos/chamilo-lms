@@ -4379,7 +4379,6 @@ class Rest extends WebService
         exit;
     }
 
-<<<<<<< HEAD
     public function GetUserCourseRegistration(string $startDate, string $endDate)
     {
         $resultArray = [];
@@ -4472,7 +4471,6 @@ class Rest extends WebService
         return $resultArray;
     }
 
-=======
     /**
      * Create a group/class.
      *
@@ -5104,7 +5102,6 @@ class Rest extends WebService
     /**
      * Generate an API key for webservices access for the given user ID.
      */
->>>>>>> 578c78770ca2c8465413125c32705d586d4cc74b
     protected static function generateApiKeyForUser(int $userId): string
     {
         UserManager::add_api_key($userId, self::SERVICE_NAME);
