@@ -201,7 +201,7 @@ class LtiProviderPlugin extends Plugin
             foreach ($courses as $course) {
                 $courseInfo = api_get_course_info($course['code']);
 
-                $optgroupLabel = "{$sessionInfo['name']} ({$course['title']}) : ".get_lang('Learnpath');
+                $optgroupLabel = "{$sessionInfo['name']} ({$course['title']}) : ".get_lang('Learnpath')." (ID: {$session['id']})";
                 $htmlcontent .= '<optgroup label="'.$optgroupLabel.'">';
 
                 $list = new LearnpathList(
