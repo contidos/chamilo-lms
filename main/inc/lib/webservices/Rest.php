@@ -112,13 +112,17 @@ class Rest extends WebService
     public const GET_COURSES = 'get_courses';
     public const GET_COURSES_FROM_EXTRA_FIELD = 'get_courses_from_extra_field';
     public const SAVE_COURSE = 'save_course';
+    public const UPDATE_COURSE = 'update_course';
     public const DELETE_COURSE = 'delete_course';
     public const GET_SESSION_FROM_EXTRA_FIELD = 'get_session_from_extra_field';
+    public const GET_SESSION_INFO = 'session_info';
     public const GET_SESSION_INFO_FROM_EXTRA_FIELD = 'get_session_info_from_extra_field';
     public const SAVE_SESSION = 'save_session';
     public const CREATE_SESSION_FROM_MODEL = 'create_session_from_model';
     public const UPDATE_SESSION = 'update_session';
+    public const DELETE_SESSION = 'delete_session';
     public const GET_SESSIONS = 'get_sessions';
+    public const GET_COURSE_SESSIONS = 'get_course_sessions';
 
     public const SUBSCRIBE_USER_TO_COURSE = 'subscribe_user_to_course';
     public const SUBSCRIBE_USER_TO_COURSE_PASSWORD = 'subscribe_user_to_course_password';
@@ -1761,6 +1765,40 @@ class Rest extends WebService
         return $shortList;
     }
 
+    public function getSessionsByCourse(): array
+    {
+        self::protectAdminEndpoint();
+
+        $sessions = SessionManager::get_session_by_course($this->course->getId());
+        $extraFieldValues = new ExtraFieldValue('session');
+        $filter = ['variable', 'value', 'display_text'];
+        $list = [];
+
+        foreach ($sessions as $sessionInfo) {
+            $session = api_get_session_info($sessionInfo['id']);
+
+            if (empty($session)) {
+                continue;
+            }
+
+            $extraFields = $extraFieldValues->getAllValuesByItem($session['id']);
+            $list[] = [
+                'id' => $session['id'],
+                'name' => $session['name'],
+                'access_start_date' => $session['access_start_date'],
+                'access_end_date' => $session['access_end_date'],
+                'extra_fields' => array_map(
+                    function ($item) use ($filter) {
+                        return array_intersect_key($item, array_flip($filter));
+                    },
+                    $extraFields
+                ),
+            ];
+        }
+
+        return $list;
+    }
+
     /**
      * Returns an array of groups with id, group_type, name, description, visibility.
      *
@@ -1912,6 +1950,118 @@ class Rest extends WebService
         }
 
         return $results;
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function updateCourse(ParameterBag $request): array
+    {
+        self::protectAdminEndpoint();
+
+        $courseId = $request->getInt('course_id');
+        $courseCode = $request->get('course_code');
+
+        if (!empty($courseCode)) {
+            $courseInfo = api_get_course_info($courseCode);
+        } elseif (!empty($courseId)) {
+            $courseInfo = api_get_course_info_by_id($courseId);
+        } else {
+            throw new Exception(get_lang('NoData'));
+        }
+
+        if (empty($courseInfo)) {
+            throw new Exception(get_lang('NoCourse'));
+        }
+
+        $realId = $courseInfo['real_id'];
+        $table = Database::get_main_table(TABLE_MAIN_COURSE);
+        $params = [];
+
+        $title = $request->get('title');
+
+        if (!is_null($title)) {
+            $params['title'] = $title;
+        }
+
+        $language = $request->get('language');
+
+        if (!is_null($language)) {
+            $params['course_language'] = $language;
+        }
+
+        $visibility = $request->get('visibility');
+
+        if (!is_null($visibility)) {
+            if (!isset(Course::getStatusList()[(int) $visibility])) {
+                throw new Exception(get_lang('VisibilityCannotBeChanged'));
+            }
+
+            $params['visibility'] = (int) $visibility;
+        }
+
+        $diskQuota = $request->get('disk_quota');
+
+        if (!is_null($diskQuota)) {
+            $params['disk_quota'] = (int) $diskQuota;
+        }
+
+        $categoryCode = $request->get('category_code');
+
+        if (!is_null($categoryCode)) {
+            $params['category_code'] = $categoryCode;
+        }
+
+        $departmentName = $request->get('department_name');
+
+        if (!is_null($departmentName)) {
+            $params['department_name'] = $departmentName;
+        }
+
+        $departmentUrl = $request->get('department_url');
+
+        if (!is_null($departmentUrl)) {
+            $params['department_url'] = $departmentUrl;
+        }
+
+        $subscribe = $request->get('subscribe');
+
+        if (!is_null($subscribe)) {
+            $params['subscribe'] = (int) $subscribe;
+        }
+
+        $unsubscribe = $request->get('unsubscribe');
+
+        if (!is_null($unsubscribe)) {
+            $params['unsubscribe'] = (int) $unsubscribe;
+        }
+
+        if (!empty($params)) {
+            Database::update($table, $params, ['id = ?' => $realId]);
+        }
+
+        $extraFields = array_filter(
+            $request->all(),
+            function ($key) {
+                return substr($key, 0, 6) === 'extra_';
+            },
+            ARRAY_FILTER_USE_KEY
+        );
+
+        if (!empty($extraFields)) {
+            $extraFields['item_id'] = $realId;
+            $courseFieldValue = new ExtraFieldValue('course');
+            $courseFieldValue->saveFieldValues($extraFields);
+        }
+
+        $updatedCourse = api_get_course_info_by_id($realId);
+
+        return [
+            'message' => get_lang('Updated'),
+            'id' => $realId,
+            'course_code' => $updatedCourse['code'],
+            'course_title' => $updatedCourse['title'],
+        ];
     }
 
     /**
@@ -2600,6 +2750,33 @@ class Rest extends WebService
         return (int) $sessionIdList[0]['item_id'];
     }
 
+    public function getSessionInfo(): array
+    {
+        self::protectAdminEndpoint();
+
+        $bundle = [
+            'id' => $this->session->getId(),
+            'name' => $this->session->getName(),
+            'access_start_date' => $this->session->getAccessStartDate()->format('Y-m-d H:i:s'),
+            'access_end_date' => $this->session->getAccessEndDate()
+                ? $this->session->getAccessEndDate()->format('Y-m-d H:i:s')
+                : null,
+        ];
+        $extraFieldValues = new ExtraFieldValue('session');
+        $extraFields = $extraFieldValues->getAllValuesByItem($this->session->getId());
+        // Only return these properties for each extra_field (the rest is not relevant to a webservice)
+        $filter = ['variable', 'value', 'display_text'];
+        $bundle['extra_fields'] = array_map(
+            function ($item) use ($filter) {
+                return array_intersect_key($item, array_flip($filter));
+            },
+            $extraFields
+        );
+
+        // return session details, including extra fields that have filter=1
+        return $bundle;
+    }
+
     /**
      * Finds the session which has a specific value in a specific extra field and return its details.
      *
@@ -3138,6 +3315,29 @@ class Rest extends WebService
             'status' => true,
             'message' => get_lang('Updated'),
             'id_session' => $id,
+        ];
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function deleteSession(int $sessionId): array
+    {
+        if (!SessionManager::cantEditSession($sessionId)) {
+            self::throwNotAllowedException();
+        }
+
+        $sessionInfo = api_get_session_info($sessionId);
+
+        if (empty($sessionInfo)) {
+            throw new Exception(get_lang('NoData'));
+        }
+
+        $result = SessionManager::delete($sessionId);
+
+        return [
+            'status' => $result,
+            'message' => $result ? get_lang('Deleted').': '.$sessionInfo['name'] : get_lang('Error'),
         ];
     }
 
