@@ -947,10 +947,7 @@ if ($formValid) {
                             if (api_is_multiple_url_enabled()) {
                                 $access_url_id = api_get_current_access_url_id();
                                 if ($access_url_id != -1) {
-                                    $urlInfo = api_get_access_url($access_url_id);
-                                    if ($urlInfo) {
-                                        $url = $urlInfo['url'];
-                                    }
+                                    $url = api_get_access_url($access_url_id);
                                 }
                             }
                             
@@ -1017,10 +1014,7 @@ if ($formValid) {
                         if (api_is_multiple_url_enabled()) {
                             $access_url_id = api_get_current_access_url_id();
                             if ($access_url_id != -1) {
-                                $urlInfo = api_get_access_url($access_url_id);
-                                if ($urlInfo) {
-                                    $url = $urlInfo['url'];
-                                }
+                                $url = api_get_access_url($access_url_id);
                             }
                         }
                         
