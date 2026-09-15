@@ -3,7 +3,7 @@
     {{ 'Pass'|get_lang }} : {{ original_password }}</p>
 <p>{{ 'YouReceivedAnEmailWithTheUsername'|get_lang }}</p>
 <p>{{ 'ThanksForRegisteringToSite'|get_lang|format(_s.site_name) }}</p>
-<p>{{ 'Address'|get_lang }} {{ _s.site_name }} {{ 'Is'|get_lang }} : {{ mailWebPath }}</p>
+<p>{{ 'Address'|get_lang }} {{ _s.site_name }} {{ 'Is'|get_lang }} : <a href="{{ mailWebPath }}">{{ mailWebPath }}</a></p>
 <p>{{ 'Problem'|get_lang }}</p>
 <p>{{ 'SignatureFormula'|get_lang }}</p>
 <p>{{ _admin.name }}, {{ _admin.surname }}<br>

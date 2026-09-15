@@ -4,7 +4,7 @@
 {% if original_password != '' %}
 {{ 'Pass'|get_lang }} : {{ original_password }}</p>
 {% endif %}
-<p>{{ 'Address'|get_lang }} {{ _s.site_name }} {{ 'Is'|get_lang }} : {{ portal_url }}</p>
+<p>{{ 'Address'|get_lang }} {{ _s.site_name }} {{ 'Is'|get_lang }} : <a href="{{ portal_url }}">{{ portal_url }}</a></p>
 <p>{{ 'Problem'|get_lang }}</p>
 <p>{{ 'SignatureFormula'|get_lang }}</p>
 <p>{{ _admin.name }}, {{ _admin.surname }}<br>
