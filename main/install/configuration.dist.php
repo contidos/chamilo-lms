@@ -1209,6 +1209,13 @@ Enable specific columns in gradebook table.
 // Disable token verification when sending a message
 // $_configuration['disable_token_in_new_message'] = false;
 
+// When composing a message, the recipient search of students (and other non
+// privileged users) is limited to the users sharing a course or a session with
+// them, plus their social network contacts. Set this option to true to restore
+// the platform wide search for everybody (not recommended: it allows any user
+// to enumerate the user base of the portal).
+// $_configuration['allow_platform_wide_message_user_search_for_students'] = false;
+
 // My courses session order. Possible field values: "start_date", "end_date", "name" Order values: "asc" or "desc"
 // $_configuration['my_courses_session_order'] = ['field' => 'end_date', 'order' => 'desc'];
 
@@ -1580,6 +1587,8 @@ $_configuration['required_extra_fields_in_profile'] = [
 //$_configuration['gradebook_score_display_custom_standalone'] = false;
 
 // Blocks "my files" access to anon users
+// Deprecated: anonymous users are always blocked in main/social/download_my_files.php,
+// which also checks that the requester is allowed to read the owner personal files.
 //$_configuration['block_my_files_access'] = false;
 
 // Allow .htaccess files in SCORM packages
@@ -1786,6 +1795,14 @@ ALTER TABLE notification_event_rel_user ADD CONSTRAINT FK_USER FOREIGN KEY (user
 
 // LMS will try to update SCO status every time the status is not sent by the SCO
 //$_configuration['scorm_lms_update_sco_status_all_time'] = false;
+
+// To let a SCO that only ever reports lesson_status 'incomplete' (and never a real
+// terminal status nor a meaningful LMSFinish()) be marked completed by Chamilo when the
+// user leaves it, enable this per-LP extrafield (disabled by default, off for every LP
+// unless explicitly turned on for that LP):
+/*
+INSERT INTO extra_field (extra_field_type, field_type, variable, display_text, default_value, field_order, visible_to_self, visible_to_others, changeable, filter, created_at) VALUES (6, 13, 'lp_sco_complete_on_leave_when_incomplete', 'Complete SCO on leave when status stays incomplete', '', 0, 1, 0, 1, 0, NOW());
+*/
 
 // Show online user only to Administrators
 //$_configuration['whoisonline_only_for_admin'] = false;
