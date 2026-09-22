@@ -2882,13 +2882,9 @@ class MessageManager
         $tplMailBody->assign('user', $user);
         $tplMailBody->assign('is_western_name_order', api_is_western_name_order());
         $userId = $user->getId();
-        $url_edit = Display::url(
-            api_get_path(WEB_CODE_PATH).'admin/user_edit.php?user_id='.$userId,
-            api_get_path(WEB_CODE_PATH).'admin/user_edit.php?user_id='.$userId
-        );
         $tplMailBody->assign(
             'manageUrl',
-            $url_edit
+            api_get_path(WEB_CODE_PATH).'admin/user_edit.php?user_id='.$userId
         );
         // Get extra field values for this user and reformat the array
         $extraFieldValues = new ExtraFieldValue('user');
