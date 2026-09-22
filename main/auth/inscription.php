@@ -30,11 +30,6 @@ if ($allowedFieldsConfiguration !== false) {
     $allowedFields['extra_fields'] = isset($allowedFieldsConfiguration['extra_fields']) ? $allowedFieldsConfiguration['extra_fields'] : [];
 }
 
-// Minimal UserGatekeeper hook (ported from the campusaapa branch): register the
-// new self-registered user as a pending applicant when the plugin is enabled,
-// so it shows up in /plugin/usergatekeeper/admin.php for approval.
-$userGateKeeperEnabled = api_get_plugin_setting('usergatekeeper', 'tool_enable');
-
 $extraFieldsLoaded = false;
 $htmlHeadXtra[] = api_get_password_checker_js('#username', '#pass1');
 // User is not allowed if Terms and Conditions are disabled and
@@ -787,10 +782,6 @@ if ($form->validate()) {
                     UserManager::update_extra_field_value($user_id, $key, $value);
                 }
             }
-        }
-
-        if ($userGateKeeperEnabled && is_int($user_id)) {
-            UserGatekeeper::addUserSession($user_id, null, true);
         }
 
         if ($user_id) {
