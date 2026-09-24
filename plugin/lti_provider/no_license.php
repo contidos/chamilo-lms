@@ -5,7 +5,7 @@ $cidReset = true;
 require_once __DIR__.'/../../main/inc/global.inc.php';
 require_once __DIR__.'/LtiProviderPlugin.php';
 
-api_protect_admin_script();
+api_block_anonymous_users();
 
 $plugin = LtiProviderPlugin::create();
 
@@ -29,9 +29,5 @@ $content .= '    </div>';
 $content .= '</div>';
 
 $template = new Template($tittle);
-$template->assign('form', $form->returnForm());
-
-$content = $template->fetch('lti_provider/view/no_license.tpl');
-
 $template->assign('content', $content);
 $template->display_one_col_template();

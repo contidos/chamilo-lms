@@ -11,6 +11,7 @@ $interbreadcrumb[] = ['url' => '../index.php', 'name' => get_lang('PlatformAdmin
 
 $plugin = LtiProviderPlugin::create();
 
+$content = '';
 $content .= $plugin::printLtiLearningPath();
 
 Display::display_header('Estadisticas');

@@ -83,7 +83,7 @@ $table->set_column_filter(4, function ($id, $urlParams, $row) use ($clientId) {
     return implode(' ', $actions);
 });
 
-$interbreadcrumb[] = ['url' => api_get_path(WEB_CODE_PATH).'../plugin/lti_provider/admin.php', 'name' => $plugin->get_lang('plugin_title')];
+$interbreadcrumb[] = ['url' => api_get_path(WEB_PLUGIN_PATH).'lti_provider/admin.php', 'name' => $plugin->get_lang('plugin_title')];
 
 $template = new Template($plugin->get_lang('Licenses'));
 $template->assign('table', $table->return_table());

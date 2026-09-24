@@ -395,12 +395,14 @@ class LtiProviderPlugin extends Plugin
     {
         $dateFilter = '';
         if (!empty($startDate) && !empty($endDate)) {
+            $startDate = Database::escape_string($startDate);
+            $endDate = Database::escape_string($endDate);
             $dateFilter = " AND plpr.start_date BETWEEN '$startDate' AND '$endDate' ";
         }
 
         $toolIdFilter = '';
-        if (!empty($toolId) || $toolId != "0") {
-            $toolIdFilter = " AND plpp.id = $toolId ";
+        if (!empty($toolId)) {
+            $toolIdFilter = " AND plpp.id = ".(int) $toolId." ";
         }
 
         $sql = "SELECT plpp.id, CONCAT(plpp.name, ' (', plpp.client_id, ')') as lti_name, u.username, u.firstname, u.lastname, u.email,
@@ -788,16 +790,25 @@ class LtiProviderPlugin extends Plugin
             return true; // Unlimited licenses
         }
 
-        $usedLicenses = Database::getManager()
+        return $this->getUsedLicensesCount($clientId) < $totalLicenses;
+    }
+
+    /**
+     * Count the non-expired (in use) licenses for a platform.
+     *
+     * @param string $clientId The platform client ID
+     * @return int
+     */
+    public function getUsedLicensesCount(string $clientId): int
+    {
+        return (int) Database::getManager()
             ->createQuery('
-                SELECT COUNT(l.id) 
-                FROM ChamiloPluginBundle:LtiProvider\License l 
+                SELECT COUNT(l.id)
+                FROM ChamiloPluginBundle:LtiProvider\License l
                 WHERE l.clientId = :clientId AND l.expired = false
             ')
             ->setParameter('clientId', $clientId)
             ->getSingleScalarResult();
-
-        return $usedLicenses < $totalLicenses;
     }
 
     /**
@@ -891,6 +902,12 @@ class LtiProviderPlugin extends Plugin
                 ]);
 
             if (!$license) {
+                return false;
+            }
+
+            if ($license->isExpired()) {
+                // Already deactivated: avoid crediting the available-licenses
+                // count again if this action is triggered more than once.
                 return false;
             }
 

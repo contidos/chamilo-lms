@@ -10,7 +10,9 @@ api_protect_admin_script();
 $timestamp = time();
 $filename = "lti_stats_$timestamp.xls";
 
-header("Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+// The export below is an HTML table served with an .xls extension/MIME,
+// a format Excel opens natively - not a real OOXML (.xlsx) package.
+header("Content-Type: application/vnd.ms-excel");
 header("Content-Disposition: attachment; filename=\"$filename\"");
 header("Pragma: no-cache");
 header("Expires: 0");
@@ -21,6 +23,7 @@ $dateRangeEnd = isset($_GET['daterange_end']) ? $_GET['daterange_end'] : null;
 
 $plugin = LtiProviderPlugin::create();
 
+$content = '';
 $content .= $plugin::getStatsTable($toolId, $dateRangeStart, $dateRangeEnd);
 
 echo $content;

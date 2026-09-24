@@ -64,6 +64,7 @@ $form->build();
 
 if ($form->validate()) {
     $formValues = $form->exportValues();
+    $originalClientId = $platform->getClientId();
 
     if($formValues['licenses'] == null || $formValues['licenses'] < 0 || $formValues['licenses'] > 9999) {
         $formValues['licenses'] = "0";
@@ -80,7 +81,8 @@ if ($form->validate()) {
     $toolProvider = (isset($formValues['tool_provider']) ? $formValues['tool_provider'] : $_POST['tool_provider']);
     $platform->setToolProvider($toolProvider);
     $platform->setTotalLicenses($formValues['licenses']);
-    $platform->setAvailableLicenses(0);
+    $usedLicenses = $plugin->getUsedLicensesCount($originalClientId);
+    $platform->setAvailableLicenses(max(0, (int) $formValues['licenses'] - $usedLicenses));
 
     $em->persist($platform);
     $em->flush();
