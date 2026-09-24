@@ -7217,4 +7217,5 @@ $TimeSpentInLp = "Ikasgaian emandako denbora";
 $IHaveFinishedTheLessonsNotifyTheTeacher = "Bukatu ditut ikastaroko ikasgaiak. Irakasleari jakinarazi";
 $TimeSpentTimeRequired = "Erabilitako denbora / Behar izandako denbora";
 $ProgressSpentInLp = "Aurrerapena edukietan";
+$UserWithSameFieldAlreadyExistsInPortal = "%s berdina duen erabiltzaile bat dagoeneko existitzen da portal honetan";
 ?>

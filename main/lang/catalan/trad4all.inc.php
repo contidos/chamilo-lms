@@ -7984,4 +7984,5 @@ $StudentCourseProgressX = "Progrés: %s %%";
 $SessionDurationNotStartedMaxX = "Aquesta sessió té una durada màxima de %s";
 $StudentCourseScoreX = "Puntuació: %s %%";
 $StudentCourseCertificateX = "Certificat: %s";
+$UserWithSameFieldAlreadyExistsInPortal = "Ja existeix un usuari amb el mateix %s en aquest portal";
 ?>

@@ -7349,4 +7349,5 @@ $LastVisitedCourse = "Último curso visitado";
 $YouDidNotVisitACourseHereTheCourseList = "Aínda non visitou ningún curso, aquí está a súa lista de cursos.";
 $NoEntity = "Sen organización";
 $UserByEntityReport = "Usuario por entidade";
+$UserWithSameFieldAlreadyExistsInPortal = "Xa existe un usuario co mesmo %s neste portal";
 ?>
