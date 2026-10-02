@@ -2871,10 +2871,14 @@ class MessageManager
     }
 
     /**
-     * Send a notification to all admins when a new user is registered
-     * while the approval method is used for users registration.
+     * Build the subject and body of the "new user pending approval" admin
+     * notification email, shared by sendNotificationOfNewRegisteredUserApproval()
+     * and any other mechanism (e.g. the Gatekeeper plugin) that needs to send
+     * the exact same notification to a different set of recipients.
+     *
+     * @return array{subject: string, body: string}
      */
-    public static function sendNotificationOfNewRegisteredUserApproval(User $user)
+    public static function buildNewRegisteredUserApprovalEmail(User $user): array
     {
         $tplMailBody = new Template(
             null,
@@ -2921,6 +2925,23 @@ class MessageManager
         }
 
         $emailsubject = '['.get_lang('ApprovalForNewAccount').'] '.$user->getUsername();
+
+        return [
+            'subject' => $emailsubject,
+            'body' => $emailbody,
+        ];
+    }
+
+    /**
+     * Send a notification to all admins when a new user is registered
+     * while the approval method is used for users registration.
+     */
+    public static function sendNotificationOfNewRegisteredUserApproval(User $user)
+    {
+        $userId = $user->getId();
+        $builtEmail = self::buildNewRegisteredUserApprovalEmail($user);
+        $emailsubject = $builtEmail['subject'];
+        $emailbody = $builtEmail['body'];
 
         if (api_get_configuration_value('send_inscription_notification_to_general_admin_only')) {
             $email = api_get_setting('emailAdministrator');

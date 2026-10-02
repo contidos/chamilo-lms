@@ -1076,9 +1076,15 @@ if ($formValid) {
                 /* If the account has to be approved then we set the account to inactive,
                 sent a mail to the platform admin and exit the page.*/
                 if (api_get_setting('allow_registration') === 'approval') {
-                    // 1. Send mail to all platform admin
-                    $chamiloUser = api_get_user_entity($user_id);
-                    MessageManager::sendNotificationOfNewRegisteredUserApproval($chamiloUser);
+                    // 1. Send mail to all platform admin, unless the Gatekeeper plugin
+                    // is handling approvals for this portal: in that case it already
+                    // notified its own configured reviewers (see UserGatekeeper::addUserSession()
+                    // above), and the generic platform-admin notification would be noise
+                    // to whoever is set as the general admin but doesn't manage Gatekeeper.
+                    if (!$userGateKeeperEnabled) {
+                        $chamiloUser = api_get_user_entity($user_id);
+                        MessageManager::sendNotificationOfNewRegisteredUserApproval($chamiloUser);
+                    }
 
                     // 2. set account inactive
                     UserManager::disable($user_id);
