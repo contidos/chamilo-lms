@@ -12067,9 +12067,7 @@ class Exercise
                 $msg
             );
 
-            if ($origin != 'learnpath') {
-                $msg .= '<br /><a href="#url#">'.get_lang('ClickToCommentAndGiveFeedback').'</a>';
-            }
+            $msg .= '<br /><a href="#url#">'.get_lang('ClickToCommentAndGiveFeedback').'</a>';
             $msg = str_replace('#url#', $url_email, $msg);
             $subject = get_lang('OpenQuestionsAttempted');
 
