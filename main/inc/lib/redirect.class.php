@@ -63,11 +63,7 @@ class Redirect
             return;
         }
 
-        // remove_XSS (HTMLPurifier) encodes "&" as "&amp;", which would break the query string
-        // of the Location header (e.g. "&amp;course_code=" arrives as parameter "amp;course_code").
-        $url = isset($_SESSION['request_uri'])
-            ? html_entity_decode(Security::remove_XSS($_SESSION['request_uri']), ENT_QUOTES)
-            : '';
+        $url = isset($_SESSION['request_uri']) ? Security::remove_XSS($_SESSION['request_uri']) : '';
 
         $afterLogin = Session::read('redirect_after_not_allow_page');
 
