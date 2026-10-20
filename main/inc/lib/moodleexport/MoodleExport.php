@@ -336,6 +336,75 @@ class MoodleExport
             'files' => count($urlFiles),
         ]);
 
+        $assignFiles = [];
+        $assignExport = new AssignExport($this->course);
+
+        foreach ($activities as $activity) {
+            if (($activity['modulename'] ?? '') !== 'assign') {
+                continue;
+            }
+
+            $assignData = $assignExport->getData(
+                (int) $activity['id'],
+                (int) $activity['sectionid'],
+                (int) $activity['moduleid']
+            );
+
+            if (!empty($assignData['files'])) {
+                $assignFiles = array_merge($assignFiles, $assignData['files']);
+            }
+        }
+
+        $this->debugLog('Assign files collected', [
+            'files' => count($assignFiles),
+        ]);
+
+        $forumFiles = [];
+        $forumExport = new ForumExport($this->course);
+
+        foreach ($activities as $activity) {
+            if (($activity['modulename'] ?? '') !== 'forum') {
+                continue;
+            }
+
+            $forumData = $forumExport->getData(
+                (int) $activity['id'],
+                (int) $activity['sectionid'],
+                (int) $activity['moduleid']
+            );
+
+            if (!empty($forumData['files'])) {
+                $forumFiles = array_merge($forumFiles, $forumData['files']);
+            }
+        }
+
+        $this->debugLog('Forum files collected', [
+            'files' => count($forumFiles),
+        ]);
+
+        $glossaryFiles = [];
+        $glossaryExport = new GlossaryExport($this->course);
+
+        foreach ($activities as $activity) {
+            if (($activity['modulename'] ?? '') !== 'glossary') {
+                continue;
+            }
+
+            $glossaryData = $glossaryExport->getData(
+                (int) $activity['id'],
+                (int) $activity['sectionid'],
+                (int) $activity['moduleid']
+            );
+
+            if (!empty($glossaryData['files'])) {
+                $glossaryFiles = array_merge($glossaryFiles, $glossaryData['files']);
+            }
+        }
+
+        $this->debugLog('Glossary files collected', [
+            'files' => count($glossaryFiles),
+        ]);
+
         $fileExport = new FileExport($this->course);
         $filesData = $fileExport->getFilesData();
 
@@ -348,7 +417,10 @@ class MoodleExport
             $pageFiles,
             $resourceFiles,
             $quizFiles,
-            $urlFiles
+            $urlFiles,
+            $assignFiles,
+            $forumFiles,
+            $glossaryFiles
         ));
 
         $this->debugLog('Files merged', [
@@ -994,7 +1066,25 @@ class MoodleExport
     }
 
     /**
-     * Get all sections from the course ordered by LP display_order.
+     * Get the rank (1, 2, ...) of each learnpath category of the course, indexed by category id.
+     */
+    private function getLearnpathCategoryRanks(): array
+    {
+        $courseInfo = api_get_course_info($this->course->code);
+        if (empty($courseInfo['real_id'])) {
+            return [];
+        }
+
+        $ranks = [];
+        foreach (\learnpath::getCategories((int) $courseInfo['real_id']) as $category) {
+            $ranks[(int) $category->getId()] = count($ranks) + 1;
+        }
+
+        return $ranks;
+    }
+
+    /**
+     * Get all sections from the course ordered as the learnpaths are displayed in Chamilo.
      * Uses the same activities list and module ids as moodle_backup.xml.
      */
     private function getSections(?array $activities = null): array
@@ -1029,15 +1119,28 @@ class MoodleExport
             'learnpaths' => count($learnpaths),
         ]);
 
-        usort($learnpaths, static function ($a, $b): int {
-            $aOrder = (int) ($a->display_order ?? 0);
-            $bOrder = (int) ($b->display_order ?? 0);
+        // Sort the learnpaths as they are displayed in Chamilo: without category first, then by category
+        // position, then by display_order (which restarts in each category and is copied with the LP).
+        $categoryRanks = $this->getLearnpathCategoryRanks();
+        usort($learnpaths, static function ($a, $b) use ($categoryRanks): int {
+            $aCategoryId = (int) ($a->categoryId ?? 0);
+            $bCategoryId = (int) ($b->categoryId ?? 0);
 
-            return $aOrder <=> $bOrder;
+            return [
+                0 === $aCategoryId ? 0 : ($categoryRanks[$aCategoryId] ?? PHP_INT_MAX),
+                (int) ($a->display_order ?? 0),
+                (string) ($a->name ?? ''),
+                (int) ($a->source_id ?? 0),
+            ] <=> [
+                0 === $bCategoryId ? 0 : ($categoryRanks[$bCategoryId] ?? PHP_INT_MAX),
+                (int) ($b->display_order ?? 0),
+                (string) ($b->name ?? ''),
+                (int) ($b->source_id ?? 0),
+            ];
         });
 
-        $isPartialExport = isset($this->course->type) && 'partial' === $this->course->type;
-        $partialSectionNumber = 0;
+        // Moodle matches sections by number, so they must be consecutive and unique.
+        $sectionNumber = 0;
 
         foreach ($learnpaths as $learnpath) {
             if ((int) $learnpath->lp_type !== 1) {
@@ -1051,10 +1154,7 @@ class MoodleExport
             ]);
 
             $sectionData = $sectionExport->getSectionData($learnpath);
-            if ($isPartialExport) {
-                $partialSectionNumber++;
-                $sectionData['number'] = $partialSectionNumber;
-            }
+            $sectionData['number'] = ++$sectionNumber;
             $sections[] = $sectionData;
 
             $this->debugLog('getSections learnpath section data exported', [
@@ -1593,7 +1693,7 @@ class MoodleExport
     private function normalizeResourceTypeForLpComparison(string $type): string
     {
         switch ($type) {
-            case RESOURCE_STUDENTPUBLICATION:
+            case RESOURCE_WORK:
             case 'student_publication':
             case 'assign':
             case 'work':
