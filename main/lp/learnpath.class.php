@@ -1228,6 +1228,11 @@ class learnpath
         if (empty($id) || empty($course_id)) {
             return false;
         }
+
+        if (!$this->isItemInLp($id)) {
+            return false;
+        }
+
         // First select item to get previous, next, and display order.
         $lp_item = Database::get_course_table(TABLE_LP_ITEM);
         $sql_sel = "SELECT * FROM $lp_item WHERE iid = $id";
@@ -1328,6 +1333,17 @@ class learnpath
         }
 
         if (empty($id) || empty($_course)) {
+            return false;
+        }
+
+        $parent = (int) $parent;
+        $previous = (int) $previous;
+        $prerequisites = Database::escape_string($prerequisites);
+
+        if (!$this->isItemInLp($id)
+            || (!empty($parent) && !$this->isItemInLp($parent))
+            || (!empty($previous) && !$this->isItemInLp($previous))
+        ) {
             return false;
         }
 
@@ -1544,6 +1560,31 @@ class learnpath
             $linkId = $row_select['path'];
             $link->updateLink($linkId, $url);
         }
+
+        return true;
+    }
+
+    /**
+     * Checks that an item belongs to this learning path, in the current course.
+     *
+     * @param int $itemId
+     *
+     * @return bool
+     */
+    public function isItemInLp($itemId)
+    {
+        $itemId = (int) $itemId;
+        $courseId = api_get_course_int_id();
+
+        if (empty($itemId) || empty($courseId) || empty($this->lp_id)) {
+            return false;
+        }
+
+        $table = Database::get_course_table(TABLE_LP_ITEM);
+        $sql = "SELECT iid FROM $table
+                WHERE iid = $itemId AND c_id = $courseId AND lp_id = ".(int) $this->lp_id;
+
+        return Database::num_rows(Database::query($sql)) > 0;
     }
 
     /**
@@ -1565,6 +1606,10 @@ class learnpath
         $id = (int) $id;
 
         if (empty($id)) {
+            return false;
+        }
+
+        if (!$this->isItemInLp($id)) {
             return false;
         }
 
@@ -6737,17 +6782,17 @@ class learnpath
                     );
                 }
 
-                $delete_icon .= ' <a
-                    href="'.$mainUrl.'&action=delete_item&id='.$arrLP[$i]['id'].'&lp_id='.$this->lp_id.'"
-                    onclick="return confirmation(\''.addslashes($title).'\');"
-                    class="btn btn-default">';
-                $delete_icon .= Display::return_icon(
-                    'delete.png',
-                    get_lang('LearnpathDeleteModule'),
-                    [],
-                    ICON_SIZE_TINY
+                $delete_icon .= $this->getDeleteItemButton(
+                    $mainUrl.'&action=delete_item&id='.$arrLP[$i]['id'].'&lp_id='.$this->lp_id,
+                    Display::return_icon(
+                        'delete.png',
+                        get_lang('LearnpathDeleteModule'),
+                        [],
+                        ICON_SIZE_TINY
+                    ),
+                    'btn btn-default',
+                    $title
                 );
-                $delete_icon .= '</a>';
 
                 $url = $mainUrl.'&view=build&id='.$arrLP[$i]['id'].'&lp_id='.$this->lp_id;
                 $previewImage = Display::return_icon(
@@ -10525,14 +10570,15 @@ class learnpath
                 $url.'&action=edit_item_prereq'
             );
         }
-        $return .= Display::url(
+        $return .= $this->getDeleteItemButton(
+            $url.'&action=delete_item',
             Display::return_icon(
                 'delete.png',
                 get_lang('Delete'),
                 [],
                 ICON_SIZE_SMALL
             ),
-            $url.'&action=delete_item'
+            'btn btn-link'
         );
 
         if (in_array($item_type, [TOOL_DOCUMENT, TOOL_LP_FINAL_ITEM, TOOL_HOTPOTATOES])) {
@@ -10707,6 +10753,30 @@ class learnpath
     }
 
     /**
+     * Builds a POST delete button without nesting forms in the item editor.
+     */
+    private function getDeleteItemButton($url, $icon, $class, $title = null)
+    {
+        $script = '';
+        if (null !== $title) {
+            $script .= 'if (!confirmation('.json_encode($title).')) { return false; }';
+        }
+        $script .= 'var form = document.createElement("form");'.
+            'form.method = "post";'.
+            'form.action = '.json_encode($url).';'.
+            'var token = document.createElement("input");'.
+            'token.type = "hidden";'.
+            'token.name = "lp_item_sec_token";'.
+            'token.value = '.json_encode(Security::get_existing_token('lp_item')).';'.
+            'form.appendChild(token);'.
+            'document.body.appendChild(form);'.
+            'form.submit(); return false;';
+
+        return '<button type="button" class="'.htmlspecialchars($class, ENT_QUOTES, 'UTF-8').
+            '" onclick="'.htmlspecialchars($script, ENT_QUOTES, 'UTF-8').'">'.$icon.'</button>';
+    }
+
+    /**
      * Return HTML form to allow prerequisites selection.
      *
      * @todo use FormValidator
@@ -10737,6 +10807,8 @@ class learnpath
         $return .= get_lang('AddEditPrerequisites');
         $return .= '</legend>';
         $return .= '<form method="POST">';
+        $return .= '<input type="hidden" name="lp_item_sec_token" value="'.
+            htmlspecialchars(Security::get_existing_token('lp_item'), ENT_QUOTES, 'UTF-8').'">';
         $return .= '<div class="table-responsive">';
         $return .= '<table class="table table-hover">';
         $return .= '<thead>';
