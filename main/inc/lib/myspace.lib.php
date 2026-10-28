@@ -155,7 +155,7 @@ class MySpace
                 $info .= "\r\n";
             }
 
-            fwrite($open, $info);
+            fwrite($open, Export::escapeDelimitedCsvContent($info));
             fclose($open);
             @chmod($file_name, api_get_permissions_for_new_files());
 
@@ -2531,7 +2531,7 @@ class MySpace
     ) {
         $from = (int) $from;
         $numberItems = (int) $numberItems;
-        $direction = Database::escape_string($direction);
+        $direction = 'DESC' === strtoupper((string) $direction) ? 'DESC' : 'ASC';
         $columnName = 'name';
         if ($column === 1) {
             $columnName = 'id';

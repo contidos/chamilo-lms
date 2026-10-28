@@ -926,6 +926,9 @@ switch ($action) {
         if (!$lp_found) {
             require 'lp_list.php';
         } else {
+            if (!empty($_REQUEST['id']) && !$_SESSION['oLP']->isItemInLp($_REQUEST['id'])) {
+                api_not_allowed(true);
+            }
             Session::write('refresh', 1);
             if (isset($_POST) && !empty($post_title)) {
                 // Updating the lp.modified_on
@@ -968,7 +971,7 @@ switch ($action) {
                     exit;
                 }
 
-                $_SESSION['oLP']->edit_item(
+                $updated = $_SESSION['oLP']->edit_item(
                     $_REQUEST['id'],
                     $_POST['parent'],
                     $_POST['previous'],
@@ -979,13 +982,19 @@ switch ($action) {
                     $maxTimeAllowed,
                     $url
                 );
+                if (true !== $updated) {
+                    api_not_allowed(true);
+                }
 
                 if (isset($_POST['content_lp'])) {
                     $_SESSION['oLP']->edit_document($_course);
                 }
                 $is_success = true;
                 $extraFieldValues = new ExtraFieldValue('lp_item');
-                $extraFieldValues->saveFieldValues($_POST, true);
+                $extraFieldValues->saveFieldValues(
+                    array_merge($_POST, ['item_id' => (int) $_REQUEST['id']]),
+                    true
+                );
 
                 Display::addFlash(Display::return_message(get_lang('Updated')));
                 $url = api_get_self().'?action=add_item&type=step&lp_id='.intval($_SESSION['oLP']->lp_id).'&'.api_get_cidreq();
@@ -1006,6 +1015,14 @@ switch ($action) {
         if (!$lp_found) {
             require 'lp_list.php';
         } else {
+            if (!empty($_GET['id']) && !$_SESSION['oLP']->isItemInLp($_GET['id'])) {
+                api_not_allowed(true);
+            }
+            if ('POST' === $_SERVER['REQUEST_METHOD'] &&
+                !Security::check_token('post', null, 'lp_item')
+            ) {
+                api_not_allowed(true);
+            }
             if (isset($_POST['submit_button'])) {
                 // Updating the lp.modified_on
                 $_SESSION['oLP']->set_modified_on();
@@ -1270,11 +1287,38 @@ switch ($action) {
         if (!api_is_allowed_to_edit(null, true)) {
             api_not_allowed(true);
         }
+        header('Content-Type: application/json');
+        if (!Security::check_token('post')) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Invalid security token']);
+            exit;
+        }
+
         $courseId = api_get_course_int_id();
         $sessionId = api_get_session_id();
         $tableLp = Database::get_course_table(TABLE_LP_MAIN);
 
-        $lists = isset($_POST['lists']) ? (array) $_POST['lists'] : [];
+        $lists = isset($_POST['lists']) && is_array($_POST['lists']) ? $_POST['lists'] : [];
+        if (empty($lists)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid learning path order']);
+            exit;
+        }
+
+        if ($sessionId > 0) {
+            if (!learnpath::reorderSessionLearningPaths($courseId, $sessionId, $lists)) {
+                // Shown after the page reload triggered by the list script.
+                Display::addFlash(
+                    Display::return_message(get_lang('LearningPathOrderNotSaved'), 'error')
+                );
+                http_response_code(400);
+                echo json_encode(['error' => 'Invalid session learning path order']);
+                exit;
+            }
+
+            echo json_encode(['ok' => true]);
+            exit;
+        }
 
         foreach ($lists as $categoryIdStr => $lpIds) {
             $categoryId = (int) $categoryIdStr;
@@ -1293,7 +1337,6 @@ switch ($action) {
             }
         }
 
-        header('Content-Type: application/json');
         echo json_encode(['ok' => true]);
         exit;
     case 'edit':
@@ -1442,6 +1485,11 @@ switch ($action) {
     case 'deleteitem':
     case 'delete_item':
         if (!$is_allowed_to_edit) {
+            api_not_allowed(true);
+        }
+        if ('POST' !== $_SERVER['REQUEST_METHOD'] ||
+            !Security::check_token('post', null, 'lp_item')
+        ) {
             api_not_allowed(true);
         }
         if (!$lp_found) {
