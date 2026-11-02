@@ -943,6 +943,7 @@ foreach ($categories as $item) {
 
             $listData[] = [
                 'lp_id' => $id,
+                'can_reorder' => 0 === $sessionId || $sessionId === (int) $details['lp_session'],
                 'learnpath_icon' => $icon_learnpath,
                 'url_start' => $url_start_lp,
                 'title' => $my_title,

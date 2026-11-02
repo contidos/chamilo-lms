@@ -8,6 +8,7 @@ use Chamilo\CoreBundle\Entity\Repository\ItemPropertyRepository;
 use Chamilo\CourseBundle\Component\CourseCopy\CourseArchiver;
 use Chamilo\CourseBundle\Component\CourseCopy\CourseBuilder;
 use Chamilo\CourseBundle\Component\CourseCopy\CourseRestorer;
+use Chamilo\CourseBundle\Component\Learnpath\SessionOrderPlanner;
 use Chamilo\CourseBundle\Entity\CDocument;
 use Chamilo\CourseBundle\Entity\CItemProperty;
 use Chamilo\CourseBundle\Entity\CLp;
@@ -1227,6 +1228,11 @@ class learnpath
         if (empty($id) || empty($course_id)) {
             return false;
         }
+
+        if (!$this->isItemInLp($id)) {
+            return false;
+        }
+
         // First select item to get previous, next, and display order.
         $lp_item = Database::get_course_table(TABLE_LP_ITEM);
         $sql_sel = "SELECT * FROM $lp_item WHERE iid = $id";
@@ -1327,6 +1333,17 @@ class learnpath
         }
 
         if (empty($id) || empty($_course)) {
+            return false;
+        }
+
+        $parent = (int) $parent;
+        $previous = (int) $previous;
+        $prerequisites = Database::escape_string($prerequisites);
+
+        if (!$this->isItemInLp($id)
+            || (!empty($parent) && !$this->isItemInLp($parent))
+            || (!empty($previous) && !$this->isItemInLp($previous))
+        ) {
             return false;
         }
 
@@ -1543,6 +1560,31 @@ class learnpath
             $linkId = $row_select['path'];
             $link->updateLink($linkId, $url);
         }
+
+        return true;
+    }
+
+    /**
+     * Checks that an item belongs to this learning path, in the current course.
+     *
+     * @param int $itemId
+     *
+     * @return bool
+     */
+    public function isItemInLp($itemId)
+    {
+        $itemId = (int) $itemId;
+        $courseId = api_get_course_int_id();
+
+        if (empty($itemId) || empty($courseId) || empty($this->lp_id)) {
+            return false;
+        }
+
+        $table = Database::get_course_table(TABLE_LP_ITEM);
+        $sql = "SELECT iid FROM $table
+                WHERE iid = $itemId AND c_id = $courseId AND lp_id = ".(int) $this->lp_id;
+
+        return Database::num_rows(Database::query($sql)) > 0;
     }
 
     /**
@@ -1564,6 +1606,10 @@ class learnpath
         $id = (int) $id;
 
         if (empty($id)) {
+            return false;
+        }
+
+        if (!$this->isItemInLp($id)) {
             return false;
         }
 
@@ -4314,6 +4360,114 @@ class learnpath
     }
 
     /**
+     * Reorder only the LPs owned by the current session.
+     *
+     * Session pages also display base-course LPs. Their order must remain
+     * untouched, so the submitted LPs of each category must all belong to the
+     * session and only exchange the slots they already occupy. Session LPs the
+     * user cannot see are not submitted and keep their slots.
+     *
+     * @param int                      $courseId
+     * @param int                      $sessionId
+     * @param array<int|string, mixed> $lists
+     */
+    public static function reorderSessionLearningPaths($courseId, $sessionId, array $lists): bool
+    {
+        $courseId = (int) $courseId;
+        $sessionId = (int) $sessionId;
+        if ($courseId <= 0 || $sessionId <= 0 || empty($lists)) {
+            return false;
+        }
+
+        $lpTable = Database::get_course_table(TABLE_LP_MAIN);
+        $connection = Database::getManager()->getConnection();
+
+        try {
+            $connection->beginTransaction();
+            $updates = [];
+
+            // Validate and lock the complete request before changing any row.
+            foreach ($lists as $categoryIdValue => $orderedIds) {
+                $categoryIdValue = (string) $categoryIdValue;
+                if ('' === $categoryIdValue || !ctype_digit($categoryIdValue) || !is_array($orderedIds) || empty($orderedIds)) {
+                    throw new RuntimeException('Invalid session learning path order.');
+                }
+
+                $categoryId = (int) $categoryIdValue;
+                $categoryCondition = 0 === $categoryId
+                    ? '(category_id = 0 OR category_id IS NULL)'
+                    : "category_id = $categoryId";
+                // Ids are validated by SessionOrderPlanner, an unknown id leaves a row missing.
+                $idList = implode(',', array_map('intval', $orderedIds));
+                $sql = "SELECT id, display_order
+                        FROM $lpTable
+                        WHERE c_id = $courseId
+                          AND session_id = $sessionId
+                          AND $categoryCondition
+                          AND id IN ($idList)
+                        ORDER BY display_order, id
+                        FOR UPDATE";
+                $result = Database::query($sql);
+                if (false === $result) {
+                    throw new RuntimeException('Could not lock session learning paths.');
+                }
+
+                $currentRows = [];
+                while ($row = Database::fetch_array($result)) {
+                    $currentRows[] = $row;
+                }
+
+                $plan = SessionOrderPlanner::buildPlan($currentRows, $orderedIds);
+                if (null === $plan) {
+                    throw new RuntimeException('Invalid session learning path order.');
+                }
+
+                foreach ($plan as $lpId => $displayOrder) {
+                    if (isset($updates[$lpId])) {
+                        throw new RuntimeException('Duplicate session learning path.');
+                    }
+
+                    $updates[$lpId] = [
+                        'category_id' => $categoryId,
+                        'display_order' => $displayOrder,
+                    ];
+                }
+            }
+
+            if (empty($updates)) {
+                throw new RuntimeException('The session learning path order is empty.');
+            }
+
+            foreach ($updates as $lpId => $update) {
+                $categoryId = $update['category_id'];
+                $displayOrder = $update['display_order'];
+                $categoryCondition = 0 === $categoryId
+                    ? '(category_id = 0 OR category_id IS NULL)'
+                    : "category_id = $categoryId";
+                $sql = "UPDATE $lpTable
+                        SET display_order = $displayOrder
+                        WHERE c_id = $courseId
+                          AND session_id = $sessionId
+                          AND $categoryCondition
+                          AND id = $lpId";
+                if (false === Database::query($sql)) {
+                    throw new RuntimeException('Could not reorder session learning paths.');
+                }
+            }
+
+            $connection->commit();
+
+            return true;
+        } catch (Throwable $exception) {
+            if ($connection->isTransactionActive()) {
+                $connection->rollBack();
+            }
+
+            return false;
+        }
+    }
+
+    /**
      * Move a learnpath down (display_order).
      *
      * @param int $lp_id      Learnpath ID
@@ -6628,17 +6782,17 @@ class learnpath
                     );
                 }
 
-                $delete_icon .= ' <a
-                    href="'.$mainUrl.'&action=delete_item&id='.$arrLP[$i]['id'].'&lp_id='.$this->lp_id.'"
-                    onclick="return confirmation(\''.addslashes($title).'\');"
-                    class="btn btn-default">';
-                $delete_icon .= Display::return_icon(
-                    'delete.png',
-                    get_lang('LearnpathDeleteModule'),
-                    [],
-                    ICON_SIZE_TINY
+                $delete_icon .= $this->getDeleteItemButton(
+                    $mainUrl.'&action=delete_item&id='.$arrLP[$i]['id'].'&lp_id='.$this->lp_id,
+                    Display::return_icon(
+                        'delete.png',
+                        get_lang('LearnpathDeleteModule'),
+                        [],
+                        ICON_SIZE_TINY
+                    ),
+                    'btn btn-default',
+                    $title
                 );
-                $delete_icon .= '</a>';
 
                 $url = $mainUrl.'&view=build&id='.$arrLP[$i]['id'].'&lp_id='.$this->lp_id;
                 $previewImage = Display::return_icon(
@@ -10416,14 +10570,15 @@ class learnpath
                 $url.'&action=edit_item_prereq'
             );
         }
-        $return .= Display::url(
+        $return .= $this->getDeleteItemButton(
+            $url.'&action=delete_item',
             Display::return_icon(
                 'delete.png',
                 get_lang('Delete'),
                 [],
                 ICON_SIZE_SMALL
             ),
-            $url.'&action=delete_item'
+            'btn btn-link'
         );
 
         if (in_array($item_type, [TOOL_DOCUMENT, TOOL_LP_FINAL_ITEM, TOOL_HOTPOTATOES])) {
@@ -10598,6 +10753,30 @@ class learnpath
     }
 
     /**
+     * Builds a POST delete button without nesting forms in the item editor.
+     */
+    private function getDeleteItemButton($url, $icon, $class, $title = null)
+    {
+        $script = '';
+        if (null !== $title) {
+            $script .= 'if (!confirmation('.json_encode($title).')) { return false; }';
+        }
+        $script .= 'var form = document.createElement("form");'.
+            'form.method = "post";'.
+            'form.action = '.json_encode($url).';'.
+            'var token = document.createElement("input");'.
+            'token.type = "hidden";'.
+            'token.name = "lp_item_sec_token";'.
+            'token.value = '.json_encode(Security::get_existing_token('lp_item')).';'.
+            'form.appendChild(token);'.
+            'document.body.appendChild(form);'.
+            'form.submit(); return false;';
+
+        return '<button type="button" class="'.htmlspecialchars($class, ENT_QUOTES, 'UTF-8').
+            '" onclick="'.htmlspecialchars($script, ENT_QUOTES, 'UTF-8').'">'.$icon.'</button>';
+    }
+
+    /**
      * Return HTML form to allow prerequisites selection.
      *
      * @todo use FormValidator
@@ -10628,6 +10807,8 @@ class learnpath
         $return .= get_lang('AddEditPrerequisites');
         $return .= '</legend>';
         $return .= '<form method="POST">';
+        $return .= '<input type="hidden" name="lp_item_sec_token" value="'.
+            htmlspecialchars(Security::get_existing_token('lp_item'), ENT_QUOTES, 'UTF-8').'">';
         $return .= '<div class="table-responsive">';
         $return .= '<table class="table table-hover">';
         $return .= '<thead>';
