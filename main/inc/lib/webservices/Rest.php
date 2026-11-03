@@ -261,7 +261,7 @@ class Rest extends WebService
      *
      * @throws Exception
      */
-    public function setCourse($id)
+    public function setCourse($id, $sessionId = 0)
     {
         global $_course;
 
@@ -283,6 +283,10 @@ class Rest extends WebService
             throw new Exception(get_lang('NoCourse'));
         }
 
+        if (!$this->canAccessCourse($course, (int) $sessionId)) {
+            self::throwNotAllowedException();
+        }
+
         $this->course = $course;
 
         $courseInfo = api_get_course_info($course->getCode());
@@ -291,6 +295,87 @@ class Rest extends WebService
         ChamiloSession::write('_real_cid', $course->getId());
         ChamiloSession::write('_cid', $course->getCode());
         ChamiloSession::write('_course', $courseInfo);
+    }
+
+    /**
+     * Check whether the authenticated webservice user can access a course.
+     */
+    private function canAccessCourse(Course $course, int $sessionId = 0): bool
+    {
+        if (api_is_platform_admin()) {
+            return true;
+        }
+
+        $userId = (int) $this->user->getId();
+        $courseId = (int) $course->getId();
+        $courseCode = $course->getCode();
+        $courseInfo = api_get_course_info($courseCode);
+
+        if (empty($courseInfo)) {
+            return false;
+        }
+
+        if ($sessionId > 0 && !SessionManager::relation_session_course_exist($sessionId, $courseId)) {
+            return false;
+        }
+
+        $isCourseAdmin = CourseManager::is_course_teacher($userId, $courseCode);
+        $isCourseTutor = CourseManager::get_tutor_in_course_status($userId, $courseId);
+        $isSessionCourseCoach = false;
+
+        if ($sessionId > 0) {
+            $sessionCourseStatus = SessionManager::get_user_status_in_course_session(
+                $userId,
+                $courseId,
+                $sessionId
+            );
+            $isSessionCourseCoach = 2 === (int) $sessionCourseStatus;
+        }
+
+        // Teachers and tutors keep their normal access to closed/hidden courses and invisible sessions.
+        if ($isCourseAdmin || $isCourseTutor || $isSessionCourseCoach) {
+            return true;
+        }
+
+        $isCourseMember = CourseManager::is_user_subscribed_in_course(
+            $userId,
+            $courseCode,
+            $sessionId > 0,
+            $sessionId
+        );
+
+        if (!$isCourseMember && $sessionId > 0 && api_drh_can_access_all_session_content()) {
+            $sessionInfo = SessionManager::getSessionFollowedByDrh($userId, $sessionId);
+            if (!empty($sessionInfo['course_list'][$courseId])) {
+                $isCourseMember = true;
+            }
+        }
+
+        if ($sessionId > 0 && SESSION_INVISIBLE === api_get_session_visibility($sessionId)) {
+            return false;
+        }
+
+        // A password-protected course must not expose its contents before subscription/password validation.
+        if (!$isCourseMember && !empty($courseInfo['registration_code'])) {
+            return false;
+        }
+
+        switch ((int) $courseInfo['visibility']) {
+            case COURSE_VISIBILITY_OPEN_WORLD:
+                return true;
+            case COURSE_VISIBILITY_OPEN_PLATFORM:
+                if (api_get_configuration_value('block_registered_users_access_to_open_course_contents')) {
+                    return $isCourseMember;
+                }
+
+                return true;
+            case COURSE_VISIBILITY_REGISTERED:
+                return $isCourseMember;
+            case COURSE_VISIBILITY_CLOSED:
+            case COURSE_VISIBILITY_HIDDEN:
+            default:
+                return false;
+        }
     }
 
     /**
@@ -1452,6 +1537,8 @@ class Rest extends WebService
      */
     public function saveForumPost(array $postValues, $forumId)
     {
+        $this->protectCourseWriteEndpoint();
+
         Event::event_access_tool(TOOL_FORUM);
 
         require_once api_get_path(SYS_CODE_PATH).'forum/forumfunction.inc.php';
@@ -1616,6 +1703,72 @@ class Rest extends WebService
     }
 
     /**
+     * Restrict course write operations to platform admins and course/session members.
+     *
+     * @throws Exception
+     */
+    private function protectCourseWriteEndpoint()
+    {
+        if (!$this->course) {
+            self::throwNotAllowedException();
+        }
+
+        if (api_is_platform_admin()) {
+            return;
+        }
+
+        $userId = (int) $this->user->getId();
+        $courseId = (int) $this->course->getId();
+        $courseCode = $this->course->getCode();
+        $sessionId = $this->session ? (int) $this->session->getId() : 0;
+
+        if (0 === $sessionId) {
+            if (!CourseManager::is_user_subscribed_in_course($userId, $courseCode)) {
+                self::throwNotAllowedException();
+            }
+
+            return;
+        }
+
+        if (!SessionManager::relation_session_course_exist($sessionId, $courseId)) {
+            self::throwNotAllowedException();
+        }
+
+        // Course teachers keep their normal access when working inside a session.
+        if (CourseManager::is_course_teacher($userId, $courseCode)) {
+            return;
+        }
+
+        $sessionVisibility = api_get_session_visibility($sessionId);
+        if (in_array($sessionVisibility, [SESSION_VISIBLE_READ_ONLY, SESSION_INVISIBLE], true)) {
+            self::throwNotAllowedException();
+        }
+
+        $sessionCourseStatus = SessionManager::get_user_status_in_course_session(
+            $userId,
+            $courseId,
+            $sessionId
+        );
+        if (false !== $sessionCourseStatus) {
+            return;
+        }
+
+        $sessionInfo = SessionManager::fetch($sessionId);
+        if (!empty($sessionInfo) && $userId === (int) $sessionInfo['id_coach']) {
+            return;
+        }
+
+        if (api_drh_can_access_all_session_content()) {
+            $sessionInfo = SessionManager::getSessionFollowedByDrh($userId, $sessionId);
+            if (!empty($sessionInfo['course_list'][$courseId])) {
+                return;
+            }
+        }
+
+        self::throwNotAllowedException();
+    }
+
+    /**
      * @param string $title
      * @param string $text
      *
@@ -1623,6 +1776,8 @@ class Rest extends WebService
      */
     public function saveCourseNotebook($title, $text)
     {
+        $this->protectCourseWriteEndpoint();
+
         Event::event_access_tool(TOOL_NOTEBOOK);
 
         $values = ['note_title' => $title, 'note_comment' => $text];
@@ -1647,6 +1802,8 @@ class Rest extends WebService
      */
     public function saveForumThread(array $values, $forumId)
     {
+        $this->protectCourseWriteEndpoint();
+
         Event::event_access_tool(TOOL_FORUM);
 
         require_once api_get_path(SYS_CODE_PATH).'forum/forumfunction.inc.php';
@@ -1753,6 +1910,7 @@ class Rest extends WebService
                 'name' => $session['name'],
                 'access_start_date' => $session['access_start_date'],
                 'access_end_date' => $session['access_end_date'],
+                'duration' => $session['duration'],
             ];
             if ($getExtraFields) {
                 $extraFieldValues = new ExtraFieldValue('session');
@@ -2255,8 +2413,9 @@ class Rest extends WebService
         $course_code = $params['course_code'];
         $user_id = $params['user_id'];
         $status = $params['status'] ?? STUDENT;
+        $isPlatformAdmin = api_is_platform_admin();
 
-        if (!api_is_platform_admin() && $user_id != $this->user->getId()) {
+        if (!$isPlatformAdmin && $user_id != $this->user->getId()) {
             self::throwNotAllowedException();
         }
 
@@ -2265,6 +2424,30 @@ class Rest extends WebService
         }
         if (!$course_code) {
             $course_code = CourseManager::get_course_code_from_course_id($course_id);
+        }
+
+        if (!$course_code) {
+            return [false];
+        }
+
+        if (!$isPlatformAdmin) {
+            $courseInfo = api_get_course_info($course_code);
+            if (empty($courseInfo)) {
+                return [false];
+            }
+
+            if (CourseManager::is_user_subscribed_in_course($user_id, $course_code)) {
+                return [false];
+            }
+
+            if (!empty($courseInfo['registration_code'])) {
+                throw new Exception(get_lang('SubscribingNotAllowed'));
+            }
+
+            // Self-subscription must always create a student and respect the course subscription rules.
+            CourseManager::processAutoSubscribeToCourse($course_code, STUDENT);
+
+            return [true];
         }
 
         if (CourseManager::subscribeUser($user_id, $course_code, $status, 0, 0, false)) {
@@ -4532,6 +4715,8 @@ class Rest extends WebService
      */
     public function getGroupSubscribedUsers(int $groupId): array
     {
+        self::protectAdminEndpoint();
+
         $userGroup = new UserGroup();
 
         return $userGroup->get_all_users_by_group($groupId);
@@ -4544,6 +4729,8 @@ class Rest extends WebService
      */
     public function getGroupSubscribedCourses(int $groupId): array
     {
+        self::protectAdminEndpoint();
+
         $userGroup = new UserGroup();
 
         return $userGroup->get_courses_by_usergroup($groupId, true);
@@ -4556,6 +4743,8 @@ class Rest extends WebService
      */
     public function getGroupSubscribedSessions(int $groupId): array
     {
+        self::protectAdminEndpoint();
+
         $userGroup = new UserGroup();
 
         return $userGroup->get_sessions_by_usergroup($groupId, true);
@@ -4570,6 +4759,8 @@ class Rest extends WebService
      */
     public function addGroupSubscribedUser(int $groupId, int $userId, int $relationType = 2): array
     {
+        self::protectAdminEndpoint();
+
         $userGroup = new UserGroup();
 
         if (!$userGroup->groupExists($groupId) or !$userGroup->userExists($userId)) {
@@ -4600,6 +4791,8 @@ class Rest extends WebService
      */
     public function addGroupSubscribedCourse(int $groupId, int $courseId): array
     {
+        self::protectAdminEndpoint();
+
         $userGroup = new UserGroup();
 
         return [$userGroup->subscribe_courses_to_usergroup($groupId, [$courseId], false)];
@@ -4612,6 +4805,8 @@ class Rest extends WebService
      */
     public function addGroupSubscribedSession(int $groupId, int $sessionId): array
     {
+        self::protectAdminEndpoint();
+
         $userGroup = new UserGroup();
 
         return [$userGroup->subscribe_sessions_to_usergroup($groupId, [$sessionId], false)];
@@ -4624,6 +4819,8 @@ class Rest extends WebService
      */
     public function deleteGroupSubscribedUser(int $groupId, int $userId): array
     {
+        self::protectAdminEndpoint();
+
         $userGroup = new UserGroup();
 
         return [$userGroup->delete_user_rel_group($userId, $groupId)];
@@ -4636,6 +4833,8 @@ class Rest extends WebService
      */
     public function deleteGroupSubscribedCourse(int $groupId, int $courseId): array
     {
+        self::protectAdminEndpoint();
+
         $userGroup = new UserGroup();
 
         return [$userGroup->unsubscribe_courses_from_usergroup($groupId, [$courseId])];
@@ -4648,6 +4847,8 @@ class Rest extends WebService
      */
     public function deleteGroupSubscribedSession(int $groupId, int $sessionId): array
     {
+        self::protectAdminEndpoint();
+
         $userGroup = new UserGroup();
 
         return [$userGroup->unsubscribeSessionsFromUserGroup($groupId, [$sessionId], false)];
