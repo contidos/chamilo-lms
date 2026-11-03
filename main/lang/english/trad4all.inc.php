@@ -9125,4 +9125,6 @@ $WillMergeNUsers = "Will merge {n} users";
 $UserUnsubscribedFromOldSessionAsThereWasOnlyOneCourse = "Note: User was unsubscribed from the previous session, as there was only this course there.";
 $AUserWithTheSameXAlreadyExistsInThisPortal = "A user with the same %s already exists in this portal";
 $TheValueEntered = "The value entered in the field %s already exists";
+$LearningPathOrderNotSaved = "The new order of the learning paths could not be saved. Please reload the page and try again.";
+$SessionLearningPathReorderHelp = "Drag to reorder. Only the learning paths created in this session can be moved, and they keep the places they already occupy among the course learning paths.";
 ?>

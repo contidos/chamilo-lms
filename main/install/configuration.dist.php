@@ -689,6 +689,8 @@ ALTER TABLE c_survey_question ADD is_required TINYINT(1) DEFAULT 0 NOT NULL;
 //$_configuration['survey_additional_teacher_modify_actions'] = [];
 // Allow show answers in anonymous surveys
 //$_configuration['survey_anonymous_show_answered'] = false;
+// Hide the user list table on survey invitation tracking pages (answered/unanswered/invited)
+//$_configuration['survey_hide_invited_tables_list'] = false;
 // ------
 
 // Allow career diagram, requires a DB change:
@@ -1207,6 +1209,13 @@ Enable specific columns in gradebook table.
 // Disable token verification when sending a message
 // $_configuration['disable_token_in_new_message'] = false;
 
+// When composing a message, the recipient search of students (and other non
+// privileged users) is limited to the users sharing a course or a session with
+// them, plus their social network contacts. Set this option to true to restore
+// the platform wide search for everybody (not recommended: it allows any user
+// to enumerate the user base of the portal).
+// $_configuration['allow_platform_wide_message_user_search_for_students'] = false;
+
 // My courses session order. Possible field values: "start_date", "end_date", "name" Order values: "asc" or "desc"
 // $_configuration['my_courses_session_order'] = ['field' => 'end_date', 'order' => 'desc'];
 
@@ -1578,6 +1587,8 @@ $_configuration['required_extra_fields_in_profile'] = [
 //$_configuration['gradebook_score_display_custom_standalone'] = false;
 
 // Blocks "my files" access to anon users
+// Deprecated: anonymous users are always blocked in main/social/download_my_files.php,
+// which also checks that the requester is allowed to read the owner personal files.
 //$_configuration['block_my_files_access'] = false;
 
 // Allow .htaccess files in SCORM packages
