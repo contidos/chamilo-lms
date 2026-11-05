@@ -4819,7 +4819,8 @@ class SessionManager
         $extraFieldValue = new ExtraFieldValue('scheduled_announcement');
 
         foreach ($items as $item) {
-            $newDate = ScheduledAnnouncement::shiftDateForCopy($item['date']);
+            // Keep the date the announcement had in the source session.
+            $newDate = $item['date'];
             $params = $item;
             unset($params['id']);
             $params['session_id'] = $targetSessionId;
